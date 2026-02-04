@@ -178,6 +178,15 @@ mod tests {
 }
 ```
 
+### Anti-Spoiler Test Rules
+
+To ensure tests don't reveal the solution:
+
+1. **Test Functions, Not Logic**: Always prefer putting the exercise logic in a separate function (e.g., `fn solve(...)`) and call that function from the tests.
+2. **Never Duplicate Solution**: Do NOT redeclare variables or reimplement the logic inside the `tests` module.
+3. **Black Box Testing**: If logic must stay in `main`, tests should only check if `main()` compiles and runs without panicking, OR capture stdout (advanced).
+4. **Call `super`**: Tests must use `use super::*;` and call the user's functions. If the user hasn't implemented the function correctly, the test should fail because of the user's code, not because the test is "smart".
+
 ### Test Guidelines
 
 1. **Multiple test cases**: Always write 2-4 tests covering different scenarios.
