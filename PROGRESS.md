@@ -9,7 +9,7 @@
 ## 🎯 Current Status
 
 **Current Module**: 01_variables
-**Current Exercise**: (none active)
+**Current Exercise**: variables1
 **Last Updated**: 2026-02-04
 
 ---
@@ -20,9 +20,9 @@
 
 ```json
 {
-  "active": false,
-  "exercise": null,
-  "started_at": null
+  "active": true,
+  "exercise": "variables1",
+  "started_at": "2026-02-04T16:13:00-03:00"
 }
 ```
 
@@ -54,7 +54,7 @@
 
 | Module          | Status         | Exercises | Time Spent | Notes |
 | --------------- | -------------- | --------- | ---------- | ----- |
-| 01_variables    | ⬜ Not Started | 0/24      | 0 min      | -     |
+| 01_variables    | 🟡 In Progress | 0/24      | 0 min      | -     |
 | 02_functions    | ⬜ Not Started | 0/12      | 0 min      | -     |
 | 03_control_flow | ⬜ Not Started | 0/26      | 0 min      | -     |
 | 04_ownership    | ⬜ Not Started | 0/23      | 0 min      | -     |
