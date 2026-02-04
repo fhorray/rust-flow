@@ -178,14 +178,41 @@ mod tests {
 }
 ```
 
-### Anti-Spoiler Test Rules
+### 🚨 ZERO-SPOILER MANDATE (CRITICAL)
 
-To ensure tests don't reveal the solution:
+The AI **MUST NEVER** reveal the solution logic within the `tests` module. Tests must be a black-box verification of the user's solution.
 
-1. **Test Functions, Not Logic**: Always prefer putting the exercise logic in a separate function (e.g., `fn solve(...)`) and call that function from the tests.
-2. **Never Duplicate Solution**: Do NOT redeclare variables or reimplement the logic inside the `tests` module.
-3. **Black Box Testing**: If logic must stay in `main`, tests should only check if `main()` compiles and runs without panicking, OR capture stdout (advanced).
-4. **Call `super`**: Tests must use `use super::*;` and call the user's functions. If the user hasn't implemented the function correctly, the test should fail because of the user's code, not because the test is "smart".
+#### The Core Principles:
+
+1. **Compiler-First Pedagogy**: For syntax/compilation exercises, the best "test" is a test that **fails to compile** until the user fixes the code.
+2. **Encapsulation**: Always move the logic to be tested into a separate function.
+3. **No Solution Leaks**: Do NOT use the keywords or logic required for the solution (e.g., `mut`, `as`, `&`, specific formulas) inside the test code.
+4. **Contract Testing**: Tests define _what_ the output should be, never _how_ to get there.
+
+#### ❌ Bad Example (Spoiled)
+
+```rust
+// The test reveals that the solution is to use 'as i64'
+#[test]
+fn test_spoiler() {
+    let x: i32 = 42;
+    let y: i64 = 42;
+    assert_eq!(x as i64, y);
+}
+```
+
+#### ✅ Good Example (Contract)
+
+```rust
+// The test calls the user's function.
+// If the user doesn't use the correct syntax/logic in their function,
+// the test will either fail to compile or fail the assertion.
+#[test]
+fn test_contract() {
+    // We expect 42 (i32) and 42 (i64) to be treated as equal by the user's logic
+    assert!(check_equality(42, 42));
+}
+```
 
 ### Test Guidelines
 
