@@ -106,7 +106,7 @@ Every exercise file should follow this structure:
 // Expected Output:
 // <What should appear in the terminal when correct>
 //
-// Execute: cargo run --bin <exercise_name>
+// Execute: cargo run
 //
 // Hints:
 // 1. <Gradual hint - starts vague>
@@ -157,7 +157,7 @@ Each module folder in `src/exercises/` contains:
 Always verify the user's solution by running:
 
 ```
-cargo run --bin <exercise_name>
+cargo run -- run <exercise_name>
 ```
 
 If there are compilation errors, explain them in simple terms.

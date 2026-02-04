@@ -22,8 +22,7 @@ This workflow automates the transition to the next exercise.
    - Example: "Calling /start <new_exercise_name>"
 
 4. **Verify Environment**
-   // turbo
-   - Run `cargo check --bin <new_exercise_name>` to ensure the logical next step is ready (it should fail or warn, as it's an exercise).
+   - **Verify creation**: Ensure the file exists. Do NOT add to Cargo.toml or run cargo check.
 
 5. **Handover**
    - Present the new file to the user.

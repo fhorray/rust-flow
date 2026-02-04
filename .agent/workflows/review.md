@@ -8,10 +8,9 @@ This workflow acts as a code reviewer to ensure idiomatic Rust.
 
 ## Steps for AI
 
-1. **Linter Check**
-   // turbo
-   - Run `cargo clippy --bin <exercise_name>`
-   - Report any clippy warnings.
+1. **Static Analysis**
+   - Check if the code compiles using `cargo run -- run <exercise_name>`.
+   - Manually inspect for common clippy warnings (needless return, unused variables, etc).
 
 2. **Idiomatic Analysis**
    - Read the user's code.

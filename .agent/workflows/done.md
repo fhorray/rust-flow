@@ -64,7 +64,7 @@ Example: `/done struggled with shadowing concept`
    - Add time to Time Spent
    - Change status to 🟡 if first exercise, ✅ if all done
 
-5. Run `cargo run --bin <exercise>` to verify it compiles
+5. Run `cargo run -- run <exercise>` to verify it compiles
 
 6. If it compiles successfully:
 

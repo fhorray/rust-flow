@@ -14,8 +14,8 @@ This workflow provides hints without giving away the answer immediately.
 
 2. **Check for Errors**
    // turbo
-   - Run `cargo check --bin <exercise_name> --message-format=short`
-   - Analyze the output.
+   - Compile to check errors: `rustc <path_to_exercise.rs> --emit=metadata -o temp_check` (clean up temp file after)
+   - OR run `cargo run -- run <exercise_name>` and capture compilation output.
 
 3. **Determine Hint Level**
    - **Level 1 (First ask)**: Point to the general concept or specific line causing trouble. Do not show code fix.

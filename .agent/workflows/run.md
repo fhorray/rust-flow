@@ -15,7 +15,7 @@ Quick shortcut to run the current exercise without typing the full command.
 
 2. **Execute**
    // turbo
-   - Run `cargo run --bin <exercise_name>`
+   - Run `cargo run -- run <exercise_name>`
 
 3. **Analyze Output**
    - If **success** (exit code 0):

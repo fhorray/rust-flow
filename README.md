@@ -47,6 +47,20 @@ git checkout -b learning-v2  # or any name you like
 
 > 💡 The `main` branch always contains the clean template. Your progress is saved in your learning branch.
 
+### Saving Your Progress to GitHub
+
+If you want to save your progress to your own GitHub repository:
+
+```bash
+# 1. Create a new repository on GitHub (empty)
+
+# 2. Point remote to your repository
+git remote set-url origin https://github.com/YOUR_USERNAME/my-rust-learning.git
+
+# 3. Push your learning branch
+git push -u origin learning
+```
+
 ## 🎮 Commands
 
 ### Antigravity Chat Commands
