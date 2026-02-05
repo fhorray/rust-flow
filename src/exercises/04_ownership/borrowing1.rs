@@ -26,6 +26,7 @@ fn main() {
     println!("s is still {}", s);
 
     // Using `r` and `s` together proves `s` wasn't moved.
+    assert_eq!(r, "hello");
 }
 
 #[cfg(test)]

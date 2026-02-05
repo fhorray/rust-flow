@@ -5,18 +5,26 @@ Difficulty: ⭐
 Topic: Smart Pointers - Box
 
 Description:
-`Box<T>` allocates data on the heap.
-It is a smart pointer that owns the data.
-When the Box goes out of scope, the data is dropped.
+`Box<T>` is the simplest smart pointer in Rust. It allows you to store data on the heap rather than the stack.
+What remains on the stack is the pointer to the heap data.
+This is useful when:
+1. You have a type whose size can't be known at compile time (recursive types).
+2. You want to transfer ownership of a large amount of data without copying it.
 
-Your task is to create a Box containing the value 5.
+Your task is to create a `Box` that stores the integer `5` on the heap.
+
+Hints:
+1. `Box::new(value)`
 */
 
 fn main() {
-    // TODO: Create a Box
+    // TODO: Create a Box containing 5
     // let b = ...;
 
-    println!("b = {}", b); // This should fail
+    // println!("b = {}", b);
+
+    // Check if it works like a number
+    // assert_eq!(*b, 5);
 }
 
 #[cfg(test)]

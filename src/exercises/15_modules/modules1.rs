@@ -5,16 +5,26 @@ Difficulty: ⭐
 Topic: Modules - Definition
 
 Description:
-Modules organize code into groups.
-You can define a module using `mod name { ... }`.
+Modules allow you to organize your code into separate namespaces.
+This helps manage complexity and privacy.
+You can define a module using the `mod` keyword followed by the name and a block `{ ... }`.
 
-Your task is to define a module named `sausage_factory` and a public function `make_sausage` inside it.
+Your task is to:
+1. Define a module named `sausage_factory`.
+2. Inside it, define a **public** function named `make_sausage` that prints "Sausage!".
+
+Hints:
+1. `mod name { ... }`
+2. Functions are private by default. Use `pub fn` to make them accessible outside the module.
 */
 
-// TODO: Define module and function
-// mod sausage_factory { ... }
+// TODO: Define module `sausage_factory` and function `make_sausage`
+// mod sausage_factory {
+//     pub fn make_sausage() { ... }
+// }
 
 fn main() {
+    // Uncomment this line to check your work
     // sausage_factory::make_sausage();
 }
 

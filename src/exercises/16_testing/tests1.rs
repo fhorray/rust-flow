@@ -5,18 +5,20 @@ Difficulty: ⭐
 Topic: Testing - Assertions
 
 Description:
-Tests are Rust functions that verify that the non-test code is functioning in the expected manner.
-The bodies of test functions typically perform some setup, run the code we want to test, then assert whether the result is what we expect.
+Tests are special functions annotated with `#[test]` that verify your code behaves as expected.
+The `assert!` macro checks that a boolean expression is `true`. If it is `false`, the test panics and fails.
 
-Your task is to fix the test so it passes.
-`assert!` checks that the boolean expression is true.
+Your task is to fix the assertion in the test function so that it passes.
+
+Hints:
+1. Make the condition inside `assert!(...)` evaluate to true.
 */
 
 #[cfg(test)]
 mod tests {
     #[test]
     fn you_can_assert() {
-        // TODO: Fix the assertion
+        // TODO: Fix the assertion to make the test pass
         assert!(1 == 2);
     }
 }

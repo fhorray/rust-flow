@@ -5,12 +5,17 @@ Difficulty: ⭐
 Topic: HashMap - Creation
 
 Description:
-A `HashMap` stores keys and values.
-It requires `use std::collections::HashMap;`.
+A `HashMap` stores mappings of keys to values. Keys must be unique.
+It is not included in the prelude, so you must import it: `use std::collections::HashMap;`.
 
 Your task is to:
-1. Create a new HashMap called `scores`.
-2. Insert ("Blue", 10) and ("Yellow", 50).
+1. Create a new, mutable HashMap called `scores`.
+2. Insert a team name (String) "Blue" with score 10.
+3. Insert a team name (String) "Yellow" with score 50.
+
+Hints:
+1. `HashMap::new()`
+2. `scores.insert(key, value)`
 */
 
 use std::collections::HashMap;
@@ -20,10 +25,12 @@ fn main() {
     // let mut scores = ...;
 
     // TODO: Insert values
-    // scores.insert(String::from("Blue"), 10);
-    // scores.insert(String::from("Yellow"), 50);
+    // scores.insert(...);
+    // scores.insert(...);
 
-    // println!("{:?}", scores);
+    // Verify
+    // assert_eq!(scores.get("Blue"), Some(&10));
+    // assert_eq!(scores.get("Yellow"), Some(&50));
 }
 
 #[cfg(test)]

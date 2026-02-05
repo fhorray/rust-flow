@@ -5,27 +5,36 @@ Difficulty: ⭐
 Topic: Async - Future
 
 Description:
-Async functions return a `Future`.
-To run a future, you need an executor (like `tokio`) or use `.await` inside another async function.
+Asynchronous programming allows you to handle many tasks concurrently without creating a thread for each one.
+In Rust, an `async fn` returns a `Future`, which is a value that represents a computation that may finish later.
+Just calling an `async fn` doesn't run it; you need to poll it (usually via an executor or `.await`).
 
-Your task is to define an async function `hello` that returns "world".
+Your task is to define an async function named `hello` that returns the string literal "world".
+
+Hints:
+1. Syntax: `async fn name() -> Type { ... }`
 */
 
 use std::future::Future;
 
-// TODO: Define async function
-// async fn hello() -> &'static str { ... }
+// TODO: Define async function `hello`
+// async fn hello() ...
 
 fn main() {
-    // let future = hello();
-    // In a real async runtime, we would await this.
-    // Here we just check the type.
+    let future = hello();
+    // In a real program, we would use an executor like:
+    // block_on(future);
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn test_main_runs() {
-        super::main();
+    fn test_hello_returns_future() {
+        let f = hello();
+        // Check that it implements Future
+        fn assert_future<T: Future<Output = &'static str>>(_: T) {}
+        assert_future(f);
     }
 }

@@ -5,23 +5,31 @@ Difficulty: ⭐
 Topic: Iterators - Basics
 
 Description:
-Iterators allow you to perform a task on a sequence of items.
-You create an iterator by calling `.iter()` on a collection.
+Iterators provide a way to process a sequence of elements.
+In Rust, the `Iterator` trait requires a method `next`, which returns an `Option<Item>`.
+- `Some(value)` when there is a value.
+- `None` when the iteration is finished.
 
-Your task is to create an iterator for `v` and print the first element.
+You can create an iterator from a vector using `.iter()`.
+Note that iterators are lazy: they don't do anything until you call methods to consume them.
+Also, the iterator itself needs to be `mut` because calling `next()` changes its internal state.
+
+Your task is to:
+1. Create a mutable iterator `iter` from the vector `v`.
+2. Use `.next()` to retrieve the first value (which should be 1).
 */
 
 fn main() {
     let v = vec![1, 2, 3];
 
-    // TODO: Create iterator
-    let mut iter = v.iter();
+    // TODO: Create a mutable iterator
+    // let mut iter = ...;
 
-    // TODO: Print the first item
-    println!("First: {:?}", iter.next());
+    // TODO: Get the first item
+    // let item = ...;
 
-    // Check next item
-    assert_eq!(iter.next(), Some(&2));
+    // println!("First item: {:?}", item);
+    // assert_eq!(item, Some(&1));
 }
 
 #[cfg(test)]

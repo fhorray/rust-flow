@@ -5,20 +5,24 @@ Difficulty: ⭐
 Topic: Generics - Definition
 
 Description:
-Generics allow you to write code that works with multiple types.
-`Vec<T>` is a generic type where `T` is the type of elements.
+Generics allow you to write code that works with different types.
+A generic type is often denoted by `<T>`, where `T` is a placeholder for the actual type.
+For example, `Vec<T>` is a generic struct. It can be a `Vec<i32>`, `Vec<String>`, etc.
 
-Your task is to create a vector of strings.
+Your task is to fix the type annotation of the vector `v` so that it can store strings.
+Currently, it is set to `Vec<u8>`, but we try to push a `String` into it.
+
+Hints:
+1. Change `Vec<u8>` to `Vec<String>`.
 */
 
 fn main() {
-    // TODO: Create a vector of strings
-    let v: Vec<String> = Vec::new(); // Fix this
+    // TODO: Fix the generic type parameter
+    let mut v: Vec<u8> = Vec::new();
 
-    // v.push("hello"); // Type mismatch if v is Vec<i32> for example
-    // v.push(String::from("hello"));
+    v.push(String::from("hello"));
 
-    println!("{:?}", v);
+    println!("v: {:?}", v);
 }
 
 #[cfg(test)]

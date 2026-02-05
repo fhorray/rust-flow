@@ -5,15 +5,19 @@ Difficulty: ⭐⭐⭐⭐⭐
 Topic: Final Project
 
 Description:
-This is the final boss!
-You need to implement a simple command-line tool `grep-lite`.
-It should:
-1. Accept a pattern and a filename as arguments.
-2. Read the file.
-3. Print lines that contain the pattern.
+This is the final challenge! You will implement a simplified version of `grep` (Global Regular Expression Print).
+Your tool should search for a specified pattern in a file and print the matching lines.
 
-Use `std::env::args`, `std::fs::File`, `std::io::BufReader`.
-Handle errors gracefully.
+The skeleton code is provided but incomplete.
+You need to:
+1. Implement `Config::new` to parse command line arguments.
+2. Implement `run` to read the file and search for the pattern.
+
+Use `std::env::args`, `std::fs::File`, and `std::io::BufReader`.
+
+Hints:
+1. `args.next()` gives an Option.
+2. `BufReader::new(file).lines()` gives an iterator over lines.
 */
 
 use std::env;
@@ -45,39 +49,44 @@ impl Config {
 }
 
 fn run(config: Config) -> Result<(), io::Error> {
-    let file = File::open(config.filename)?;
-    let reader = BufReader::new(file);
+    // TODO: Open the file and read lines
+    // If a line contains `config.pattern`, print it.
 
-    for line in reader.lines() {
-        let line = line?;
-        if line.contains(&config.pattern) {
-            println!("{}", line);
-        }
-    }
-
+    // We return Ok(()) here to make it compile, but the logic is missing!
     Ok(())
 }
 
 fn main() {
-    // This is just a skeleton.
-    // In a real run, we would parse args.
-    // For testing, we mock it.
-
-    // let config = Config::new(env::args()).unwrap_or_else(|err| {
-    //     eprintln!("Problem parsing arguments: {}", err);
-    //     std::process::exit(1);
-    // });
-
-    // if let Err(e) = run(config) {
-    //     eprintln!("Application error: {}", e);
-    //     std::process::exit(1);
-    // }
+    // We can't easily test CLI args here, but the tests below check logic.
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+    use std::io::Write;
+
     #[test]
-    fn test_main_runs() {
-        super::main();
+    fn test_config_new() {
+        let config = Config { pattern: "test".to_string(), filename: "test.txt".to_string() };
+        assert_eq!(config.pattern, "test");
+    }
+
+    #[test]
+    fn test_run_logic() {
+        // We can't easily mock stdout in this simple setup without changing the signature of run to take a writer.
+        // However, we can check that it doesn't panic on a non-existent file?
+        // Actually, for this exercise, we want it to FAIL if logic isn't implemented.
+        // But since we can't inspect stdout, a common pattern is to make `run` return something or write to a buffer.
+        // For simplicity in this TUI context, we will rely on manual verification or compilation checks
+        // that force the user to write code (like the TODOs).
+        // A real test would require refactoring `run` to take `impl Write`.
+
+        // Let's at least check that it returns an error for a missing file, which implies `File::open` was called.
+        let config = Config { pattern: "test".to_string(), filename: "non_existent_file_12345.txt".to_string() };
+        let result = run(config);
+
+        // If the user implemented `File::open`, this should be an Error.
+        // If they left it empty (just `Ok(())`), it will be Ok, which is WRONG.
+        assert!(result.is_err(), "run() should attempt to open the file and return an error if it doesn't exist");
     }
 }

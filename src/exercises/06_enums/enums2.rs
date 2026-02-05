@@ -5,18 +5,23 @@ Difficulty: ⭐⭐
 Topic: Enums - Variants with Data
 
 Description:
-Enum variants can store data, just like structs.
-- `Quit`: no data
-- `Echo`: String
-- `Move`: anonymous struct { x: i32, y: i32 }
-- `ChangeColor`: tuple (i32, i32, i32)
+Rust enums are powerful because each variant can optionally hold data.
+This means you can encode different types of information in a single enum type.
+- `Quit`: no data associated.
+- `Echo`: holds a `String`.
+- `Move`: holds an anonymous struct with fields `x` and `y` (both integers).
+- `ChangeColor`: holds a tuple of three integers (r, g, b).
 
-Your task is to define `Message` with these variants.
+Your task is to define the `Message` enum variants to hold this data.
+
+Hints:
+1. Syntax for tuple variant: `Name(Type, Type)`
+2. Syntax for struct variant: `Name { field: Type, ... }`
 */
 
 #[derive(Debug)]
 enum Message {
-    // TODO: Define the variants with their data
+    // TODO: Define the variants with their expected data types
     Quit,
     Echo,
     Move,
@@ -37,8 +42,24 @@ fn main() {
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn test_main_runs() {
-        super::main();
+    fn test_echo() {
+        if let Message::Echo(s) = Message::Echo(String::from("test")) {
+            assert_eq!(s, "test");
+        } else {
+            panic!("Echo did not match");
+        }
+    }
+
+    #[test]
+    fn test_move() {
+        if let Message::Move { x, y } = (Message::Move { x: 1, y: 2 }) {
+            assert_eq!(x, 1);
+            assert_eq!(y, 2);
+        } else {
+            panic!("Move did not match");
+        }
     }
 }

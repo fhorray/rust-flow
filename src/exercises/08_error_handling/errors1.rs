@@ -5,15 +5,20 @@ Difficulty: ⭐
 Topic: Error Handling - Panic
 
 Description:
-The simplest way to handle an error is to `panic!`. This stops the program immediately.
+In Rust, there are two main ways to handle errors: unrecoverable (panic) and recoverable (Result).
+`panic!` is a macro that stops execution, unwinds the stack, and prints an error message.
+It should be used when the program is in an unrecoverable state or a contract violation has occurred.
 
-Your task is to make the `generate_nametag_text` function panic if the name is empty.
-The message should be "Empty names aren't allowed".
+Your task is to modify `generate_nametag_text` to `panic!` if the input `name` is empty.
+The panic message should be "Empty names aren't allowed".
+
+Hints:
+1. `panic!("Message")`
 */
 
 fn generate_nametag_text(name: String) -> String {
     if name.is_empty() {
-        // TODO: Panic here
+        // TODO: Panic with the message "Empty names aren't allowed"
         String::new()
     } else {
         format!("Hi! My name is {}", name)
@@ -21,15 +26,24 @@ fn generate_nametag_text(name: String) -> String {
 }
 
 fn main() {
-    let empty = String::new();
-    // generate_nametag_text(empty); // Should panic
+    let _ = generate_nametag_text(String::from("Alice"));
+
+    // This should panic:
+    // let _ = generate_nametag_text(String::new());
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    #[should_panic]
-    fn test_main_runs() {
-        super::generate_nametag_text(String::new());
+    fn test_valid_name() {
+        assert_eq!(generate_nametag_text("Alice".to_string()), "Hi! My name is Alice");
+    }
+
+    #[test]
+    #[should_panic(expected = "Empty names aren't allowed")]
+    fn test_empty_name() {
+        generate_nametag_text(String::new());
     }
 }
