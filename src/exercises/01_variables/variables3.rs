@@ -5,13 +5,17 @@ Difficulty: ⭐⭐
 Topic: Variables - Scope
 
 Description:
-Variables in Rust have a "scope" - they are only valid within the block `{}` where they are declared.
-The variable `x` is defined inside an inner block, but the code attempts to access it in the outer block.
+Variables in Rust are valid only within the "scope" where they are declared.
+A scope usually begins with a curly brace `{` and ends with a closing curly brace `}`.
+When a variable goes out of scope, it is dropped and cannot be accessed anymore.
 
-Your task is to fix the code so that `x` is accessible where it is used.
+The variable `x` is defined inside an inner block (a new scope), but the code attempts to access it in the outer block.
+
+Your task is to fix the code so that `x` is accessible where it is used in the `println!` statement outside the block.
 
 Hints:
-1. You can declare `x` in the outer scope (before the inner block) so it remains valid.
+1. You can verify where `x` is declared.
+2. Consider declaring `x` before the inner block starts.
 */
 
 fn main() {
@@ -23,21 +27,10 @@ fn main() {
     println!("Outer x is {}", x);
 }
 
-fn practice() {
-    let x = 5;
-    {
-        let x = 10; // Shadows the outer x
-        println!("Inner x is {}", x);
-    }
-    // Expected: 5
-    println!("Outer x is {}", x);
-}
-
 #[cfg(test)]
 mod tests {
     #[test]
     fn test_main_runs() {
         super::main();
-        super::practice();
     }
 }

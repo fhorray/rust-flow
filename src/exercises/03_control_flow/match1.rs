@@ -5,14 +5,22 @@ Difficulty: ⭐
 Topic: Match
 
 Description:
-The `match` control flow construct is like a switch statement in other languages, but more powerful.
-It allows you to compare a value against a series of patterns and execute code based on which pattern matches.
+The `match` control flow construct is like a switch statement in other languages, but more powerful and safe.
+It forces you to handle *every possible case*.
+You can use the wildcard `_` to match "anything else".
 
-Your task is to write a match expression that checks `number`:
-- If 1, print "One"
-- If 2, print "Two"
-- If 3, print "Three"
-- Use `_` (underscore) for any other value and print "Other".
+Your task is to write a match expression that checks `number` and prints:
+- "One" if it is 1
+- "Two" if it is 2
+- "Three" if it is 3
+- "Other" for any other number.
+
+Hints:
+1. Syntax:
+   match value {
+       pattern => code,
+       _ => code,
+   }
 */
 
 fn main() {

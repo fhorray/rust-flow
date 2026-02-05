@@ -2,16 +2,22 @@
 
 /*
 Difficulty: ⭐
-Topic: Functions
+Topic: Functions - Definition
 
 Description:
-Functions are the building blocks of Rust code.
-The `main` function is the entry point of every program.
+Functions are the primary way code is executed in Rust.
+They are declared using the `fn` keyword.
+Rust uses "snake_case" as the conventional style for function names (lowercase with underscores).
 
-Your task is to define a new function named `call_me` and call it from `main`.
+The `main` function is special: it's the entry point of every executable Rust program.
+
+Your task is to:
+1. Define a new function named `call_me` outside of `main`.
+2. Call this function inside `main`.
 
 Hints:
-1. `fn call_me() { ... }`
+1. Function definition: `fn function_name() { ... }`
+2. Function call: `function_name();`
 */
 
 fn main() {

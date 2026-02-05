@@ -5,12 +5,16 @@ Difficulty: ⭐
 Topic: Structs - Instantiation
 
 Description:
-To use a struct, you create an instance of it by specifying values for each field.
-You access fields using dot notation.
+To use a struct, you create an "instance" of it by specifying concrete values for each field.
+You access fields using dot notation (e.g., `instance.field`).
 
 Your task is to:
-1. Create an instance of `Color` named `red` with values (255, 0, 0).
-2. Print the red value.
+1. Create an instance of the `Color` struct named `red`.
+2. Set its values to: red=255, green=0, blue=0.
+3. Print the red component.
+
+Hints:
+1. Syntax: `let instance = StructName { field: value, ... };`
 */
 
 struct Color {
@@ -20,10 +24,12 @@ struct Color {
 }
 
 fn main() {
-    // TODO: Create an instance
+    // TODO: Create an instance named `red`
     // let red = ...;
 
+    // Uncomment and fix if needed:
     // println!("Red component is {}", red.red);
+
     // assert_eq!(red.red, 255);
 }
 

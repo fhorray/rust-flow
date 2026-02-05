@@ -2,15 +2,22 @@
 
 /*
 Difficulty: ⭐⭐
-Topic: Functions - Implicit Return
+Topic: Functions - Expressions vs Statements
 
 Description:
-In Rust, the last expression in a function block is the return value.
-If you put a semicolon `;` at the end, it becomes a statement and returns `()` (unit type).
+In Rust, the distinction between expressions and statements is important.
+- **Expressions** evaluate to a value (e.g., `5 + 5`, `x`).
+- **Statements** perform an action and do not return a value (usually ending with `;`).
 
-The function `square` is supposed to return the square of a number, but it currently returns `()`.
+A function body is a block of code. If the last line of the block is an expression (no semicolon), that value is returned.
+If the last line is a statement (ends with semicolon), the function returns `()` (unit).
 
-Your task is to remove the semicolon at the end of the function body.
+The function `square` below is declared to return an `i32`, but the body ends with a semicolon, making it a statement.
+
+Your task is to fix the function so it returns the squared value.
+
+Hints:
+1. Remove the semicolon `;` at the end of the line `num * num;`.
 */
 
 fn main() {
@@ -18,15 +25,18 @@ fn main() {
     println!("The square of 3 is {}", answer);
 }
 
-// TODO: Fix the return value
+// TODO: Fix the return value by converting the statement into an expression
 fn square(num: i32) -> i32 {
-    num * num; // Remove this semicolon!
+    num * num;
 }
 
 #[cfg(test)]
 mod tests {
+    use super::*;
+
     #[test]
-    fn test_main_runs() {
-        super::main();
+    fn test_square() {
+        assert_eq!(square(2), 4);
+        assert_eq!(square(5), 25);
     }
 }

@@ -5,10 +5,14 @@ Difficulty: ⭐⭐
 Topic: Functions - Multiple Parameters
 
 Description:
-Functions can take multiple parameters, separated by commas.
-Each parameter must have a type annotation.
+Functions can accept multiple parameters, separated by commas.
+Each parameter must have its own name and type.
 
-Your task is to fix the `call_me` function to accept an integer `num` and a boolean `check`.
+Your task is to fix the `call_me` function signature so that it accepts an integer `num` AND a boolean `check`.
+
+Hints:
+1. Ensure both parameters are present in the definition.
+2. Ensure the order of arguments in the call matches the definition.
 */
 
 fn main() {

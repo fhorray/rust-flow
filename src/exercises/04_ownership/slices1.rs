@@ -5,10 +5,19 @@ Difficulty: ⭐
 Topic: Slices - String Slices
 
 Description:
-A string slice (`&str`) is a reference to a part of a `String`.
-It allows you to view a portion of the string without copying it.
+A string slice (`&str`) is a reference to a sequence of bytes in memory (usually part of a `String`).
+It allows you to view a portion of the string efficiently without copying the data.
+Slices are created using the range syntax `[start..end]`.
+- `start` is the starting index (inclusive).
+- `end` is the ending index (exclusive).
 
-Your task is to create a slice `hello` that contains "Hello" and `world` that contains "World" from `s`.
+Your task is to create two slices from the string `s`:
+1. `hello` containing "Hello"
+2. `world` containing "World"
+
+Hints:
+1. "Hello" is at indices 0 to 5 (bytes).
+2. "World" starts at index 6.
 */
 
 fn main() {

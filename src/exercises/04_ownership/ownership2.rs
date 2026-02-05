@@ -2,22 +2,31 @@
 
 /*
 Difficulty: ⭐
-Topic: Ownership - Move
+Topic: Ownership - Clone
 
 Description:
-Strings are heap-allocated, so they are not `Copy`.
-When you assign `s1` to `s2`, `s1` is invalidated.
+Sometimes you *do* want two variables to have their own copies of the same data.
+Since `String` stores data on the heap, copying it is expensive (it requires allocation), so Rust doesn't do it implicitly.
+To force a deep copy of the heap data, you can use the `.clone()` method.
 
-Your task is to fix the error by cloning `s1` so that `s2` gets a copy, and `s1` remains valid.
+The code below fails because `s1` is moved to `s2`. We want `s1` to remain valid.
+
+Your task is to use `.clone()` to assign a copy of `s1` to `s2`, so that both variables are valid independently.
+
+Hints:
+1. `let s2 = s1.clone();`
 */
 
 fn main() {
     let s1 = String::from("hello");
 
-    // TODO: Use .clone() here
+    // TODO: Use .clone() here to create a copy instead of moving
     let s2 = s1;
 
     println!("s1 = {}, s2 = {}", s1, s2);
+    // Since we want both to be valid:
+    assert_eq!(s1, "hello");
+    assert_eq!(s2, "hello");
 }
 
 #[cfg(test)]

@@ -5,10 +5,16 @@ Difficulty: ⭐
 Topic: Functions - Parameters
 
 Description:
-Rust functions require type annotations for all parameters.
-The code below defines a function `call_me` that takes an argument, but the type is missing.
+Rust functions are strict about types.
+Unlike some languages where types can be inferred in function signatures, Rust requires you to explicitly state the type of every parameter.
+This is a design choice to make function signatures self-documenting and stable.
 
-Your task is to add the type annotation for `num` (use `i32`).
+The code below defines a function `call_me` that takes one argument `num`, but the type annotation is missing.
+
+Your task is to add the type annotation for `num` so that it accepts an 32-bit integer (`i32`).
+
+Hints:
+1. Syntax: `parameter_name: Type`
 */
 
 fn main() {
