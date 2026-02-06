@@ -1,5 +1,0 @@
-[alias]
-run-cli = "run -p runner --"
-test-ex = "run -p runner -- test"
-next-ex = "run -p runner -- next"
-sync-ex = "run -p runner -- sync"

@@ -1,0 +1,23 @@
+{
+  "id": "cloudflare",
+  "name": "Cloudflare Workers",
+  "runner": {
+    "command": "bun",
+    "args": ["test", "index.test.ts"],
+    "cwd": "content/{{exercise}}"
+  },
+  "content": {
+    "root": ".",
+    "exercises": "content"
+  },
+  "setup": {
+    "checks": [
+      {
+        "name": "Bun Runtime",
+        "type": "command",
+        "command": "bun --version"
+      }
+    ],
+    "guide": "SETUP.md"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "id": "go",
+  "name": "Go",
+  "runner": {
+    "command": "go",
+    "args": ["run", "./runner/main.go", "test", "{{id}}"],
+    "cwd": "."
+  },
+  "content": {
+    "root": ".",
+    "exercises": "content"
+  },
+  "setup": {
+    "checks": [
+      {
+        "name": "Go Compiler",
+        "type": "command",
+        "command": "go version"
+      }
+    ],
+    "guide": "SETUP.md"
+  }
+}

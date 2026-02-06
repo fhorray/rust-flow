@@ -1,0 +1,37 @@
+{
+  "name": "progy",
+  "module": "index.ts",
+  "type": "module",
+  "bin": {
+    "progy": "./src/cli.ts"
+  },
+  "private": true,
+  "scripts": {
+    "dev": "bun run --hot src/backend/server.ts",
+    "build": "bun build --compile --target=bun-windows-x64 src/backend/server.ts --outfile prog.exe"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.24"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "@nanostores/query": "^0.3.4",
+    "@nanostores/react": "^1.0.0",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "commander": "^14.0.3",
+    "lucide-react": "^0.563.0",
+    "nanostores": "^1.1.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "tailwind-merge": "^3.4.0"
+  }
+}

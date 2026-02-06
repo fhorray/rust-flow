@@ -1,2 +1,3 @@
-/target
-.rustflow
+.prog
+node_modules
+target
