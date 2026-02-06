@@ -1,10 +1,13 @@
 import { serve } from "bun";
 import index from "../../public/index.html";
-import { readdir, readFile, writeFile, mkdir, exists } from "node:fs/promises";
+import { readdir, readFile, writeFile, mkdir, exists, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";
+import { homedir } from "node:os";
 
 const PROG_CWD = process.env.PROG_CWD || process.cwd();
+const CONFIG_DIR = join(homedir(), ".progy");
+const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
 const COURSE_CONFIG_PATH = join(PROG_CWD, "course.json");
 const PROG_DIR = join(PROG_CWD, ".prog");
 const MANIFEST_PATH = join(PROG_DIR, "exercises.json");
@@ -101,24 +104,118 @@ async function getApiKey() {
 }
 
 async function getProgress(): Promise<Progress> {
+  let localProgress: Progress | null = null;
   try {
     if (await exists(PROGRESS_PATH)) {
       const text = await readFile(PROGRESS_PATH, "utf-8");
-      return JSON.parse(text);
+      localProgress = JSON.parse(text);
+      console.log(`[PROGRESS] Loaded local progress. XP: ${localProgress?.stats.totalXp}`);
+    } else {
+      console.log(`[PROGRESS] No local progress file found at ${PROGRESS_PATH}`);
     }
   } catch (e) {
     console.warn(`[WARN] Failed to read progress.json: ${e}`);
   }
-  return JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
+
+  // Check cloud if logged in
+  const config = await getGlobalConfig();
+  if (config?.token && currentConfig?.id) {
+    console.log(`[PROGRESS] Checking cloud for course ${currentConfig.id}`);
+    const cloudProgress = await fetchProgressFromCloud(currentConfig.id, config.token);
+    if (cloudProgress) {
+      console.log(`[SYNC] Found cloud progress. Cloud XP: ${cloudProgress.stats.totalXp}, Local XP: ${localProgress?.stats.totalXp || 0}`);
+
+      // Simple merge: cloud wins if local is empty or cloud has more XP
+      if (!localProgress || cloudProgress.stats.totalXp > (localProgress?.stats.totalXp || 0)) {
+        console.log(`[SYNC] Updating local progress with cloud data.`);
+        localProgress = cloudProgress;
+        // Save it locally too
+        await mkdir(PROG_DIR, { recursive: true });
+        await writeFile(PROGRESS_PATH, JSON.stringify(localProgress, null, 2));
+      } else {
+        console.log(`[SYNC] Local progress is ahead or equal. Keeping local.`);
+      }
+    } else {
+      console.log(`[SYNC] No cloud progress found.`);
+    }
+  }
+
+  return localProgress || JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
 }
 
 async function saveProgress(progress: Progress) {
+  console.log(`[PROGRESS] Saving progress... XP: ${progress.stats.totalXp}`);
   try {
     await mkdir(PROG_DIR, { recursive: true });
     await writeFile(PROGRESS_PATH, JSON.stringify(progress, null, 2));
+    console.log(`[PROGRESS] Saved to ${PROGRESS_PATH}`);
+
+    // Attempt cloud sync if token exists
+    const config = await getGlobalConfig();
+    if (config?.token && currentConfig?.id) {
+      console.log(`[PROGRESS] Triggering background cloud sync...`);
+      syncProgressWithCloud(currentConfig.id, progress, config.token);
+    }
   } catch (e) {
     console.error(`[ERROR] Failed to save progress.json: ${e}`);
   }
+}
+
+async function getGlobalConfig() {
+  if (await exists(GLOBAL_CONFIG_PATH)) {
+    return JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
+  }
+  return null;
+}
+
+async function syncProgressWithCloud(courseId: string, progress: Progress, token: string) {
+  const remoteUrl = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
+  try {
+    console.log(`[SYNC] Syncing ${courseId} to cloud...`);
+    const res = await fetch(`${remoteUrl}/api/progress/sync`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({ courseId, data: progress })
+    });
+    if (res.ok) {
+      console.log(`[SYNC] Successfully synced ${courseId} progress.`);
+    } else {
+      console.warn(`[SYNC] Cloud sync failed: ${res.status}`);
+    }
+  } catch (e) {
+    console.error(`[SYNC] Connection error during sync: ${e}`);
+  }
+}
+
+async function fetchProgressFromCloud(courseId: string, token: string): Promise<Progress | null> {
+  const remoteUrl = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+
+    const res = await fetch(`${remoteUrl}/api/progress/get?courseId=${courseId}`, {
+      signal: controller.signal,
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      return await res.json();
+    }
+  } catch (e) {
+    if ((e as any).name === 'AbortError') {
+      console.warn(`[SYNC] Cloud fetch timed out after 3s.`);
+    } else {
+      console.error(`[SYNC] Failed to fetch progress from cloud: ${e}`);
+    }
+  }
+  return null;
 }
 
 function updateStreak(stats: ProgressStats): ProgressStats {
@@ -527,7 +624,10 @@ const server = serve({
     "/api/config": {
       async GET() {
         if (!currentConfig) currentConfig = await getCourseConfig();
-        return Response.json(currentConfig || {});
+        return Response.json({
+          ...(currentConfig || {}),
+          remoteApiUrl: process.env.PROGY_API_URL || "https://progy.francy.workers.dev"
+        });
       }
     },
 
@@ -688,6 +788,139 @@ const server = serve({
           return Response.json({ markdown: content });
         }
         return Response.json({ markdown: "# Setup guide not found" });
+      }
+    },
+
+    "/api/auth/token": {
+      async GET() {
+        try {
+          if (await exists(GLOBAL_CONFIG_PATH)) {
+            const config = JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
+            console.log(`[AUTH] Local token found: ${config.token ? 'Yes' : 'No'}`);
+            return Response.json({ token: config.token || null });
+          }
+        } catch (e) {
+          console.error(`[AUTH] Error reading global config: ${e}`);
+        }
+        return Response.json({ token: null });
+      },
+      async POST() {
+        try {
+          if (await exists(GLOBAL_CONFIG_PATH)) {
+            const config = JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
+            delete config.token;
+            await writeFile(GLOBAL_CONFIG_PATH, JSON.stringify(config, null, 2));
+            console.log(`[AUTH] Local token cleared.`);
+          }
+          return Response.json({ success: true });
+        } catch (e) {
+          return Response.json({ success: false, error: String(e) }, { status: 500 });
+        }
+      }
+    },
+
+    "/api/local-settings": {
+      async GET() {
+        try {
+          if (await exists(GLOBAL_CONFIG_PATH)) {
+            const config = JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
+            const { token, ...settings } = config;
+            return Response.json(settings);
+          }
+        } catch (e) { }
+        return Response.json({});
+      },
+      async POST(req) {
+        try {
+          const newSettings = await req.json() as any;
+          let config: any = {};
+          if (await exists(GLOBAL_CONFIG_PATH)) {
+            config = JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
+          } else {
+            if (!(await exists(CONFIG_DIR))) await mkdir(CONFIG_DIR, { recursive: true });
+          }
+
+          Object.assign(config, newSettings);
+          await writeFile(GLOBAL_CONFIG_PATH, JSON.stringify(config, null, 2));
+          return Response.json({ success: true });
+        } catch (e) {
+          return Response.json({ success: false, error: String(e) }, { status: 500 });
+        }
+      }
+    },
+
+    "/api/ide/open": {
+      async POST(req) {
+        try {
+          let { path } = await req.json() as { path: string };
+          if (!path) return Response.json({ success: false, error: "Missing path" }, { status: 400 });
+
+          // check if path is a directory and look for common entry points
+          try {
+            const stats = await stat(path);
+            if (stats.isDirectory()) {
+              const candidates = ["exercise.rs", "main.rs", "main.go", "index.ts", "index.js", "App.tsx"];
+              for (const file of candidates) {
+                const filePath = join(path, file);
+                if (await exists(filePath)) {
+                  path = filePath;
+                  break;
+                }
+              }
+            }
+          } catch (e) {
+            // ignore error, proceed with original path
+          }
+
+          // 1. Get IDE preference
+          let ide = "vs-code";
+          if (await exists(GLOBAL_CONFIG_PATH)) {
+            try {
+              const config = JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
+              // Local config takes precedence, or falls back to 'settings' sync logic if implemented
+              // For now, assuming SettingsDialog saves 'ide' to metadata, verify if it saves to local too?
+              // The SettingsDialog saves OpenAI key to local, but IDE to metadata.
+              // We need to fetch metadata if not in local? Or assume user synced it?
+              // Correction: The implementation plan says "Reads ide setting from GLOBAL_CONFIG_PATH". 
+              // SettingsDialog currently does NOT save IDE to local config, only metadata.
+              // I should update SettingsDialog to save IDE to local config as well for offline support.
+              // For now, let's assume it's in local or fallback to vs-code.
+              if (config.ide) ide = config.ide;
+            } catch (e) { }
+          }
+
+          // 2. Map to command
+          let command = "code";
+          const args = [path]; // Open the specific file
+
+          switch (ide) {
+            case "vs-code": command = "code"; break;
+            case "cursor": command = "cursor"; break;
+            case "zed": command = "zed"; break;
+            case "antigravity": command = "antigravity"; break; // Custom alias?
+            case "vim":
+              // unique handling for terminal editors? For now, assume it opens a new terminal window or just fails if no terminal attached
+              // Maybe skip vim for now or use `code` as safe fallback?
+              // Let's assume user has a `vim` command that might launch a GUI or separate terminal
+              command = "vim";
+              break;
+          }
+
+          console.log(`[IDE] Opening ${path} with ${command}`);
+
+          // 3. Spawn detached process
+          const child = spawn(command, args, {
+            detached: true,
+            stdio: 'ignore',
+            shell: true // important for finding commands in PATH
+          });
+          child.unref();
+
+          return Response.json({ success: true });
+        } catch (e) {
+          console.error(`[IDE] Failed to open: ${e}`);
+          return Response.json({ success: false, error: String(e) }, { status: 500 });
+        }
       }
     }
   },

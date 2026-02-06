@@ -5,6 +5,7 @@ import { Card } from './ui/card';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
 import { $selectedExercise, $results } from '../stores/course-store';
+import { OpenInIdeButton } from './open-in-ide-button';
 
 interface ExerciseCardProps {
   isRunning: boolean;
@@ -61,9 +62,12 @@ export function ExerciseCard({
                 selectedExercise.module.replace(/_/g, ' ')}
             </span>
             <span className="text-zinc-700">•</span>
-            <code className="bg-zinc-800/50 px-1.5 py-0.5 rounded text-zinc-400 text-[10px]">
+            <OpenInIdeButton
+              path={selectedExercise.path}
+              className="bg-zinc-800/50 hover:bg-zinc-700/50 px-2 py-1 rounded text-zinc-400 hover:text-zinc-300 text-[10px] w-auto h-auto transition-colors font-mono"
+            >
               {selectedExercise.path.split('prog').pop()}
-            </code>
+            </OpenInIdeButton>
           </p>
         </div>
         <div className="flex items-center gap-2">

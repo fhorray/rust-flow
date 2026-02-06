@@ -32,9 +32,15 @@ import {
 } from './stores/course-store';
 import { $viewMode, setViewMode } from './stores/ui-store';
 import { ChallengeGenerator } from './components/challenge-generator';
-import { Navbar } from './components/Navbar';
+import { Navbar } from './components/navbar';
+import { UserNav } from './components/user-nav';
+import { fetchLocalSettings } from './stores/user-store';
 
 export function App() {
+  // ...
+  useEffect(() => {
+    fetchLocalSettings();
+  }, []);
   const selectedExercise = useStore($selectedExercise);
   const exerciseGroups = useStore($exerciseGroups);
   const exerciseGroupsQuery = useStore($exerciseGroupsQuery);

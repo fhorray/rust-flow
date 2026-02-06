@@ -11,6 +11,7 @@ import {
   $completedCount,
   $totalExercises,
 } from '../stores/course-store';
+import { UserNav } from './user-nav';
 
 interface NavbarProps {
   onGenerateChallenge: () => void;
@@ -160,6 +161,10 @@ export function Navbar({ onGenerateChallenge }: NavbarProps) {
             <Wand2 className="w-4 h-4 mr-2" />
             Gerar Desafio
           </Button>
+
+          <div className="h-8 w-[1px] bg-zinc-800/50 mx-1" />
+
+          <UserNav />
         </div>
       </div>
     </nav>

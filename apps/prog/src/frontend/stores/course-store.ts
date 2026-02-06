@@ -124,3 +124,16 @@ export const getAiHint = async () => {
     $isAiLoading.set(false);
   }
 };
+
+// Sync Results with Progress when loaded
+$progress.subscribe(progress => {
+  if (progress && progress.exercises) {
+    const newResults: Record<string, TestStatus> = {};
+    for (const [id, data] of Object.entries(progress.exercises)) {
+      newResults[id] = data.status;
+    }
+    // Only update if different to avoid cycles/jitter? 
+    // Map set is cheap.
+    $results.set(newResults);
+  }
+});

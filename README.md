@@ -1,159 +1,128 @@
-# Progy Course Creator Guide
+# Progy
 
-Welcome to Progy! This guide explains how to create courses, write lessons, add rich media, and configure quizzes.
+**Progy** is a modern, interactive code learning platform designed to make mastering new languages engaging and effective. It combines a powerful CLI companion with a beautiful web dashboard to provide a seamless "local-first, cloud-synced" learning experience.
 
-## 📚 Course Structure
+![Progy Banner](https://placehold.co/1200x400/0f0f11/ce412b?text=Progy+Platform)
 
-Values in `{{ }}` are placeholders.
+## ✨ Features
 
-```
-my-course/
-├── course.json          # Main configuration file
-├── SETUP.md             # Setup instructions for the student
-├── content/             # Course content directory
-│   ├── 01_module_name/  # Modules are directories
-│   │   ├── intro/       # Lessons are sub-directories
-│   │   │   ├── README.md   # Lesson instructions (Markdown)
-│   │   │   ├── main.rs     # Starter code (or main.go, index.ts, etc.)
-│   │   │   └── quiz.json   # (Optional) Quiz for this lesson
-│   │   └── info.toml    # Module metadata (title, ordering)
-│   └── ...
-└── runner/              # (Optional) Custom runner logic (for Go, etc.)
-```
+- **Interactive CLI**: Learn directly in your terminal with the `progy` CLI. It manages your efficient workflow.
+- **Web Dashboard**: Track your progress, view rich lesson details (Markdown, Videos), and manage your courses in a sleek, modern interface.
+- **IDE Integration**: Open exercises directly in your favorite editor (**VS Code**, **Cursor**, **Zed**, **Vim**) with a single click. intelligent file detection ensures you open the right file.
+- **Progress Sync**: Never lose your streak. Your progress is synced automatically between your local machine (`progress.json`) and the cloud.
+- **Gamification**: Earn XP, maintain daily streaks, and collect badges as you conquer concepts.
+- **Smart Feedback**: Get instant, helpful feedback on your code. The runner analyzes your output to provide specific hints.
+- **Integrated Quizzes**: Validate your knowledge with multiple-choice questions before moving to coding challenges.
 
-### Quick Start
+## 🚀 Getting Started
 
-Use the CLI to scaffold a new course:
+### Prerequisites
+
+- **[Bun](https://bun.sh/)** (v1.0.0 or higher) - Required for the runtime.
+- **[Rust](https://www.rust-lang.org/)** (Recommended) - If you plan to take the Rust course.
+
+### Installation
+
+1.  **Clone the repository**:
+
+    ```bash
+    git clone https://github.com/yourusername/progy.git
+    cd progy
+    ```
+
+2.  **Install dependencies**:
+
+    ```bash
+    bun install
+    ```
+
+3.  **Start the development environment**:
+    ```bash
+    bun run dev
+    ```
+    This will start both the Next.js frontend (on port 3000) and the Hono backend (on port 3001).
+
+## 🛠️ Usage
+
+### Starting the CLI
+
+To interact with the course content and run exercises, use the CLI:
 
 ```bash
-bunx progy create-course --name my-rust-course --course rust
+# Run locally
+bun run progy
 ```
 
----
+### Initializing a Course
 
-## 📝 Writing Content
+To start a new course or resume an existing one in your current directory:
 
-Each lesson is a directory inside `content/<module>/`. It **must** contain:
+```bash
+# Initialize and start the course runner
+bunx progy init
 
-1.  **`README.md`**: The lesson text, instructions, and theory.
-2.  **Code File**: The starting code for the student (e.g., `main.rs`, `main.go`).
-
-### Rich Content Tags
-
-You can enhance your `README.md` with special directives that Progy renders beautifully:
-
-#### Callouts / Notes
-
-Use `::note[]` to highlight important information.
-
-```markdown
-::note[Don't forget to borrow the variable here!]
+# Or specify a course template if starting fresh (e.g. rust, go)
+bunx progy init --course rust
 ```
 
-> Renders as a styled blockquote with a 📝 icon.
+### Creating a New Course
 
-#### Videos
+If you want to create a brand new course structure from scratch:
 
-Use `::video[]` to embed a video player.
-
-```markdown
-::video[https://www.youtube.com/watch?v=dQw4w9WgXcQ]
+```bash
+bunx progy create-course --name my-awesome-course --course rust
+cd my-awesome-course
+bunx progy init
 ```
 
-> Renders an embedded YouTube player. Also supports direct `.mp4` links.
+### Authorization
 
----
+Authenticate with GitHub to enable cloud synchronization and advanced features:
 
-## 🧠 Integrated Quizzes
-
-You can add a quiz to any lesson by creating a `quiz.json` file in the lesson directory.
-
-**File:** `content/01_module/lesson1/quiz.json`
-
-```json
-{
-  "title": "Check Your Understanding",
-  "questions": [
-    {
-      "id": "q1",
-      "type": "multiple-choice",
-      "question": "Which keyword is used to define a variable in Rust?",
-      "options": [
-        { "id": "a", "text": "var", "isCorrect": false },
-        {
-          "id": "b",
-          "text": "let",
-          "isCorrect": true,
-          "explanation": "Correct! 'let' binds a value to a variable."
-        },
-        { "id": "c", "text": "const", "isCorrect": false }
-      ]
-    }
-  ]
-}
+```bash
+bunx progy login
 ```
 
-- **`explanation`**: (Optional) Text shown after the user answers, explaining why they were right or wrong.
+This will open a browser window to authorize your device.
 
----
+### Studying
 
-## ⚙️ Configuration (`course.json`)
+1.  Navigate to the `dashboard` at `http://localhost:3000`.
+2.  Pick an exercise.
+3.  Click **"Open in Editor"** to launch your IDE.
+4.  Solve the problem in `src/exercises/...`.
+5.  Run tests:
+    ```bash
+    bun run progy test
+    ```
+    or use the **"Run"** button in the dashboard.
 
-The `course.json` file controls how your course runs and is structured.
+## 🏗️ Architecture
 
-```json
-{
-  "id": "rust-basics",
-  "name": "Rust Basics",
-  "runner": {
-    "command": "cargo",
-    "args": [
-      "test",
-      "--quiet",
-      "--manifest-path",
-      "./content/{{id}}/Cargo.toml"
-    ],
-    "cwd": "."
-  },
-  "content": {
-    "root": ".",
-    "exercises": "content"
-  },
-  "setup": {
-    "guide": "SETUP.md",
-    "checks": [
-      {
-        "name": "Rust Compiler",
-        "type": "command",
-        "command": "rustc --version"
-      }
-    ]
-  }
-}
-```
+Progy is built as a modern monorepo:
 
-### Runner Variables
+- **Frontend (`apps/prog`)**:
+  - Built with **Next.js 14** (App Router) and **React**.
+  - Styled with **Tailwind CSS** and **Shadcn UI**.
+  - State management via **Nanostores**.
+- **Backend (`apps/backend`)**:
+  - Powered by **Hono** for high-performance API handling.
+  - Designed for **Cloudflare Workers**.
+  - **Better Auth** for secure authentication.
+- **Data Persistence**:
+  - **Local**: JSON-based storage for offline capability (`.prog/progress.json`).
+  - **Cloud**: **Cloudflare D1** (SQLite at the edge) for sync.
+- **CLI**:
+  - Node.js/Bun-based CLI for local interactions and file system management.
 
-- `{{exercise}}`: The folder name of the current exercise (e.g., `variables1`).
-- `{{id}}`: The full ID/path (e.g., `01_variables/variables1`).
-- `{{module}}`: The module name (e.g., `01_variables`).
+## 🧩 Course Creation
 
-### Setup Checks
+Want to build your own course? Check out our [Course Creator Guide](./COURSE_CREATOR_GUIDE.md) to learn how to structure modules, write lessons, and configure runners.
 
-Define commands that must pass for the student's environment to be considered ready. If `rustc --version` fails, Progy will show the `SETUP.md` guide.
+## 🤝 Contributing
 
----
+Contributions are welcome! Please read our [CONTRIBUTING.md](CONTRIBUTING.md) for details on our code of conduct, and the process for submitting pull requests.
 
-## 📂 Module Metadata (`info.toml`)
+## 📄 License
 
-Create an `info.toml` in a module folder (`content/01_module/info.toml`) to control titles and ordering.
-
-```toml
-[module]
-message = "Introduction to Variables" # The nice display title for the module
-
-# Optional: explicitly order or rename exercises
-[exercises]
-variables1 = { title = "Variables 1" }
-variables2 = { title = "Mutability" }
-```
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.

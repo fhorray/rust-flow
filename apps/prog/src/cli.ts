@@ -1,9 +1,15 @@
 #!/usr/bin/env bun
 import { program } from "commander";
-import { cp, exists, mkdir, writeFile } from "node:fs/promises";
+import { cp, exists, mkdir, writeFile, readFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
+import { homedir } from "node:os";
 import { TEMPLATES } from "./templates";
+
+const CONFIG_DIR = join(homedir(), ".progy");
+const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
+const BACKEND_URL = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
+const FRONTEND_URL = process.env.PROGY_FRONTEND_URL || BACKEND_URL; // Assuming frontend is hosted on the same domain or subpath
 
 const CONFIG_NAME = "course.json";
 
@@ -17,6 +23,28 @@ async function findCoursesDir(): Promise<string | null> {
     return localAttempt;
   }
   return null;
+}
+
+async function saveToken(token: string) {
+  if (!(await exists(CONFIG_DIR))) {
+    await mkdir(CONFIG_DIR, { recursive: true });
+  }
+  await writeFile(GLOBAL_CONFIG_PATH, JSON.stringify({ token }));
+}
+
+async function loadToken(): Promise<string | null> {
+  if (!(await exists(GLOBAL_CONFIG_PATH))) return null;
+  try {
+    const config = JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
+    return config.token || null;
+  } catch {
+    return null;
+  }
+}
+
+function openBrowser(url: string) {
+  const start = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
+  spawn(start, [url], { shell: true }).unref();
 }
 
 async function cloneCourse(lang: string, dest: string) {
@@ -241,6 +269,82 @@ func main() {
 
     console.log(`[SUCCESS] Course created!`);
     console.log(`\nTo get started:\n  cd ${courseName}\n  bunx progy init`);
+  });
+
+program
+  .command("login")
+  .description("Authenticate with Progy")
+  .action(async () => {
+    // Dynamically import better-auth client to avoid top-level issues if not installed
+    const { createAuthClient } = await import("better-auth/client");
+    const { deviceAuthorizationClient } = await import("better-auth/client/plugins");
+
+    const authClient = createAuthClient({
+      baseURL: BACKEND_URL,
+      plugins: [deviceAuthorizationClient()],
+    });
+
+    try {
+      console.log("[INFO] Requesting login session...");
+
+      const { data, error } = await authClient.device.code({
+        client_id: "progy-cli",
+      });
+
+      if (error) {
+        throw new Error(error.error_description || "Failed to initiate device authorization");
+      }
+
+      const { device_code, user_code, verification_uri, interval } = data;
+      const verificationUrl = verification_uri.startsWith("http")
+        ? verification_uri
+        : `${FRONTEND_URL}${verification_uri}`;
+
+      console.log(`\nPlease authenticate in your browser:`);
+      console.log(`\x1b[36m${verificationUrl}\x1b[0m`);
+      console.log(`Code: \x1b[33m${user_code}\x1b[0m\n`);
+
+      openBrowser(verificationUrl);
+
+      console.log("[WAIT] Waiting for authorization...");
+
+      // Poll function
+      const poll = async (): Promise<string | null> => {
+        while (true) {
+          const { data: tokenData, error: tokenError } = await authClient.device.token({
+            grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+            device_code,
+            client_id: 'progy-cli'
+          });
+
+          if (tokenData?.access_token) {
+            return tokenData.access_token;
+          }
+
+          if (tokenError) {
+            const code = tokenError.error;
+            if (code === 'access_denied' || code === 'expired_token') {
+              throw new Error(tokenError.error_description || code);
+            }
+            // otherwise 'authorization_pending' or 'slow_down' -> continue
+          }
+
+          await new Promise((resolve) => setTimeout(resolve, (interval || 5) * 1000));
+        }
+      };
+
+      const token = await poll();
+      if (token) {
+        // We have the token, now let's get the user session/info if needed or just save it.
+        // Usually we might want to save the token for future requests.
+        // For better-auth, the client might handle state, but for a CLI we need to persist it.
+        await saveToken(token);
+        console.log("[SUCCESS] Logged in successfully!");
+      }
+    } catch (e: any) {
+      console.error(`[ERROR] Login failed: ${e.message || e}`);
+      process.exit(1);
+    }
   });
 
 program.parse();

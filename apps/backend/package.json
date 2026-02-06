@@ -1,0 +1,23 @@
+{
+  "name": "backend",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --minify",
+    "cf-typegen": "wrangler types --env-interface CloudflareBindings",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "wrangler d1 execute progy --remote --file=./drizzle/0000_awesome_marvel_zombies.sql",
+    "db:migrate:local": "wrangler d1 execute progy --file=./drizzle/0000_awesome_marvel_zombies.sql"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.19.9",
+    "@types/node": "^25.2.1",
+    "better-auth": "^1.4.18",
+    "drizzle-orm": "^0.45.1",
+    "hono": "^4.11.8"
+  },
+  "devDependencies": {
+    "drizzle-kit": "^0.31.8",
+    "wrangler": "^4.4.0"
+  }
+}
