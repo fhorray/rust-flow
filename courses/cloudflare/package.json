@@ -1,9 +1,0 @@
-{
-  "name": "cloudflare-course",
-  "dependencies": {
-    "@cloudflare/workers-types": "^4.20240208.0"
-  },
-  "devDependencies": {
-    "bun-types": "latest"
-  }
-}
