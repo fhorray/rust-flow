@@ -1,0 +1,6 @@
+{
+  "language": "rust",
+  "commands": {
+    "test": "cargo run -q -p runner -- test {{exercise}}"
+  }
+}

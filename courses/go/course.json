@@ -1,0 +1,6 @@
+{
+  "language": "go",
+  "commands": {
+    "test": "go test -v ./lessons/{{exercise}}"
+  }
+}

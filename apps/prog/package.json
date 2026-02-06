@@ -1,0 +1,36 @@
+{
+  "name": "prog",
+  "version": "0.1.0",
+  "module": "index.ts",
+  "type": "module",
+  "bin": {
+    "prog": "./src/cli.ts"
+  },
+  "scripts": {
+    "dev": "bun run --hot src/backend/server.ts",
+    "build": "bun build --compile --target=bun-windows-x64 src/backend/server.ts --outfile rustflow.exe"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/react": "^19.2.13",
+    "@types/react-dom": "^19.2.3",
+    "autoprefixer": "^10.4.24",
+    "bun-plugin-tailwind": "^0.1.2",
+    "postcss": "^8.5.6",
+    "tailwindcss": "^4.1.18"
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  },
+  "dependencies": {
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "lucide-react": "^0.563.0",
+    "radix-ui": "^1.4.3",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "rehype-highlight": "^7.0.2",
+    "tailwind-merge": "^3.4.0"
+  }
+}

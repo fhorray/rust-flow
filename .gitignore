@@ -1,2 +1,4 @@
 /target
 .rustflow
+node_modules/
+test_*/
