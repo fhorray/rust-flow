@@ -476,10 +476,10 @@ export default function Home() {
 									<Button
 										className="w-full h-11 bg-primary text-primary-foreground font-black text-[10px] tracking-[0.2em] uppercase rounded-lg hover:shadow-primary/30 shadow-[0_0_20px_-10px_rgba(251,146,60,0.5)]"
 										onClick={handleLifetimeCheckout}
-										disabled={checkoutState.loading || isLifetime || isPro}
+										disabled={checkoutState.loading || isLifetime}
 									>
 										{checkoutState.loading && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
-										{isLifetime || isPro ? "OWNED" : "BUY LIFETIME"}
+										{isLifetime ? "OWNED" : "BUY LIFETIME"}
 									</Button>
 								</CardFooter>
 							</Card>
@@ -488,7 +488,16 @@ export default function Home() {
 								<CardHeader className="p-6 md:p-8">
 									<Badge className="w-fit bg-white/5 text-muted-foreground border-white/10 mb-4 text-[9px] font-black tracking-widest leading-none">CLOUD</Badge>
 									<CardTitle className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">Professional</CardTitle>
-									<div className="mt-4 md:mt-6 text-3xl md:text-4xl font-black">$12<span className="text-sm font-bold text-muted-foreground ml-1 font-sans">/mo</span></div>
+									<div className="mt-4 md:mt-6 text-3xl md:text-4xl font-black">
+										{isLifetime ? (
+											<>
+												<span className="line-through text-muted-foreground text-xl mr-2">$12</span>$8
+											</>
+										) : (
+											"$12"
+										)}
+										<span className="text-sm font-bold text-muted-foreground ml-1 font-sans">/mo</span>
+									</div>
 								</CardHeader>
 								<CardContent className="px-6 md:px-8 flex-grow">
 									<ul className="space-y-3 md:space-y-4 text-muted-foreground">
@@ -507,7 +516,7 @@ export default function Home() {
 										disabled={isLoadingPro || isPro}
 									>
 										{isLoadingPro && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
-										{isPro ? "CURRENT PLAN" : "START TRIAL"}
+										{isPro ? "CURRENT PLAN" : isLifetime ? "ADD MASTER AI" : "START TRIAL"}
 									</Button>
 								</CardFooter>
 							</Card>
