@@ -4,6 +4,7 @@
   "scripts": {
     "build": "bun run --cwd apps/progy build",
     "deploy:backend": "bun run --cwd apps/backend deploy",
+    "build:web": "bun run --cwd apps/web build:cf",
     "deploy:web": "bun run --cwd apps/web deploy",
     "pkg:major": "bun pm --cwd apps/progy version major --force",
     "pkg:minor": "bun pm --cwd apps/progy version minor --force",
