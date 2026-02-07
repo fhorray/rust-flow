@@ -1,0 +1,37 @@
+{
+  "id": "rust",
+  "name": "Rust",
+  "runner": {
+    "command": "cargo",
+    "args": [
+      "run",
+      "-q",
+      "-p",
+      "runner",
+      "--",
+      "--json",
+      "test",
+      "content/{{id}}"
+    ],
+    "cwd": "."
+  },
+  "content": {
+    "root": ".",
+    "exercises": "content"
+  },
+  "setup": {
+    "checks": [
+      {
+        "name": "Rust Compiler",
+        "type": "command",
+        "command": "rustc --version"
+      },
+      {
+        "name": "Cargo Package Manager",
+        "type": "command",
+        "command": "cargo --version"
+      }
+    ],
+    "guide": "SETUP.md"
+  }
+}

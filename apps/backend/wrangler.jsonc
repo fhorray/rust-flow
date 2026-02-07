@@ -8,7 +8,8 @@
     "nodejs_compat"
   ],
   "vars": {
-    "BETTER_AUTH_URL": "https://progy.francy.workers.dev"
+    "BETTER_AUTH_URL": "https://progy.francy.workers.dev",
+    "PROGY_API_URL": "https://progy.francy.workers.dev"
   },
   // "kv_namespaces": [
   //   {
@@ -32,7 +33,6 @@
   // "ai": {
   //   "binding": "AI"
   // },
-
   "observability": {
     "enabled": false,
     "head_sampling_rate": 1,

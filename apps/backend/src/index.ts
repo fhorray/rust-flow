@@ -16,6 +16,43 @@ app.use('*', cors({
   credentials: true,
 }))
 
+app.get('/api/registry', (c) => {
+  return c.json({
+    courses: {
+      rust: {
+        repo: 'https://github.com/fhorray/progy-courses',
+        branch: 'main',
+        path: 'rust',
+        description: 'Learn Rust programming with interactive exercises'
+      },
+      go: {
+        repo: 'https://github.com/fhorray/progy-courses',
+        branch: 'main',
+        path: 'golang',
+        description: 'Master Go with hands-on learning'
+      },
+      "better-auth": {
+        repo: 'https://github.com/fhorray/progy-courses',
+        branch: 'main',
+        path: 'better-auth',
+        description: 'Master authentication with Better-Auth'
+      },
+      cpp: {
+        repo: 'https://github.com/fhorray/progy-courses',
+        branch: 'main',
+        path: 'cpp',
+        description: 'Learn C++ programming'
+      },
+      cloudflare: {
+        repo: 'https://github.com/fhorray/progy-courses',
+        branch: 'main',
+        path: 'cloudflare',
+        description: 'Deep dive into Cloudflare Workers and more'
+      }
+    }
+  })
+})
+
 app.get('/api/auth/get-session', async (c) => {
   const auth = authServer(c.env)
   const authHeader = c.req.header('Authorization')

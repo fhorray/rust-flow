@@ -1,0 +1,20 @@
+{
+  "title": "Check Your Understanding",
+  "questions": [
+    {
+      "id": "q1",
+      "type": "multiple-choice",
+      "question": "Which keyword is used to define a variable in Rust?",
+      "options": [
+        { "id": "a", "text": "var", "isCorrect": false },
+        {
+          "id": "b",
+          "text": "let",
+          "isCorrect": true,
+          "explanation": "Correct! 'let' binds a value to a variable."
+        },
+        { "id": "c", "text": "const", "isCorrect": false }
+      ]
+    }
+  ]
+}

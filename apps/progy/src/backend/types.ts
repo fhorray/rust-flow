@@ -1,0 +1,1 @@
+export type ServerType = Bun.Serve.BaseRouteValue | Bun.Serve.Handler<Bun.BunRequest<"/">, Bun.Server<undefined>, Response> | Partial<Record<Bun.Serve.HTTPMethod, Response | Bun.Serve.Handler<Bun.BunRequest<"/">, Bun.Server<undefined>, Response>>>;

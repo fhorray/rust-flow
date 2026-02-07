@@ -5,6 +5,7 @@ import { join, resolve } from "node:path";
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 import { TEMPLATES } from "./templates";
+import { CourseLoader } from "./course-loader";
 
 const CONFIG_DIR = join(homedir(), ".progy");
 const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
@@ -47,50 +48,7 @@ function openBrowser(url: string) {
   spawn(start, [url], { shell: true }).unref();
 }
 
-async function cloneCourse(lang: string, dest: string) {
-  // Fallback: Clone from the repository if local courses folder is missing
-  // This supports running the tool when installed globally on a different machine
-  const REPO = "https://github.com/fhorray/rust-flow.git";
-  console.log(`[INFO] Local courses not found. Attempting to download ${lang} from ${REPO}...`);
-
-  const tempDir = join(process.cwd(), ".prog-temp-" + Date.now());
-
-  try {
-    console.log(`[GIT] Cloning repository...`);
-    const proc = spawn("git", ["clone", "--depth", "1", REPO, tempDir], { stdio: "inherit" });
-    await new Promise((resolve, reject) => {
-      proc.on("close", (code) => code === 0 ? resolve(null) : reject("Git clone failed"));
-    });
-
-    // Check generic structure: courses/<lang> or root (if repo is per-course?)
-    // Assuming monorepo structure: courses/rust
-    const sourceCourse = join(tempDir, "courses", lang);
-    if (!(await exists(sourceCourse))) {
-      // Try root if user gave specific repo
-      // But for now assume monorepo
-      throw new Error(`Course '${lang}' not found in repository.`);
-    }
-
-    // Copy from temp to dest
-    const files = ["content", "runner", "Cargo.toml", "go.mod", "SETUP.md", CONFIG_NAME];
-    for (const file of files) {
-      const srcPath = join(sourceCourse, file);
-      const destPath = join(dest, file);
-      if (await exists(srcPath)) {
-        console.log(`[COPY] ${file}...`);
-        await cp(srcPath, destPath, { recursive: true });
-      }
-    }
-
-  } finally {
-    try {
-      if (await exists(tempDir)) {
-        const rm = spawn("rm", ["-rf", tempDir], { stdio: "ignore" });
-        rm.unref();
-      }
-    } catch (e) { /* ignore */ }
-  }
-}
+// cloneCourse removed, moved to CourseLoader
 
 program
   .name("progy")
@@ -101,10 +59,24 @@ program
   .command("init")
   .description("Initialize a new course in the current directory")
   .option("-c, --course <course>", "Language/Course to initialize (e.g., rust)")
+  .option("--offline", "Run in offline mode (Guest access, local storage only)")
   .action(async (options) => {
     const cwd = process.cwd();
+    const isOffline = !!options.offline;
     const courseConfigPath = join(cwd, CONFIG_NAME);
     const hasConfig = await exists(courseConfigPath);
+
+    // Enforce Login if Online
+    let token: string | null = null;
+    if (!isOffline) {
+      token = await loadToken();
+      if (!token) {
+        console.error("❌ Authentication required for Online Mode.");
+        console.error("   Run `bunx progy login` to authenticate.");
+        console.error("   Or use `--offline` for Guest access (progress will only be saved locally).");
+        process.exit(1);
+      }
+    }
 
     // If no course provided, check if we are already in a course directory
     if (!options.course) {
@@ -123,30 +95,36 @@ program
       const coursesDir = await findCoursesDir();
       let installed = false;
 
+      // 1. Try Local Courses Folder (Monorepo)
       if (coursesDir) {
-        // ...
-        console.log(`[INFO] Found local courses directory: ${coursesDir}`);
+        console.log(`[INFO] Checking local courses directory: ${coursesDir}`);
         const sourceDir = join(coursesDir, lang);
         if (await exists(sourceDir)) {
-          const files = ["content", "runner", "Cargo.toml", "go.mod", "SETUP.md", CONFIG_NAME];
-          for (const file of files) {
-            const srcPath = join(sourceDir, file);
-            const destPath = join(cwd, file);
+          try {
+            console.log(`[VAL] Validating local course...`);
+            await CourseLoader.validateCourse(sourceDir);
 
-            if (await exists(srcPath)) {
-              console.log(`[COPY] ${file}...`);
-              await cp(srcPath, destPath, { recursive: true });
+            const files = ["content", "runner", "Cargo.toml", "go.mod", "SETUP.md", CONFIG_NAME];
+            for (const file of files) {
+              const srcPath = join(sourceDir, file);
+              const destPath = join(cwd, file);
+              if (await exists(srcPath)) {
+                console.log(`[COPY] ${file}...`);
+                await cp(srcPath, destPath, { recursive: true });
+              }
             }
+            installed = true;
+          } catch (e) {
+            console.warn(`[WARN] Local course validation failed: ${e}`);
           }
-          installed = true;
-        } else {
-          console.warn(`[WARN] Course ${lang} not found locally.`);
         }
       }
 
+      // 2. Try CourseLoader (Alias, URL, Local Path)
       if (!installed) {
         try {
-          await cloneCourse(lang, cwd);
+          await CourseLoader.load(lang, cwd);
+          installed = true;
         } catch (e) {
           console.error(`[ERROR] Failed to initialize course: ${e}`);
           process.exit(1);
@@ -155,7 +133,7 @@ program
       console.log("[INFO] Initialization complete!");
     }
 
-    console.log("[INFO] Starting UI...");
+    console.log(`[INFO] Starting UI in ${isOffline ? 'OFFLINE' : 'ONLINE'} mode...`);
 
     // dynamically find server file (ts in dev, js in prod)
     // In dev: src/cli.ts -> backend/server.ts
@@ -164,9 +142,18 @@ program
     const serverExt = isTs ? "ts" : "js";
     const serverPath = join(import.meta.dir, "backend", `server.${serverExt}`);
 
-    const child = spawn("bun", ["run", "--hot", serverPath], {
+    const serverArgs = ["run", serverPath];
+    if (process.env.ENABLE_HMR === "true") {
+      serverArgs.splice(1, 0, "--hot");
+    }
+
+    const child = spawn("bun", serverArgs, {
       stdio: "inherit",
-      env: { ...process.env, PROG_CWD: cwd },
+      env: {
+        ...process.env,
+        PROG_CWD: cwd,
+        PROGY_OFFLINE: isOffline ? "true" : "false"
+      },
     });
 
     child.on("close", (code) => process.exit(code ?? 0));

@@ -1,0 +1,64 @@
+{
+  "01_variables": [
+    {
+      "id": "01_variables/variables1",
+      "module": "01_variables",
+      "moduleTitle": "M01: Variables & Primitive Types",
+      "name": "variables1",
+      "exerciseName": "variables1",
+      "friendlyName": "Variable Assignment",
+      "path": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables1",
+      "markdownPath": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables1\\README.md",
+      "hasQuiz": true,
+      "type": "directory"
+    },
+    {
+      "id": "01_variables/variables2",
+      "module": "01_variables",
+      "moduleTitle": "M01: Variables & Primitive Types",
+      "name": "variables2",
+      "exerciseName": "variables2",
+      "friendlyName": "Mutable Variables",
+      "path": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables2",
+      "markdownPath": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables2\\README.md",
+      "hasQuiz": false,
+      "type": "directory"
+    },
+    {
+      "id": "01_variables/variables3",
+      "module": "01_variables",
+      "moduleTitle": "M01: Variables & Primitive Types",
+      "name": "variables3",
+      "exerciseName": "variables3",
+      "friendlyName": "Shadowing Basics",
+      "path": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables3",
+      "markdownPath": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables3\\README.md",
+      "hasQuiz": false,
+      "type": "directory"
+    },
+    {
+      "id": "01_variables/variables4",
+      "module": "01_variables",
+      "moduleTitle": "M01: Variables & Primitive Types",
+      "name": "variables4",
+      "exerciseName": "variables4",
+      "friendlyName": "Type Inference",
+      "path": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables4",
+      "markdownPath": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables4\\README.md",
+      "hasQuiz": false,
+      "type": "directory"
+    },
+    {
+      "id": "01_variables/variables5",
+      "module": "01_variables",
+      "moduleTitle": "M01: Variables & Primitive Types",
+      "name": "variables5",
+      "exerciseName": "variables5",
+      "friendlyName": "Scope and Shadowing",
+      "path": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables5",
+      "markdownPath": "F:\\dev\\JS\\progy\\apps\\progy\\content\\01_variables\\variables5\\README.md",
+      "hasQuiz": false,
+      "type": "directory"
+    }
+  ]
+}

@@ -4,6 +4,7 @@ import { readdir, readFile, writeFile, mkdir, exists, stat } from "node:fs/promi
 import { join } from "node:path";
 import { spawn } from "node:child_process";
 import { homedir } from "node:os";
+import { health } from "./endpoints/health";
 
 const PROG_CWD = process.env.PROG_CWD || process.cwd();
 const CONFIG_DIR = join(homedir(), ".progy");
@@ -108,61 +109,90 @@ async function getApiKey() {
   return config?.api_keys?.OpenAI || process.env.OPENAI_API_KEY;
 }
 
+// offline mode logic
+const IS_OFFLINE = process.env.PROGY_OFFLINE === "true";
+
+let currentConfig: CourseConfig | null = null;
+
+async function ensureConfig() {
+  if (!currentConfig) {
+    currentConfig = await getCourseConfig();
+  }
+  return currentConfig;
+}
+
 async function getProgress(): Promise<Progress> {
-  let localProgress: Progress | null = null;
-  try {
-    if (await exists(PROGRESS_PATH)) {
-      const text = await readFile(PROGRESS_PATH, "utf-8");
-      localProgress = JSON.parse(text);
-      console.log(`[PROGRESS] Loaded local progress. XP: ${localProgress?.stats.totalXp}`);
-    } else {
-      console.log(`[PROGRESS] No local progress file found at ${PROGRESS_PATH}`);
-    }
-  } catch (e) {
-    console.warn(`[WARN] Failed to read progress.json: ${e}`);
-  }
-
-  // Check cloud if logged in
-  const config = await getGlobalConfig();
-  if (config?.token && currentConfig?.id) {
-    console.log(`[PROGRESS] Checking cloud for course ${currentConfig.id}`);
-    const cloudProgress = await fetchProgressFromCloud(currentConfig.id, config.token);
-    if (cloudProgress) {
-      console.log(`[SYNC] Found cloud progress. Cloud XP: ${cloudProgress.stats.totalXp}, Local XP: ${localProgress?.stats.totalXp || 0}`);
-
-      // Simple merge: cloud wins if local is empty or cloud has more XP
-      if (!localProgress || cloudProgress.stats.totalXp > (localProgress?.stats.totalXp || 0)) {
-        console.log(`[SYNC] Updating local progress with cloud data.`);
-        localProgress = cloudProgress;
-        // Save it locally too
-        await mkdir(PROG_DIR, { recursive: true });
-        await writeFile(PROGRESS_PATH, JSON.stringify(localProgress, null, 2));
-      } else {
-        console.log(`[SYNC] Local progress is ahead or equal. Keeping local.`);
+  // OFFLINE MODE: JSON ONLY
+  if (IS_OFFLINE) {
+    try {
+      if (await exists(PROGRESS_PATH)) {
+        const text = await readFile(PROGRESS_PATH, "utf-8");
+        const localProgress = JSON.parse(text);
+        console.log(`[OFFLINE] Loaded local progress. XP: ${localProgress?.stats.totalXp}`);
+        return localProgress;
       }
-    } else {
-      console.log(`[SYNC] No cloud progress found.`);
+      console.log(`[OFFLINE] No local progress found. Starting fresh.`);
+    } catch (e) {
+      console.warn(`[WARN] Failed to read ${PROGRESS_PATH}: ${e}`);
+    }
+    return JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
+  }
+
+  // ONLINE MODE: CLOUD ONLY
+  await ensureConfig();
+  const config = await getGlobalConfig();
+
+  if (config?.token && currentConfig?.id) {
+    console.log(`[ONLINE] Fetching progress for ${currentConfig.id}...`);
+    try {
+      const cloudProgress = await fetchProgressFromCloud(currentConfig.id, config.token);
+      if (cloudProgress) {
+        console.log(`[ONLINE] Loaded cloud progress. XP: ${cloudProgress.stats.totalXp}`);
+        return cloudProgress;
+      } else {
+        // Cloud returned null/undefined, meaning 404 or empty. Safe to start fresh.
+        console.log(`[ONLINE] No existing cloud progress found (new user?). Returning default.`);
+        return JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
+      }
+    } catch (e) {
+      console.error(`[CRITICAL] Failed to fetch cloud progress: ${e}`);
+      // IMPORTANT: If we cannot fetch, and we are online, likely network issue.
+      // DANGER: If we return default, we might overwrite cloud data later.
+      // For now, let's throw or handle in the caller. 
+      // User experience: returning default allows playing, but saving might fail or overwrite.
+      // Let's assume if it throws it's a temp issue, but we'll return default with a warning.
+      // Ideally, the UI should show "Offline/Error".
+      return JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
     }
   }
 
-  return localProgress || JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
+  // Fallback if cloud fail or no token
+  console.log(`[ONLINE] No token or config. Returning default.`);
+  return JSON.parse(JSON.stringify(DEFAULT_PROGRESS));
 }
 
 async function saveProgress(progress: Progress) {
-  console.log(`[PROGRESS] Saving progress... XP: ${progress.stats.totalXp}`);
-  try {
-    await mkdir(PROG_DIR, { recursive: true });
-    await writeFile(PROGRESS_PATH, JSON.stringify(progress, null, 2));
-    console.log(`[PROGRESS] Saved to ${PROGRESS_PATH}`);
-
-    // Attempt cloud sync if token exists
-    const config = await getGlobalConfig();
-    if (config?.token && currentConfig?.id) {
-      console.log(`[PROGRESS] Triggering background cloud sync...`);
-      syncProgressWithCloud(currentConfig.id, progress, config.token);
+  // OFFLINE MODE: JSON ONLY
+  if (IS_OFFLINE) {
+    console.log(`[OFFLINE] Saving progress locally... XP: ${progress.stats.totalXp}`);
+    try {
+      await mkdir(PROG_DIR, { recursive: true });
+      await writeFile(PROGRESS_PATH, JSON.stringify(progress, null, 2));
+      console.log(`[OFFLINE] Saved to ${PROGRESS_PATH}`);
+    } catch (e) {
+      console.error(`[ERROR] Failed to save local progress: ${e}`);
     }
-  } catch (e) {
-    console.error(`[ERROR] Failed to save progress.json: ${e}`);
+    return;
+  }
+
+  // ONLINE MODE: CLOUD ONLY
+  await ensureConfig();
+  const config = await getGlobalConfig();
+  if (config?.token && currentConfig?.id) {
+    console.log(`[ONLINE] Saving progress to cloud... XP: ${progress.stats.totalXp}`);
+    await syncProgressWithCloud(currentConfig.id, progress, config.token);
+  } else {
+    console.warn("[ONLINE] Cannot save: No token or course ID available.");
   }
 }
 
@@ -176,7 +206,6 @@ async function getGlobalConfig() {
 async function syncProgressWithCloud(courseId: string, progress: Progress, token: string) {
   const remoteUrl = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
   try {
-    console.log(`[SYNC] Syncing ${courseId} to cloud...`);
     const res = await fetch(`${remoteUrl}/api/progress/sync`, {
       method: 'POST',
       headers: {
@@ -186,12 +215,12 @@ async function syncProgressWithCloud(courseId: string, progress: Progress, token
       body: JSON.stringify({ courseId, data: progress })
     });
     if (res.ok) {
-      console.log(`[SYNC] Successfully synced ${courseId} progress.`);
+      console.log(`[ONLINE] Successfully saved to cloud.`);
     } else {
-      console.warn(`[SYNC] Cloud sync failed: ${res.status}`);
+      console.warn(`[ONLINE] Cloud save failed: ${res.status} - ${await res.text()}`);
     }
   } catch (e) {
-    console.error(`[SYNC] Connection error during sync: ${e}`);
+    console.error(`[ONLINE] Connection error during save: ${e}`);
   }
 }
 
@@ -199,7 +228,7 @@ async function fetchProgressFromCloud(courseId: string, token: string): Promise<
   const remoteUrl = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
   try {
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 3000); // 3s timeout
+    const timeoutId = setTimeout(() => controller.abort(), 5000); // 5s timeout
 
     const res = await fetch(`${remoteUrl}/api/progress/get?courseId=${courseId}`, {
       signal: controller.signal,
@@ -212,15 +241,14 @@ async function fetchProgressFromCloud(courseId: string, token: string): Promise<
 
     if (res.ok) {
       return await res.json();
+    } else if (res.status === 404) {
+      return null;
+    } else {
+      throw new Error(`Cloud fetch failed with ${res.status}`);
     }
   } catch (e) {
-    if ((e as any).name === 'AbortError') {
-      console.warn(`[SYNC] Cloud fetch timed out after 3s.`);
-    } else {
-      console.error(`[SYNC] Failed to fetch progress from cloud: ${e}`);
-    }
+    throw e;
   }
-  return null;
 }
 
 function updateStreak(stats: ProgressStats): ProgressStats {
@@ -486,7 +514,7 @@ async function runSetupChecks(config: SetupConfig): Promise<Array<{ name: string
 }
 
 let exerciseManifest: Record<string, any[]> | null = null;
-let currentConfig: CourseConfig | null = null;
+// currentConfig is already declared at top level
 let exerciseManifestCache: Record<string, any[]> | null = null;
 let exerciseManifestTimestamp: number = 0;
 
@@ -594,6 +622,7 @@ function parseRunnerOutput(rawOutput: string, exitCode: number): { success: bool
 const server = serve({
   port: 3001,
   routes: {
+    "/api/health": health,
     "/": () => new Response(Bun.file(join(PUBLIC_DIR, "index.html"))),
     "/main.js": () => new Response(Bun.file(join(PUBLIC_DIR, "main.js"))),
     "/main.css": () => new Response(Bun.file(join(PUBLIC_DIR, "main.css"))),
@@ -931,7 +960,7 @@ const server = serve({
       }
     }
   },
-  development: { hmr: true },
+  development: { hmr: process.env.ENABLE_HMR === "true" },
   fetch(req) { return new Response("Not Found", { status: 404 }); }
 });
 
