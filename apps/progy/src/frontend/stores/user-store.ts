@@ -24,6 +24,8 @@ export const $session = atom<Session | null>(null);
 export const $localSettings = atom<LocalSettings>({});
 export const $isUserLoading = atom<boolean>(false);
 export const $remoteApiUrl = atom<string>('https://progy.francy.workers.dev');
+export const $isOffline = atom<boolean>(false);
+export const $isOfficial = atom<boolean>(true); // Default to true to avoid flash
 
 // Computed user for easier access
 export const $user = computed($session, (s) => s?.user || null);
@@ -36,6 +38,8 @@ export const fetchUserSession = async () => {
     const configRes = await fetch('/api/config');
     const config = await configRes.json();
     if (config.remoteApiUrl) $remoteApiUrl.set(config.remoteApiUrl);
+    $isOffline.set(config.isOffline || false);
+    $isOfficial.set(config.isOfficial !== false); // Default true if undefined
 
     // 2. Get local token
     const tokenRes = await fetch('/api/auth/token');

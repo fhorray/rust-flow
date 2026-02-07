@@ -37,7 +37,23 @@ try {
       ...settingsRoutes,
     },
     development: { hmr: process.env.ENABLE_HMR === "true" },
-    fetch(req) { return new Response("Not Found", { status: 404 }); }
+    fetch(req) {
+      // CSRF Protection: Strict Origin Check
+      const origin = req.headers.get("Origin");
+      const host = req.headers.get("Host");
+
+      // Allow requests with no Origin (like curl, CLI, or same-origin GETs)
+      // But if Origin is present, it MUST match the host (localhost:3001)
+      if (origin) {
+        const originUrl = new URL(origin);
+        if (originUrl.host !== host) {
+          console.warn(`[SECURITY] Blocked CSRF attempt from ${origin}`);
+          return new Response("Forbidden", { status: 403 });
+        }
+      }
+
+      return new Response("Not Found", { status: 404 });
+    }
   });
   console.log(`🚀 Progy Server running on ${server.url}`);
 } catch (e: any) {

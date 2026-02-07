@@ -8,21 +8,26 @@ import {
   ChevronDown,
   Monitor,
   Cpu,
+  BookOpen,
 } from 'lucide-react';
 import {
   $session,
   $user,
   $isUserLoading,
+  $isOffline,
   fetchUserSession,
   logout,
 } from '../stores/user-store';
 import { SettingsDialog } from './settings-dialog';
+import { MyCoursesDialog } from './my-courses-dialog';
 
 export function UserNav() {
   const session = useStore($session);
   const user = useStore($user);
   const isLoading = useStore($isUserLoading);
+  const isOffline = useStore($isOffline);
   const [showSettings, setShowSettings] = useState(false);
+  const [showMyCourses, setShowMyCourses] = useState(false);
 
   useEffect(() => {
     fetchUserSession();
@@ -91,6 +96,16 @@ export function UserNav() {
               <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
             </div>
 
+            {!isOffline && (
+              <DropdownMenu.Item
+                onClick={() => setShowMyCourses(true)}
+                className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 rounded-lg hover:bg-zinc-800 hover:text-white cursor-pointer outline-none transition-colors group"
+              >
+                <BookOpen className="w-4 h-4 text-zinc-500 group-hover:text-rust" />
+                My Courses
+              </DropdownMenu.Item>
+            )}
+
             <DropdownMenu.Item
               onClick={() => setShowSettings(true)}
               className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 rounded-lg hover:bg-zinc-800 hover:text-white cursor-pointer outline-none transition-colors group"
@@ -112,6 +127,13 @@ export function UserNav() {
 
       {showSettings && (
         <SettingsDialog onClose={() => setShowSettings(false)} />
+      )}
+
+      {showMyCourses && session?.session.token && (
+        <MyCoursesDialog
+          token={session.session.token}
+          onClose={() => setShowMyCourses(false)}
+        />
       )}
     </>
   );

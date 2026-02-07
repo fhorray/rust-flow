@@ -27,6 +27,7 @@ export interface CourseConfig {
   content: ContentConfig;
   api_keys?: Record<string, string>;
   setup?: SetupConfig;
+  repo?: string;
 }
 
 export interface ProgressStats {

@@ -112,6 +112,7 @@ program
     const isOffline = !!options.offline;
     const courseConfigPath = join(cwd, CONFIG_NAME);
     const hasConfig = await exists(courseConfigPath);
+    let sourceInfo: { url: string; branch?: string; path?: string } | null = null;
 
     // Enforce Login if Online
     let token: string | null = null;
@@ -170,7 +171,7 @@ program
       // 2. Try CourseLoader (Alias, URL, Local Path)
       if (!installed) {
         try {
-          await CourseLoader.load(lang, cwd);
+          sourceInfo = await CourseLoader.load(lang, cwd);
           installed = true;
         } catch (e) {
           console.error(`[ERROR] Failed to initialize course: ${e}`);
@@ -180,24 +181,58 @@ program
       console.log("[INFO] Initialization complete!");
     }
 
-    // Dynamic ID Injection
-    if (hasConfig || options.course) {
-      try {
+    // Persist Metadata & Dynamic ID Injection (Always run on init)
+    try {
+      if (await exists(courseConfigPath)) {
+        console.log(`[DEBUG] Found course.json at ${courseConfigPath}. Checking for updates...`);
         const configContent = await readFile(courseConfigPath, "utf-8");
         const config = JSON.parse(configContent);
+        let updated = false;
 
-        const { remoteUrl, root } = await getGitInfo(cwd);
-        if (remoteUrl && root) {
+        // 1. If we just loaded from CourseLoader, we have source info
+        if (sourceInfo) {
+          console.log(`[DEBUG] sourceInfo URL: ${sourceInfo.url}`);
+          config.repo = sourceInfo.url;
+          updated = true;
+        }
+
+        // 2. Dynamic ID Injection based on Git (if available)
+        const gitInfo = await getGitInfo(cwd);
+        console.log(`[DEBUG] gitInfo: ${JSON.stringify(gitInfo)}`);
+
+        if (gitInfo.remoteUrl && gitInfo.root) {
+          const { remoteUrl, root } = gitInfo;
+          if (!config.repo) {
+            config.repo = remoteUrl;
+            updated = true;
+          }
           const newId = generateCourseId(remoteUrl, root, cwd);
           if (config.id !== newId) {
             console.log(`[ID] Updating course ID to match repository: ${newId}`);
             config.id = newId;
-            await writeFile(courseConfigPath, JSON.stringify(config, null, 2));
+            updated = true;
+          }
+        } else if (sourceInfo) {
+          // Fallback ID generation if no git but we have source
+          const dummyRoot = "/";
+          const newId = generateCourseId(sourceInfo.url, dummyRoot, sourceInfo.path || "");
+          if (config.id !== newId) {
+            console.log(`[ID] Setting course ID from source: ${newId}`);
+            config.id = newId;
+            updated = true;
           }
         }
-      } catch (e) {
-        console.warn(`[WARN] Failed to update dynamic course ID: ${e}`);
+
+        console.log(`[DEBUG] Update pending? ${updated}`);
+        if (updated) {
+          await writeFile(courseConfigPath, JSON.stringify(config, null, 2));
+          console.log(`[META] Course metadata updated at ${courseConfigPath}.`);
+        }
+      } else {
+        console.log(`[DEBUG] No course.json found at ${courseConfigPath}`);
       }
+    } catch (e) {
+      console.warn(`[WARN] Failed to update course metadata: ${e}`);
     }
 
     console.log(`[INFO] Starting UI in ${isOffline ? 'OFFLINE' : 'ONLINE'} mode...`);

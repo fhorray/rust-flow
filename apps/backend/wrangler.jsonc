@@ -9,7 +9,45 @@
   ],
   "vars": {
     "BETTER_AUTH_URL": "https://progy.francy.workers.dev",
-    "PROGY_API_URL": "https://progy.francy.workers.dev"
+    "PROGY_API_URL": "https://progy.francy.workers.dev",
+    "COURSES": {
+      "rust": {
+        "repo": "https://github.com/fhorray/progy-courses",
+        "branch": "main",
+        "path": "rust",
+        "description": "Learn Rust programming with interactive exercises"
+      },
+      "go": {
+        "repo": "https://github.com/fhorray/progy-courses",
+        "branch": "main",
+        "path": "golang",
+        "description": "Master Go with hands-on learning"
+      },
+      "better-auth": {
+        "repo": "https://github.com/fhorray/progy-courses",
+        "branch": "main",
+        "path": "better-auth",
+        "description": "Master authentication with Better-Auth"
+      },
+      "cpp": {
+        "repo": "https://github.com/fhorray/progy-courses",
+        "branch": "main",
+        "path": "cpp",
+        "description": "Learn C++ programming"
+      },
+      "cloudflare": {
+        "repo": "https://github.com/fhorray/progy-courses",
+        "branch": "main",
+        "path": "cloudflare",
+        "description": "Deep dive into Cloudflare Workers and more"
+      },
+      "javascript": {
+        "repo": "https://github.com/fhorray/progy-courses",
+        "branch": "main",
+        "path": "javascript",
+        "description": "Learn JavaScript programming with interactive exercises"
+      }
+    }
   },
   // "kv_namespaces": [
   //   {

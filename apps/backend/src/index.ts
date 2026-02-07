@@ -17,40 +17,7 @@ app.use('*', cors({
 }))
 
 app.get('/api/registry', (c) => {
-  return c.json({
-    courses: {
-      rust: {
-        repo: 'https://github.com/fhorray/progy-courses',
-        branch: 'main',
-        path: 'rust',
-        description: 'Learn Rust programming with interactive exercises'
-      },
-      go: {
-        repo: 'https://github.com/fhorray/progy-courses',
-        branch: 'main',
-        path: 'golang',
-        description: 'Master Go with hands-on learning'
-      },
-      "better-auth": {
-        repo: 'https://github.com/fhorray/progy-courses',
-        branch: 'main',
-        path: 'better-auth',
-        description: 'Master authentication with Better-Auth'
-      },
-      cpp: {
-        repo: 'https://github.com/fhorray/progy-courses',
-        branch: 'main',
-        path: 'cpp',
-        description: 'Learn C++ programming'
-      },
-      cloudflare: {
-        repo: 'https://github.com/fhorray/progy-courses',
-        branch: 'main',
-        path: 'cloudflare',
-        description: 'Deep dive into Cloudflare Workers and more'
-      }
-    }
-  })
+  return c.json({ courses: c.env.COURSES })
 })
 
 // Helper for robust session verification
@@ -172,6 +139,24 @@ app.get('/api/progress/get', async (c) => {
     .get()
 
   return c.json(progress ? JSON.parse(progress.data) : null)
+})
+
+app.get('/api/progress/list', async (c) => {
+  const db = drizzle(c.env.DB)
+  const session = await verifySession(c)
+
+  if (!session) return c.json({ error: 'Unauthorized' }, 401)
+
+  const progressList = await db.select()
+    .from(schema.courseProgress)
+    .where(eq(schema.courseProgress.userId, session.user.id))
+    .all()
+
+  return c.json(progressList.map(p => ({
+    courseId: p.courseId,
+    data: JSON.parse(p.data),
+    updatedAt: p.updatedAt
+  })))
 })
 
 // Global Error Handler

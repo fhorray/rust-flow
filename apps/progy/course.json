@@ -1,15 +1,10 @@
 {
   "id": "fhorray/rust-flow/apps/progy",
-  "name": "Rust",
+  "name": "JavaScript Essentials",
   "runner": {
-    "command": "cargo",
+    "command": "node",
     "args": [
-      "run",
-      "-q",
-      "-p",
-      "runner",
-      "--",
-      "--json",
+      "./runner/index.js",
       "test",
       "content/{{id}}"
     ],
@@ -22,16 +17,12 @@
   "setup": {
     "checks": [
       {
-        "name": "Rust Compiler",
+        "name": "Node.js",
         "type": "command",
-        "command": "rustc --version"
-      },
-      {
-        "name": "Cargo Package Manager",
-        "type": "command",
-        "command": "cargo --version"
+        "command": "node --version"
       }
     ],
     "guide": "SETUP.md"
-  }
+  },
+  "repo": "https://github.com/fhorray/progy-courses"
 }

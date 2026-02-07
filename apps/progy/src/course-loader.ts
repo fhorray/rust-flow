@@ -82,6 +82,12 @@ export class CourseLoader {
       throw new Error(`Invalid JSON in ${CONFIG_NAME}`);
     }
 
+    // Security: Block any pre-existing 'repo' field in the source manifest
+    // This field must only be injected by the local CLI during 'init'
+    if ("repo" in configJson) {
+      throw new Error(`Security Error: Pre-configured 'repo' field in ${CONFIG_NAME} is forbidden. Source is potentially untrusted.`);
+    }
+
     const result = CourseConfigSchema.safeParse(configJson);
     if (!result.success) {
       const issues = result.error.issues.map((e: any) => `- ${e.path.join('.')}: ${e.message}`).join("\n");
@@ -108,15 +114,16 @@ export class CourseLoader {
     return result.data;
   }
 
-  static async load(courseInput: string, dest: string): Promise<void> {
-    const { url, branch, path } = await this.resolveSource(courseInput);
+  static async load(courseInput: string, dest: string): Promise<{ url: string; branch?: string; path?: string }> {
+    const source = await this.resolveSource(courseInput);
+    const { url, branch, path } = source;
     console.log(`[INFO] Loading course from: ${url} (branch: ${branch || "default"}, path: ${path || "root"})`);
 
     // If local path, just copy and validate
     if (await exists(url) && !url.endsWith(".git")) {
       await this.validateCourse(url);
       await cp(url, dest, { recursive: true });
-      return;
+      return source;
     }
 
     // Git Remote
@@ -146,9 +153,8 @@ export class CourseLoader {
 
       console.log(`[INST] Installing course...`);
       // Copy contents to destination
-      // We copy everything from the sourceDir to dest
       await cp(sourceDir, dest, { recursive: true });
-
+      return source;
     } finally {
       await rm(tempDir, { recursive: true, force: true });
     }

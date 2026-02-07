@@ -35,6 +35,7 @@ import { ChallengeGenerator } from './components/challenge-generator';
 import { Navbar } from './components/navbar';
 import { UserNav } from './components/user-nav';
 import { fetchLocalSettings } from './stores/user-store';
+import { SecurityBanner } from './components/security-banner';
 
 export function App() {
   // ...
@@ -97,6 +98,7 @@ export function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-100 flex flex-col font-sans selection:bg-rust/30">
+      <SecurityBanner />
       <Navbar onGenerateChallenge={() => setShowChallengeGenerator(true)} />
 
       {error && (

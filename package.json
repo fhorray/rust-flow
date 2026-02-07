@@ -3,11 +3,11 @@
   "private": true,
   "scripts": {
     "build": "bun run --cwd apps/progy build",
-    "publish-cli": "bun run --cwd apps/progy publish",
+    "deploy:backend": "bun run --cwd apps/backend deploy",
     "pkg:major": "bun pm --cwd apps/progy version major --force",
     "pkg:minor": "bun pm --cwd apps/progy version minor --force",
     "pkg:patch": "bun pm --cwd apps/progy version patch --force",
-    "pkg:publish": "bun publish --cwd apps/progy "
+    "pkg:publish": "bun publish --cwd apps/progy"
   },
   "workspaces": [
     "apps/*"
