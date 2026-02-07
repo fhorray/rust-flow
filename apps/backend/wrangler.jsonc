@@ -10,6 +10,8 @@
   "vars": {
     "BETTER_AUTH_URL": "https://progy.francy.workers.dev",
     "PROGY_API_URL": "https://progy.francy.workers.dev",
+    "STRIPE_PRICE_ID_PRO": "price_1SyByzGdycZGJETWXJft9raE",
+    "STRIPE_PRICE_ID_LIFETIME": "price_1SyBy8GdycZGJETWNQ2HCROC",
     "COURSES": {
       "rust": {
         "repo": "https://github.com/fhorray/progy-courses",

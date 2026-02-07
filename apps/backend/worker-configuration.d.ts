@@ -14,7 +14,7 @@ declare namespace Cloudflare {
         STRIPE_WEBHOOK_SECRET: string;
         OPENAI_API_KEY: string;
         STRIPE_PRICE_ID_PRO: string;
-        STRIPE_PRICE_ID_STANDARD: string;
+        STRIPE_PRICE_ID_LIFETIME: string;
         BETTER_AUTH_SECRET: string;
         GITHUB_CLIENT_ID: string;
         GITHUB_CLIENT_SECRET: string;

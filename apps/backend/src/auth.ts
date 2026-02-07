@@ -82,13 +82,13 @@ export const authServer = (env: CloudflareBindings) => {
         onEvent: async (event) => {
           if (event.type === "checkout.session.completed") {
             const session = event.data.object as Stripe.Checkout.Session;
-            if (session.metadata?.planType === "standard") {
+            if (session.metadata?.planType === "lifetime") {
               const userEmail = session.customer_details?.email;
               if (userEmail) {
                 // Use drizzle-orm operators for update query
                 // @ts-ignore - d1 types
                 await drizzle(env.DB).update(schema.user)
-                  .set({ subscription: 'standard' })
+                  .set({ subscription: 'lifetime' })
                   // @ts-ignore - d1 types
                   .where(schema.eq(schema.user.email, userEmail))
                   .execute();

@@ -11,44 +11,40 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import Link from "next/link";
 
+import { useStore } from '@nanostores/react';
+import { $checkoutMutation } from '@/stores/billing-store';
+
 export default function Home() {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
-	const [isLoadingStandard, setIsLoadingStandard] = useState(false);
 	const [isLoadingPro, setIsLoadingPro] = useState(false);
 	const router = useRouter();
 	const { data: session, isPending: isSessionLoading } = authClient.useSession();
+	const checkoutState = useStore($checkoutMutation);
 
 	// @ts-ignore
 	const userPlan = session?.user?.subscription || "free";
 	// @ts-ignore
 	const isPro = userPlan === "pro" || (session?.user as any)?.subscription === "pro"; // Double check
 	// @ts-ignore
-	const isStandard = userPlan === "standard";
+	const isLifetime = userPlan === "lifetime";
 
-	const handleStandardCheckout = async () => {
-		setIsLoadingStandard(true);
+	const handleLifetimeCheckout = async () => {
+		if (!session) {
+			handleSignIn();
+			return;
+		}
 		try {
-			if (!session) {
-				router.push("/auth/signin?redirect=checkout_standard");
-				return;
-			}
-			const res = await fetch("http://localhost:8787/api/billing/checkout/standard", {
-				method: "POST",
-				headers: {
-					"Content-Type": "application/json",
-					"Authorization": `Bearer ${session.session?.token}`
-				},
+			const res = await $checkoutMutation.mutate({
+				plan: "lifetime",
+				token: session.session?.token
 			});
-			const data = await res.json() as { url: string };
-			if (data.url) {
-				window.location.href = data.url;
+			if (res.url) {
+				window.location.href = res.url;
 			} else {
 				toast.error("Failed to start checkout");
 			}
 		} catch (error) {
 			toast.error("An error occurred");
-		} finally {
-			setIsLoadingStandard(false);
 		}
 	};
 
@@ -56,7 +52,7 @@ export default function Home() {
 		setIsLoadingPro(true);
 		try {
 			if (!session) {
-				router.push("/auth/signin?redirect=checkout_pro");
+				handleSignIn();
 				return;
 			}
 			await authClient.subscription.upgrade({
@@ -86,6 +82,13 @@ export default function Home() {
 		return () => reveals.forEach(reveal => observer.unobserve(reveal));
 	}, []);
 
+	const handleSignIn = async () => {
+		await authClient.signIn.social({
+			provider: "github",
+			callbackURL: "/"
+		});
+	};
+
 	return (
 		<div className="min-h-screen bg-background selection:bg-primary/20 overflow-x-hidden font-sans">
 			{/* Navigation */}
@@ -107,10 +110,37 @@ export default function Home() {
 					</div>
 
 					<div className="flex items-center gap-3">
-						<div className="hidden sm:flex items-center gap-3">
-							<Button size="sm" variant="ghost" className="text-[11px] font-black tracking-widest text-muted-foreground hover:text-foreground h-9">Log in</Button>
-							<Button size="sm" className="bg-foreground text-background hover:bg-foreground/90 font-black px-5 h-9 rounded-lg text-[11px] tracking-widest">JOIN NOW</Button>
-						</div>
+						{session ? (
+							<div className="hidden sm:flex items-center gap-3">
+								<div className="flex flex-col items-end leading-none">
+									<span className="text-[10px] font-black uppercase tracking-widest text-foreground">
+										{session.user.name}
+									</span>
+									<span className="text-[8px] font-black uppercase tracking-[0.2em] text-primary">
+										{isLifetime ? "LIFETIME" : isPro ? "PRO" : "FREE"}
+									</span>
+								</div>
+								<div className="w-8 h-8 rounded bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
+									{session.user.name?.charAt(0).toUpperCase()}
+								</div>
+							</div>
+						) : (
+							<div className="hidden sm:flex items-center gap-3">
+								<Button
+									onClick={handleSignIn}
+									size="sm"
+									variant="ghost"
+									className="text-[11px] font-black tracking-widest text-muted-foreground hover:text-foreground h-9">
+									Log in
+								</Button>
+								<Button
+									onClick={handleSignIn}
+									size="sm"
+									className="bg-foreground text-background hover:bg-foreground/90 font-black px-5 h-9 rounded-lg text-[11px] tracking-widest">
+									JOIN NOW
+								</Button>
+							</div>
+						)}
 						<button
 							className="md:hidden p-2 text-muted-foreground hover:text-foreground transition-colors"
 							onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -129,8 +159,26 @@ export default function Home() {
 							<a href="#pricing" onClick={() => setIsMenuOpen(false)} className="text-muted-foreground hover:text-foreground transition-colors">Pricing</a>
 							<a href="/docs" className="text-muted-foreground hover:text-foreground transition-colors">Docs</a>
 							<div className="pt-6 border-t border-white/5 flex flex-col gap-4">
-								<Button variant="ghost" className="justify-start px-0 text-[12px] font-black tracking-widest h-10">Log in</Button>
-								<Button className="bg-foreground text-background w-full h-12 text-[12px] font-black tracking-widest rounded-xl">JOIN NOW</Button>
+								{session ? (
+									<div className="flex items-center gap-3 mb-4">
+										<div className="w-8 h-8 rounded bg-primary/20 border border-primary/30 flex items-center justify-center text-[10px] font-black text-primary">
+											{session.user.name?.charAt(0).toUpperCase()}
+										</div>
+										<div className="flex flex-col leading-none">
+											<span className="text-[10px] font-black uppercase tracking-widest text-foreground">
+												{session.user.name}
+											</span>
+											<span className="text-[8px] font-black uppercase tracking-[0.2em] text-primary mt-1">
+												{isLifetime ? "LIFETIME" : isPro ? "PRO" : "FREE"}
+											</span>
+										</div>
+									</div>
+								) : (
+									<>
+										<Button onClick={handleSignIn} variant="ghost" className="justify-start px-0 text-[12px] font-black tracking-widest h-10">Log in</Button>
+										<Button onClick={handleSignIn} className="bg-foreground text-background w-full h-12 text-[12px] font-black tracking-widest rounded-xl">JOIN NOW</Button>
+									</>
+								)}
 							</div>
 						</div>
 					</div>
@@ -396,22 +444,27 @@ export default function Home() {
 									</ul>
 								</CardContent>
 								<CardFooter className="p-6 md:p-8">
-									<Link href="/auth/signin" className="w-full">
-										<Button variant="outline" className="w-full h-10 border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-lg">JOIN NOW</Button>
-									</Link>
+									<Button
+										variant="outline"
+										className="w-full h-10 border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-lg"
+										onClick={!session ? handleSignIn : undefined}
+										disabled={!!session}
+									>
+										{session ? "ACTIVE" : "JOIN NOW"}
+									</Button>
 								</CardFooter>
 							</Card>
 
 							<Card className="flex flex-col border-primary/30 bg-black/60 relative md:scale-105 lg:scale-110 shadow-[0_0_80px_-20px_rgba(251,146,60,0.15)] reveal rounded-2xl p-2 z-10" style={{ transitionDelay: '0.1s' }}>
-								<div className="absolute top-0 right-6 md:right-8 -translate-y-1/2 bg-primary text-primary-foreground text-[8px] font-black px-3 py-1.5 rounded-full tracking-[0.2em] uppercase shadow-lg shadow-primary/20 leading-none">Perpetual</div>
+								<div className="absolute top-0 right-6 md:right-8 -translate-y-1/2 bg-primary text-primary-foreground text-[8px] font-black px-3 py-1.5 rounded-full tracking-[0.2em] uppercase shadow-lg shadow-primary/20 leading-none">Best Value</div>
 								<CardHeader className="p-6 md:p-8">
-									<Badge className="w-fit bg-primary/20 text-primary border-primary/20 mb-4 text-[9px] font-black tracking-widest leading-none">ELITE</Badge>
-									<CardTitle className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">Standard</CardTitle>
-									<div className="mt-4 md:mt-6 text-3xl md:text-4xl font-black">$99</div>
+									<Badge className="w-fit bg-primary/20 text-primary border-primary/20 mb-4 text-[9px] font-black tracking-widest leading-none">LIFETIME ACCESS</Badge>
+									<CardTitle className="text-xl md:text-2xl font-black italic uppercase tracking-tighter">Lifetime</CardTitle>
+									<div className="mt-4 md:mt-6 text-3xl md:text-4xl font-black">$149</div>
 								</CardHeader>
 								<CardContent className="px-6 md:px-8 flex-grow">
 									<ul className="space-y-3 md:space-y-4">
-										{["Life-time Premium", "AI-Powered Hints", "Use your API Keys", "Priority Updates"].map((item, i) => (
+										{["Everything in Free", "One-time Payment", "Bring Your Own Key", "Community Discord"].map((item, i) => (
 											<li key={i} className="flex items-center gap-2.5 text-[11px] md:text-[12px] font-black">
 												<Check className="w-3.5 h-3.5 text-primary shrink-0" /> {item}
 											</li>
@@ -421,11 +474,11 @@ export default function Home() {
 								<CardFooter className="p-6 md:p-8">
 									<Button
 										className="w-full h-11 bg-primary text-primary-foreground font-black text-[10px] tracking-[0.2em] uppercase rounded-lg hover:shadow-primary/30 shadow-[0_0_20px_-10px_rgba(251,146,60,0.5)]"
-										onClick={handleStandardCheckout}
-										disabled={isLoadingStandard || isStandard || isPro}
+										onClick={handleLifetimeCheckout}
+										disabled={checkoutState.loading || isLifetime || isPro}
 									>
-										{isLoadingStandard && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
-										{isStandard || isPro ? "OWNED" : "OWN FOREVER"}
+										{checkoutState.loading && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
+										{isLifetime || isPro ? "OWNED" : "BUY LIFETIME"}
 									</Button>
 								</CardFooter>
 							</Card>

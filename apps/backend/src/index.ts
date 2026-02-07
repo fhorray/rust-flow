@@ -181,20 +181,20 @@ app.post('/api/ai/generate', async (c) => {
         eq(schema.subscription.plan, 'pro')
       )).get();
 
-    // Check for Standard Plan (one-time)
+    // Check for Lifetime Plan (one-time)
     // @ts-ignore
-    const isStandard = session.user.subscription === 'standard';
+    const isLifetime = session.user.subscription === 'lifetime';
 
     if (activePro) {
       // Pro users use backend key
       finalConfig.apiKey = c.env.OPENAI_API_KEY;
       finalConfig.provider = 'openai';
-    } else if (isStandard) {
-      // Standard users must provide key
-      if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
+    } else if (isLifetime) {
+      // Lifetime users must provide key
+      if (!finalConfig.apiKey) return c.json({ error: 'Lifetime plan requires your own API Key' }, 403);
     } else {
       // Free users
-      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
+      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
     }
 
     if (!finalConfig.apiKey || !finalConfig.provider) {
@@ -241,17 +241,17 @@ app.post('/api/ai/hint', async (c) => {
         eq(schema.subscription.plan, 'pro')
       )).get();
 
-    // Check for Standard Plan
+    // Check for Lifetime Plan
     // @ts-ignore
-    const isStandard = session.user.subscription === 'standard';
+    const isLifetime = session.user.subscription === 'lifetime';
 
     if (activePro) {
       finalConfig.apiKey = c.env.OPENAI_API_KEY;
       finalConfig.provider = 'openai';
-    } else if (isStandard) {
-      if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
+    } else if (isLifetime) {
+      if (!finalConfig.apiKey) return c.json({ error: 'Lifetime plan requires your own API Key' }, 403);
     } else {
-      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
+      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
     }
 
     if (!finalConfig.apiKey || !finalConfig.provider) {
@@ -301,7 +301,7 @@ app.post('/api/ai/explain', async (c) => {
     } else if (isStandard) {
       if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
     } else {
-      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
+      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
     }
 
     if (!finalConfig.apiKey || !finalConfig.provider) {
@@ -351,7 +351,7 @@ app.post('/api/ai/chat', async (c) => {
     } else if (isStandard) {
       if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
     } else {
-      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
+      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
     }
 
     if (!finalConfig.apiKey || !finalConfig.provider) {
