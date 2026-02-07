@@ -5,10 +5,71 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card";
-import { Check, Code, Cpu, Globe, Rocket, Terminal, Zap, Sparkles, BrainCircuit, ShieldCheck, Copy, ChevronRight, Layers, Command, Laptop, Monitor, AppWindow, Menu, X } from "lucide-react";
+import { Check, Code, Cpu, Globe, Rocket, Terminal, Zap, Sparkles, BrainCircuit, ShieldCheck, Copy, ChevronRight, Layers, Command, Laptop, Monitor, AppWindow, Menu, X, Loader2 } from "lucide-react";
+import { authClient } from "@/lib/auth-client";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
+import Link from "next/link";
 
 export default function Home() {
 	const [isMenuOpen, setIsMenuOpen] = useState(false);
+	const [isLoadingStandard, setIsLoadingStandard] = useState(false);
+	const [isLoadingPro, setIsLoadingPro] = useState(false);
+	const router = useRouter();
+	const { data: session, isPending: isSessionLoading } = authClient.useSession();
+
+	// @ts-ignore
+	const userPlan = session?.user?.subscription || "free";
+	// @ts-ignore
+	const isPro = userPlan === "pro" || (session?.user as any)?.subscription === "pro"; // Double check
+	// @ts-ignore
+	const isStandard = userPlan === "standard";
+
+	const handleStandardCheckout = async () => {
+		setIsLoadingStandard(true);
+		try {
+			if (!session) {
+				router.push("/auth/signin?redirect=checkout_standard");
+				return;
+			}
+			const res = await fetch("http://localhost:8787/api/billing/checkout/standard", {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+					"Authorization": `Bearer ${session.session?.token}`
+				},
+			});
+			const data = await res.json() as { url: string };
+			if (data.url) {
+				window.location.href = data.url;
+			} else {
+				toast.error("Failed to start checkout");
+			}
+		} catch (error) {
+			toast.error("An error occurred");
+		} finally {
+			setIsLoadingStandard(false);
+		}
+	};
+
+	const handleProCheckout = async () => {
+		setIsLoadingPro(true);
+		try {
+			if (!session) {
+				router.push("/auth/signin?redirect=checkout_pro");
+				return;
+			}
+			await authClient.subscription.upgrade({
+				plan: "pro",
+				successUrl: "/dashboard",
+				cancelUrl: "/",
+			});
+		} catch (error) {
+			toast.error("Failed to start subscription");
+		} finally {
+			setIsLoadingPro(false);
+		}
+	};
 
 	// Simple Scroll Reveal Logic
 	useEffect(() => {
@@ -335,7 +396,9 @@ export default function Home() {
 									</ul>
 								</CardContent>
 								<CardFooter className="p-6 md:p-8">
-									<Button variant="outline" className="w-full h-10 border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-lg">JOIN NOW</Button>
+									<Link href="/auth/signin" className="w-full">
+										<Button variant="outline" className="w-full h-10 border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-lg">JOIN NOW</Button>
+									</Link>
 								</CardFooter>
 							</Card>
 
@@ -356,7 +419,14 @@ export default function Home() {
 									</ul>
 								</CardContent>
 								<CardFooter className="p-6 md:p-8">
-									<Button className="w-full h-11 bg-primary text-primary-foreground font-black text-[10px] tracking-[0.2em] uppercase rounded-lg hover:shadow-primary/30 shadow-[0_0_20px_-10px_rgba(251,146,60,0.5)]">OWN FOREVER</Button>
+									<Button
+										className="w-full h-11 bg-primary text-primary-foreground font-black text-[10px] tracking-[0.2em] uppercase rounded-lg hover:shadow-primary/30 shadow-[0_0_20px_-10px_rgba(251,146,60,0.5)]"
+										onClick={handleStandardCheckout}
+										disabled={isLoadingStandard || isStandard || isPro}
+									>
+										{isLoadingStandard && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
+										{isStandard || isPro ? "OWNED" : "OWN FOREVER"}
+									</Button>
 								</CardFooter>
 							</Card>
 
@@ -376,7 +446,15 @@ export default function Home() {
 									</ul>
 								</CardContent>
 								<CardFooter className="p-6 md:p-8">
-									<Button variant="outline" className="w-full h-10 border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-lg">START TRIAL</Button>
+									<Button
+										variant="outline"
+										className="w-full h-10 border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-lg"
+										onClick={handleProCheckout}
+										disabled={isLoadingPro || isPro}
+									>
+										{isLoadingPro && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
+										{isPro ? "CURRENT PLAN" : "START TRIAL"}
+									</Button>
 								</CardFooter>
 							</Card>
 						</div>

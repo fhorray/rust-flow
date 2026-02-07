@@ -163,13 +163,45 @@ app.get('/api/progress/list', async (c) => {
 
 app.post('/api/ai/generate', async (c) => {
   try {
-    const { prompt, difficulty, config } = await c.req.json() as { prompt: string; difficulty: string; config: AIConfig };
+    const { prompt, difficulty, config: clientConfig } = await c.req.json() as { prompt: string; difficulty: string; config: AIConfig };
 
-    if (!config?.apiKey || !config?.provider) {
-      return c.json({ error: 'Missing AI configuration (apiKey or provider)' }, 400);
+    // 1. Verify Session & Subscription
+    const session = await verifySession(c);
+    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+    const db = drizzle(c.env.DB);
+    let finalConfig = { ...clientConfig };
+
+    // Check for Pro Plan (via better-auth subscription table or user metadata)
+    // Assuming 'pro' plan is stored in subscription table
+    const activePro = await db.select().from(schema.subscription)
+      .where(and(
+        eq(schema.subscription.userId, session.user.id),
+        eq(schema.subscription.status, 'active'),
+        eq(schema.subscription.plan, 'pro')
+      )).get();
+
+    // Check for Standard Plan (one-time)
+    // @ts-ignore
+    const isStandard = session.user.subscription === 'standard';
+
+    if (activePro) {
+      // Pro users use backend key
+      finalConfig.apiKey = c.env.OPENAI_API_KEY;
+      finalConfig.provider = 'openai';
+    } else if (isStandard) {
+      // Standard users must provide key
+      if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
+    } else {
+      // Free users
+      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
     }
 
-    const model = getModel(config);
+    if (!finalConfig.apiKey || !finalConfig.provider) {
+      return c.json({ error: 'Missing AI configuration' }, 400);
+    }
+
+    const model = getModel(finalConfig);
     const system = constructGeneratePrompt(prompt, difficulty);
 
     const { text } = await generateText({
@@ -192,14 +224,41 @@ app.post('/api/ai/generate', async (c) => {
 
 app.post('/api/ai/hint', async (c) => {
   try {
-    const { context, config } = await c.req.json() as { context: AIContext; config: AIConfig };
+    const { context, config: clientConfig } = await c.req.json() as { context: AIContext; config: AIConfig };
 
-    // Basic validation
-    if (!config?.apiKey || !config?.provider) {
-      return c.json({ error: 'Missing AI configuration (apiKey or provider)' }, 400);
+    // 1. Verify Session & Subscription
+    const session = await verifySession(c);
+    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+    const db = drizzle(c.env.DB);
+    let finalConfig = { ...clientConfig };
+
+    // Check for Pro Plan
+    const activePro = await db.select().from(schema.subscription)
+      .where(and(
+        eq(schema.subscription.userId, session.user.id),
+        eq(schema.subscription.status, 'active'),
+        eq(schema.subscription.plan, 'pro')
+      )).get();
+
+    // Check for Standard Plan
+    // @ts-ignore
+    const isStandard = session.user.subscription === 'standard';
+
+    if (activePro) {
+      finalConfig.apiKey = c.env.OPENAI_API_KEY;
+      finalConfig.provider = 'openai';
+    } else if (isStandard) {
+      if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
+    } else {
+      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
     }
 
-    const model = getModel(config);
+    if (!finalConfig.apiKey || !finalConfig.provider) {
+      return c.json({ error: 'Missing AI configuration' }, 400);
+    }
+
+    const model = getModel(finalConfig);
     const system = constructSystemPrompt(context);
 
     const { text } = await generateText({
@@ -217,13 +276,39 @@ app.post('/api/ai/hint', async (c) => {
 
 app.post('/api/ai/explain', async (c) => {
   try {
-    const { context, config } = await c.req.json() as { context: AIContext; config: AIConfig };
+    const { context, config: clientConfig } = await c.req.json() as { context: AIContext; config: AIConfig };
 
-    if (!config?.apiKey || !config?.provider) {
-      return c.json({ error: 'Missing AI configuration (apiKey or provider)' }, 400);
+    // 1. Verify Session & Subscription
+    const session = await verifySession(c);
+    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+    const db = drizzle(c.env.DB);
+    let finalConfig = { ...clientConfig };
+
+    const activePro = await db.select().from(schema.subscription)
+      .where(and(
+        eq(schema.subscription.userId, session.user.id),
+        eq(schema.subscription.status, 'active'),
+        eq(schema.subscription.plan, 'pro')
+      )).get();
+
+    // @ts-ignore
+    const isStandard = session.user.subscription === 'standard';
+
+    if (activePro) {
+      finalConfig.apiKey = c.env.OPENAI_API_KEY;
+      finalConfig.provider = 'openai';
+    } else if (isStandard) {
+      if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
+    } else {
+      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
     }
 
-    const model = getModel(config);
+    if (!finalConfig.apiKey || !finalConfig.provider) {
+      return c.json({ error: 'Missing AI configuration' }, 400);
+    }
+
+    const model = getModel(finalConfig);
     const system = constructExplanationPrompt(context);
 
     const result = streamText({
@@ -241,13 +326,39 @@ app.post('/api/ai/explain', async (c) => {
 
 app.post('/api/ai/chat', async (c) => {
   try {
-    const { messages, context, config } = await c.req.json() as { messages: any[]; context: AIContext; config: AIConfig };
+    const { messages, context, config: clientConfig } = await c.req.json() as { messages: any[]; context: AIContext; config: AIConfig };
 
-    if (!config?.apiKey || !config?.provider) {
-      return c.json({ error: 'Missing AI configuration (apiKey or provider)' }, 400);
+    // 1. Verify Session & Subscription
+    const session = await verifySession(c);
+    if (!session) return c.json({ error: 'Unauthorized' }, 401);
+
+    const db = drizzle(c.env.DB);
+    let finalConfig = { ...clientConfig };
+
+    const activePro = await db.select().from(schema.subscription)
+      .where(and(
+        eq(schema.subscription.userId, session.user.id),
+        eq(schema.subscription.status, 'active'),
+        eq(schema.subscription.plan, 'pro')
+      )).get();
+
+    // @ts-ignore
+    const isStandard = session.user.subscription === 'standard';
+
+    if (activePro) {
+      finalConfig.apiKey = c.env.OPENAI_API_KEY;
+      finalConfig.provider = 'openai';
+    } else if (isStandard) {
+      if (!finalConfig.apiKey) return c.json({ error: 'Standard plan requires your own API Key' }, 403);
+    } else {
+      return c.json({ error: 'AI features require a Standard or Pro subscription' }, 403);
     }
 
-    const model = getModel(config);
+    if (!finalConfig.apiKey || !finalConfig.provider) {
+      return c.json({ error: 'Missing AI configuration' }, 400);
+    }
+
+    const model = getModel(finalConfig);
     const system = constructSystemPrompt(context);
 
     // Filter out messages with empty content to avoid API errors

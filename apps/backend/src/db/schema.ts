@@ -9,7 +9,22 @@ export const user = sqliteTable("user", {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   subscription: text('subscription').default('free'), // Custom field
+  stripeCustomerId: text('stripe_customer_id'), // New field from plugin
   metadata: text('metadata'), // JSON string for persistent settings
+});
+
+export const subscription = sqliteTable("subscription", {
+  id: text("id").primaryKey(),
+  userId: text("user_id").references(() => user.id), // Added missing userId field
+  plan: text("plan").notNull(),
+  referenceId: text("reference_id").notNull(),
+  stripeCustomerId: text("stripe_customer_id"),
+  stripeSubscriptionId: text("stripe_subscription_id"),
+  status: text("status"),
+  periodStart: integer("period_start", { mode: "timestamp" }),
+  periodEnd: integer("period_end", { mode: "timestamp" }),
+  cancelAtPeriodEnd: integer("cancel_at_period_end", { mode: "boolean" }),
+  seats: integer("seats"),
 });
 
 export const session = sqliteTable("session", {
