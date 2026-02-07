@@ -82,7 +82,7 @@ export default function Home() {
 	const handleSignIn = async () => {
 		await authClient.signIn.social({
 			provider: "github",
-			callbackURL: "/"
+			callbackURL: window.location.origin + "/dashboard"
 		});
 	};
 

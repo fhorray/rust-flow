@@ -4,7 +4,7 @@ import { inferAdditionalFields } from "better-auth/client/plugins"
 
 
 export const authClient = createAuthClient({
-  baseURL: process.env.NEXT_PUBLIC_API_URL! || "https://progy.francy.workers.dev",
+  baseURL: (process.env.NEXT_PUBLIC_API_URL || "https://progy.francy.workers.dev").replace(/\/$/, "") + "/api/auth",
   plugins: [
     inferAdditionalFields({
       user: {

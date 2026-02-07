@@ -16,26 +16,66 @@ billing.post("/checkout/standard", async (c) => {
     return c.json({ error: "Unauthorized" }, 401);
   }
 
-  const stripe = new Stripe(c.env.STRIPE_SECRET_KEY, {
-    apiVersion: "2026-01-28.clover" as any, // Cast to any to avoid TS mismatch if the types are slightly off, but the error suggested this string.
+  const stripe = new Stripe(c.env.STRIPE_SECRET_KEY || "", {
+    apiVersion: "2026-01-28.clover",
+    httpClient: Stripe.createFetchHttpClient()
   });
 
-  const origin = c.req.header("origin") || "http://localhost:3000";
+  // Ensure redirect goes back to the frontend dashboard
+  const origin = c.req.header("origin") || "https://progy-web.francy.workers.dev";
+  const redirectBase = origin.includes("localhost") ? origin : "https://progy-web.francy.workers.dev";
 
   const checkoutSession = await stripe.checkout.sessions.create({
     customer_email: session.user.email,
     line_items: [
       {
-        price: c.env.STRIPE_PRICE_ID_STANDARD,
+        price: c.env.STRIPE_PRICE_ID_PRO,
         quantity: 1,
       },
     ],
-    mode: "payment",
-    success_url: `${origin}/billing/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/billing/cancel`,
+    mode: "subscription",
+    success_url: `${redirectBase}/dashboard`,
+    cancel_url: `${redirectBase}/dashboard`,
     metadata: {
       userId: session.user.id,
       planType: "standard",
+    },
+  });
+
+  return c.json({ url: checkoutSession.url });
+});
+
+billing.post("/checkout/pro", async (c) => {
+  const auth = authServer(c.env);
+  const session = await auth.api.getSession({ headers: c.req.raw.headers });
+
+  if (!session) {
+    return c.json({ error: "Unauthorized" }, 401);
+  }
+
+  const stripe = new Stripe(c.env.STRIPE_SECRET_KEY || "", {
+    apiVersion: "2026-01-28.clover" as any,
+    httpClient: Stripe.createFetchHttpClient()
+  });
+
+  // Ensure redirect goes back to the frontend dashboard
+  const origin = c.req.header("origin") || "https://progy-web.francy.workers.dev";
+  const redirectBase = origin.includes("localhost") ? origin : "https://progy-web.francy.workers.dev";
+
+  const checkoutSession = await stripe.checkout.sessions.create({
+    customer_email: session.user.email,
+    line_items: [
+      {
+        price: c.env.STRIPE_PRICE_ID_PRO,
+        quantity: 1,
+      },
+    ],
+    mode: "subscription",
+    success_url: `${redirectBase}/dashboard`,
+    cancel_url: `${redirectBase}/dashboard`,
+    metadata: {
+      userId: session.user.id,
+      planType: "pro",
     },
   });
 

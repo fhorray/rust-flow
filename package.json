@@ -11,7 +11,8 @@
     "pkg:major": "bun pm --cwd apps/progy version major --force",
     "pkg:minor": "bun pm --cwd apps/progy version minor --force",
     "pkg:patch": "bun pm --cwd apps/progy version patch --force",
-    "pkg:publish": "bun publish --cwd apps/progy"
+    "pkg:publish": "bun publish --cwd apps/progy",
+    "db:clean": "wrangler d1 execute progy --remote --file=scripts/clean-db.sql"
   },
   "workspaces": [
     "apps/*"

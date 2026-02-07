@@ -6,10 +6,13 @@ import * as schema from './db/schema'
 import { eq, and } from 'drizzle-orm'
 import { streamText, generateText } from "ai";
 import { getModel, constructSystemPrompt, constructExplanationPrompt, constructGeneratePrompt, type AIConfig, type AIContext } from "./ai/service";
+import billing from './endpoints/billing'
 
 const app = new Hono<{
   Bindings: CloudflareBindings
 }>()
+
+app.route('/api/billing', billing)
 
 app.use('*', cors({
   origin: ['http://localhost:3001', 'https://progy.francy.workers.dev', 'https://progy-web.francy.workers.dev'],
@@ -17,6 +20,21 @@ app.use('*', cors({
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }))
+
+// Debugging Middleware for Stripe/Auth
+app.use("/api/auth/*", async (c, next) => {
+  if (c.req.path.includes("/stripe/upgrade") || c.req.path.includes("/subscription/upgrade")) {
+    console.log(`[DEBUG] Stripe/Subscription Upgrade Request: ${c.req.method} ${c.req.url}`);
+    console.log(`[DEBUG] Cookies: ${c.req.header("Cookie")}`);
+    const auth = authServer(c.env);
+    const session = await auth.api.getSession({ headers: c.req.raw.headers });
+    console.log(`[DEBUG] Session identified: ${session ? "YES" : "NO"}`);
+    if (session) {
+      console.log(`[DEBUG] User ID: ${session.user.id}`);
+    }
+  }
+  await next();
+});
 
 app.get('/api/registry', (c) => {
   return c.json({ courses: c.env.COURSES })

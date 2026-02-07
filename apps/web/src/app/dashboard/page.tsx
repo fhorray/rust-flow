@@ -74,8 +74,8 @@ export default function Dashboard() {
       // In better-auth stripe plugin, we can use upgrade()
       await authClient.subscription.upgrade({
         plan: "pro", // Or a specific 'master-ai' plan if defined in backend
-        successUrl: "/dashboard",
-        cancelUrl: "/dashboard",
+        successUrl: window.location.origin + "/dashboard",
+        cancelUrl: window.location.origin + "/dashboard",
       });
     } catch (error) {
       toast.error("Failed to start upgrade");
