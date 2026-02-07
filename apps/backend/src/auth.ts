@@ -27,7 +27,8 @@ export const authServer = (env: CloudflareBindings) => {
     baseURL: env.BETTER_AUTH_URL ? `${env.BETTER_AUTH_URL.replace(/\/$/, "")}/api/auth` : "https://progy.francy.workers.dev/api/auth",
     trustedOrigins: [
       "http://localhost:3001",
-      "https://progy.francy.workers.dev"
+      "https://progy.francy.workers.dev",
+      "https://progy-api.francy.workers.dev"
     ],
     socialProviders: {
       github: {

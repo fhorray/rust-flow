@@ -11,8 +11,8 @@ import { CourseContainer } from "./course-container";
 
 const CONFIG_DIR = join(homedir(), ".progy");
 const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
-const BACKEND_URL = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
-const FRONTEND_URL = process.env.PROGY_FRONTEND_URL || BACKEND_URL;
+const BACKEND_URL = process.env.PROGY_API_URL || "https://progy-api.francy.workers.dev";
+const FRONTEND_URL = process.env.PROGY_FRONTEND_URL || "https://progy.francy.workers.dev";
 
 // Version & Source Check
 import packageJson from "../package.json";

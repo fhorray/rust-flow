@@ -13,7 +13,7 @@ export const MANIFEST_PATH = join(PROG_DIR, "exercises.json");
 export const PROGRESS_PATH = join(PROG_DIR, "progress.json");
 
 export const IS_OFFLINE = process.env.PROGY_OFFLINE === "true";
-export const BACKEND_URL = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
+export const BACKEND_URL = process.env.PROGY_API_URL || "https://progy-api.francy.workers.dev";
 
 export const DEFAULT_PROGRESS: Progress = {
   stats: {
@@ -140,7 +140,7 @@ export async function saveProgress(progress: Progress) {
 }
 
 async function syncProgressWithCloud(courseId: string, progress: Progress, token: string) {
-  const remoteUrl = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
+  const remoteUrl = process.env.PROGY_API_URL || "https://progy-api.francy.workers.dev";
   try {
     const res = await fetch(`${remoteUrl}/api/progress/sync`, {
       method: 'POST',
@@ -161,7 +161,7 @@ async function syncProgressWithCloud(courseId: string, progress: Progress, token
 }
 
 async function fetchProgressFromCloud(courseId: string, token: string): Promise<Progress | null> {
-  const remoteUrl = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
+  const remoteUrl = process.env.PROGY_API_URL || "https://progy-api.francy.workers.dev";
   try {
     const res = await fetch(`${remoteUrl}/api/progress/get?courseId=${courseId}`, {
       headers: {

@@ -77,7 +77,7 @@ async function verifySession(c: any) {
     }
     return null
   } catch (err: any) {
-    console.error(`[AUTH-ERROR] ${err.message}`)
+    console.error(`[AUTH-ERROR-CRITICAL] ${err.message}`, err.stack)
     return null
   }
 }
@@ -138,9 +138,17 @@ app.get('/api/progress/get', async (c) => {
         eq(schema.courseProgress.courseId, courseId)
       )
     )
-    .get()
+  if (progress?.data) {
+    try {
+      return c.json(JSON.parse(progress.data))
+    } catch (e) {
+      console.error(`[PROGRESS-PARSE-ERROR] Course: ${courseId}, User: ${session.user.id}`, e)
+      // If corrupted, return null rather than 500
+      return c.json(null)
+    }
+  }
 
-  return c.json(progress ? JSON.parse(progress.data) : null)
+  return c.json(null)
 })
 
 app.get('/api/progress/list', async (c) => {
@@ -154,11 +162,19 @@ app.get('/api/progress/list', async (c) => {
     .where(eq(schema.courseProgress.userId, session.user.id))
     .all()
 
-  return c.json(progressList.map(p => ({
-    courseId: p.courseId,
-    data: JSON.parse(p.data),
-    updatedAt: p.updatedAt
-  })))
+  return c.json(progressList.map(p => {
+    let data = {}
+    try {
+      data = JSON.parse(p.data)
+    } catch (e) {
+      console.error(`[PROGRESS-LIST-PARSE-ERROR] Course: ${p.courseId}, User: ${session.user.id}`, e)
+    }
+    return {
+      courseId: p.courseId,
+      data,
+      updatedAt: p.updatedAt
+    }
+  }))
 })
 
 app.post('/api/ai/generate', async (c) => {
