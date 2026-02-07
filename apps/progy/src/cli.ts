@@ -1,18 +1,30 @@
 #!/usr/bin/env bun
 import { program } from "commander";
-import { cp, exists, mkdir, writeFile, readFile } from "node:fs/promises";
-import { join, resolve, relative } from "node:path";
+import { cp, mkdir, writeFile, readFile, rm, readdir } from "node:fs/promises";
+import { join, resolve, relative, basename } from "node:path";
 import { spawn } from "node:child_process";
-import { homedir } from "node:os";
+import { homedir, tmpdir } from "node:os";
+import { stat } from "node:fs/promises"; // Import stat for exists helper
 import { TEMPLATES } from "./templates";
 import { CourseLoader } from "./course-loader";
+import { CourseContainer } from "./course-container";
 
 const CONFIG_DIR = join(homedir(), ".progy");
 const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
 const BACKEND_URL = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
-const FRONTEND_URL = process.env.PROGY_FRONTEND_URL || BACKEND_URL; // Assuming frontend is hosted on the same domain or subpath
+const FRONTEND_URL = process.env.PROGY_FRONTEND_URL || BACKEND_URL;
 
 const CONFIG_NAME = "course.json";
+
+// Helper for exists check
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 // Heuristic to find the root "courses" directory
 // When linked locally, import.meta.dir resolves to the real location (apps/prog/src)
@@ -97,6 +109,105 @@ function openBrowser(url: string) {
 
 // cloneCourse removed, moved to CourseLoader
 
+async function startCourse(file: string | undefined, options: { offline: boolean }) {
+  const cwd = process.cwd();
+  const isOffline = !!options.offline;
+
+  // ---------------------------------------------------------
+  // RUNTIME LOGIC
+  // ---------------------------------------------------------
+
+  let runtimeCwd = cwd;
+  let containerFile = "";
+
+  // 1. Detect .progy file
+  if (file && file.endsWith(".progy") && await exists(file)) {
+    containerFile = resolve(file);
+  } else {
+    // Scan directory
+    const files = await readdir(cwd);
+    const progyFiles = files.filter(f => f.endsWith(".progy"));
+    if (progyFiles.length > 0) {
+      if (progyFiles.length > 1) {
+        console.warn(`[WARN] Multiple .progy files found. Using ${progyFiles[0]}`);
+      }
+      containerFile = join(cwd, progyFiles[0] as string);
+    }
+  }
+
+  if (containerFile) {
+    console.log(`[OPEN] Opening course: ${basename(containerFile)}...`);
+    try {
+      // Unpack to global runtime
+      runtimeCwd = await CourseContainer.unpack(containerFile);
+      console.log(`[KT] Runtime ready at: ${runtimeCwd}`);
+    } catch (e) {
+      console.error(`[ERROR] Failed to unpack course: ${e}`);
+      process.exit(1);
+    }
+  } else {
+    // Check if open directory is a legacy course (has course.json)
+    if (await exists(join(cwd, CONFIG_NAME))) {
+      console.log(`[INFO] Legacy course directory detected.`);
+    } else {
+      // No course found
+      console.log(`[INFO] No .progy file or course structure found.`);
+      console.log(`Run 'progy init' to create a new course.`);
+      // We allow server to start so it can show "No Course" UI if implemented.
+    }
+  }
+
+  console.log(`[INFO] Starting UI in ${isOffline ? 'OFFLINE' : 'ONLINE'} mode...`);
+
+  // dynamically find server file
+  const isTs = import.meta.file.endsWith(".ts");
+  const serverExt = isTs ? "ts" : "js";
+  const serverPath = join(import.meta.dir, "backend", `server.${serverExt}`);
+
+  const serverArgs = ["run", serverPath];
+  if (process.env.ENABLE_HMR === "true") {
+    serverArgs.splice(1, 0, "--hot");
+  }
+
+  const child = spawn("bun", serverArgs, {
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      PROG_CWD: runtimeCwd, // Point server to runtime!
+      PROGY_OFFLINE: isOffline ? "true" : "false"
+    },
+  });
+
+  // Watcher for Sync
+  if (containerFile) {
+    console.log(`[SYNC] Auto-save enabled.`);
+    const { watch } = await import("node:fs");
+    let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+
+    const watcher = watch(runtimeCwd, { recursive: true }, (event, filename) => {
+      // Ignore temporary files if needed, or specific patterns
+      if (!filename || filename.includes(".git") || filename.includes("node_modules")) return;
+
+      if (debounceTimer) clearTimeout(debounceTimer);
+      debounceTimer = setTimeout(async () => {
+        try {
+          await CourseContainer.sync(runtimeCwd, containerFile);
+        } catch (e) {
+          console.error(`[SYNC] Failed to save: ${e}`);
+        }
+      }, 1000); // 1s write debounce
+    });
+
+    child.on("close", () => {
+      watcher.close();
+      console.log(`[SYNC] Final save...`);
+      CourseContainer.sync(runtimeCwd, containerFile).then(() => process.exit(0));
+    });
+  } else {
+    child.on("close", (code) => process.exit(code ?? 0));
+  }
+}
+
 program
   .name("progy")
   .description("Universal programming course runner")
@@ -168,97 +279,89 @@ program
         }
       }
 
-      // 2. Try CourseLoader (Alias, URL, Local Path)
-      if (!installed) {
-        try {
-          sourceInfo = await CourseLoader.load(lang, cwd);
-          installed = true;
-        } catch (e) {
-          console.error(`[ERROR] Failed to initialize course: ${e}`);
-          process.exit(1);
+      // 1. Optimistic Check: If [course].progy exists, use it validly
+      // Note: aliases like "javascript" might map to "js-essentials", so this only catches exact matches
+      // or if the user provided the ID directly.
+      const optimisticFile = join(cwd, `${lang}.progy`);
+      if (await exists(optimisticFile)) {
+        console.log(`[INFO] Found '${lang}.progy'. Opening existing file...`);
+        await startCourse(optimisticFile, { offline: isOffline });
+        return;
+      }
+
+      // 2. Download and Package
+      const tempDir = join(tmpdir(), `progy-init-${Date.now()}`);
+      await mkdir(tempDir, { recursive: true });
+      let courseId = lang.replace(/\//g, "-");
+
+      try {
+        // Download to temp
+        sourceInfo = await CourseLoader.load(lang, tempDir);
+
+        // Read config to get real ID and inject metadata
+        const configPath = join(tempDir, CONFIG_NAME);
+        if (await exists(configPath)) {
+          const configContent = await readFile(configPath, "utf-8");
+          const config = JSON.parse(configContent);
+
+          if (config.id) courseId = config.id;
+
+          // Metadata Injection
+          let updated = false;
+          if (sourceInfo) {
+            config.repo = sourceInfo.url;
+            updated = true;
+          }
+
+          if (updated) {
+            await writeFile(configPath, JSON.stringify(config, null, 2));
+            console.log(`[META] Course metadata injected.`);
+          }
+        }
+
+        // Pack to .progy file
+        const progyFile = join(cwd, `${courseId}.progy`);
+        if (await exists(progyFile)) {
+          console.log(`[INFO] File '${courseId}.progy' already exists. Using existing file.`);
+          // Skip packaging, just proceed to start
+        } else {
+          // Package the course
+          console.log(`[INFO] Packaging course from ${tempDir}...`);
+          await CourseContainer.pack(tempDir, progyFile);
+          console.log(`[SUCCESS] Course packaged: ${courseId}.progy`);
+        }
+
+        // 4. Clean up temp
+        if (tempDir && await exists(tempDir)) {
+          await rm(tempDir, { recursive: true, force: true });
+        }
+
+        console.log(`\nTo start the course, run:\n  bunx progy`);
+
+        // Auto-start
+        await startCourse(progyFile, { offline: isOffline });
+
+      } catch (e) {
+        console.error(`[ERROR] Failed to initialize course: ${e}`);
+        await rm(tempDir, { recursive: true, force: true });
+        process.exit(1);
+      } finally {
+        if (await exists(tempDir)) {
+          await rm(tempDir, { recursive: true, force: true });
         }
       }
-      console.log("[INFO] Initialization complete!");
     }
 
-    // Persist Metadata & Dynamic ID Injection (Always run on init)
-    try {
-      if (await exists(courseConfigPath)) {
-        console.log(`[DEBUG] Found course.json at ${courseConfigPath}. Checking for updates...`);
-        const configContent = await readFile(courseConfigPath, "utf-8");
-        const config = JSON.parse(configContent);
-        let updated = false;
+  });
 
-        // 1. If we just loaded from CourseLoader, we have source info
-        if (sourceInfo) {
-          console.log(`[DEBUG] sourceInfo URL: ${sourceInfo.url}`);
-          config.repo = sourceInfo.url;
-          updated = true;
-        }
-
-        // 2. Dynamic ID Injection based on Git (if available)
-        const gitInfo = await getGitInfo(cwd);
-        console.log(`[DEBUG] gitInfo: ${JSON.stringify(gitInfo)}`);
-
-        if (gitInfo.remoteUrl && gitInfo.root) {
-          const { remoteUrl, root } = gitInfo;
-          if (!config.repo) {
-            config.repo = remoteUrl;
-            updated = true;
-          }
-          const newId = generateCourseId(remoteUrl, root, cwd);
-          if (config.id !== newId) {
-            console.log(`[ID] Updating course ID to match repository: ${newId}`);
-            config.id = newId;
-            updated = true;
-          }
-        } else if (sourceInfo) {
-          // Fallback ID generation if no git but we have source
-          const dummyRoot = "/";
-          const newId = generateCourseId(sourceInfo.url, dummyRoot, sourceInfo.path || "");
-          if (config.id !== newId) {
-            console.log(`[ID] Setting course ID from source: ${newId}`);
-            config.id = newId;
-            updated = true;
-          }
-        }
-
-        console.log(`[DEBUG] Update pending? ${updated}`);
-        if (updated) {
-          await writeFile(courseConfigPath, JSON.stringify(config, null, 2));
-          console.log(`[META] Course metadata updated at ${courseConfigPath}.`);
-        }
-      } else {
-        console.log(`[DEBUG] No course.json found at ${courseConfigPath}`);
-      }
-    } catch (e) {
-      console.warn(`[WARN] Failed to update course metadata: ${e}`);
-    }
-
-    console.log(`[INFO] Starting UI in ${isOffline ? 'OFFLINE' : 'ONLINE'} mode...`);
-
-    // dynamically find server file (ts in dev, js in prod)
-    // In dev: src/cli.ts -> backend/server.ts
-    // In prod: dist/cli.js -> backend/server.js
-    const isTs = import.meta.file.endsWith(".ts");
-    const serverExt = isTs ? "ts" : "js";
-    const serverPath = join(import.meta.dir, "backend", `server.${serverExt}`);
-
-    const serverArgs = ["run", serverPath];
-    if (process.env.ENABLE_HMR === "true") {
-      serverArgs.splice(1, 0, "--hot");
-    }
-
-    const child = spawn("bun", serverArgs, {
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        PROG_CWD: cwd,
-        PROGY_OFFLINE: isOffline ? "true" : "false"
-      },
-    });
-
-    child.on("close", (code) => process.exit(code ?? 0));
+program
+  .command("start", { isDefault: true })
+  .description("Start the Progy server (opens local .progy file)")
+  .option("--offline", "Run in offline mode")
+  .argument("[file]", "Specific .progy file to open")
+  .action(async (file, options) => {
+    // RUNTIME LOGIC (Default "progy start" behavior)
+    await startCourse(file, options);
   });
 
 program
@@ -370,7 +473,9 @@ program
   .description("Authenticate with Progy")
   .action(async () => {
     // Dynamically import better-auth client to avoid top-level issues if not installed
+    // @ts-ignore
     const { createAuthClient } = await import("better-auth/client");
+    // @ts-ignore
     const { deviceAuthorizationClient } = await import("better-auth/client/plugins");
 
     const authClient = createAuthClient({
