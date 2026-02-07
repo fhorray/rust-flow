@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { authClient } from "@/lib/auth-client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,9 +11,7 @@ import { toast } from "sonner";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 
-export default function Dashboard() {
-  const { data: session, isPending } = authClient.useSession();
-  const [isLoadingBilling, setIsLoadingBilling] = useState(false);
+function PaymentStatusHandler() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -22,12 +20,19 @@ export default function Dashboard() {
       toast.success("Payment successful! Updating your profile...", {
         duration: 5000,
       });
-      // Force refresh session to get new subscription status
       authClient.getSession().then(() => {
         router.refresh();
       });
     }
   }, [searchParams, router]);
+
+  return null;
+}
+
+export default function Dashboard() {
+  const { data: session, isPending } = authClient.useSession();
+  const [isLoadingBilling, setIsLoadingBilling] = useState(false);
+  const router = useRouter();
 
   const handleSignOut = async () => {
     await authClient.signOut({
@@ -113,6 +118,10 @@ export default function Dashboard() {
 
   return (
     <div className="min-h-screen bg-background font-sans selection:bg-primary/20">
+      <Suspense fallback={null}>
+        <PaymentStatusHandler />
+      </Suspense>
+
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-background/60 backdrop-blur-xl border-b border-white/5">
         <div className="max-w-6xl mx-auto px-4 md:px-6 h-14 flex items-center justify-between">
