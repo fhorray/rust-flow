@@ -7,7 +7,7 @@
 		"build": "next build",
 		"start": "next start",
 		"lint": "next lint",
-		"build:cf": "opennextjs-cloudflare build",
+		"build:cf": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
 		"deploy": "opennextjs-cloudflare deploy",
 		"upload": "opennextjs-cloudflare build && opennextjs-cloudflare upload",
 		"preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
