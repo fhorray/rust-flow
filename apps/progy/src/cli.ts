@@ -9,6 +9,7 @@ import { TEMPLATES, RUNNER_README } from "./templates";
 import { CourseLoader } from "./course-loader";
 import { CourseContainer } from "./course-container";
 import { GitUtils } from "./git-utils";
+import { SyncManager } from "./sync-manager";
 
 const CONFIG_DIR = join(homedir(), ".progy");
 const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
@@ -37,18 +38,6 @@ async function exists(path: string): Promise<boolean> {
   }
 }
 
-// Heuristic to find the root "courses" directory
-// When linked locally, import.meta.dir resolves to the real location (apps/prog/src)
-// So we check ../../../courses
-async function findCoursesDir(): Promise<string | null> {
-  const localAttempt = join(import.meta.dir, "../../../courses");
-  // Check if we are in a monorepo structure
-  if (await exists(localAttempt)) {
-    return localAttempt;
-  }
-  return null;
-}
-
 async function saveToken(token: string) {
   if (!(await exists(CONFIG_DIR))) {
     await mkdir(CONFIG_DIR, { recursive: true });
@@ -66,59 +55,10 @@ async function loadToken(): Promise<string | null> {
   }
 }
 
-// Helper to get git info
-async function getGitInfo(cwd: string): Promise<{ remoteUrl: string | null; root: string | null }> {
-  try {
-    const remoteProc = spawn("git", ["remote", "get-url", "origin"], { cwd });
-    const remoteUrl = await new Promise<string | null>((resolve) => {
-      let data = "";
-      remoteProc.stdout.on("data", (d) => data += d.toString());
-      remoteProc.on("close", (code) => resolve(code === 0 ? data.trim() : null));
-    });
-
-    const rootProc = spawn("git", ["rev-parse", "--show-toplevel"], { cwd });
-    const root = await new Promise<string | null>((resolve) => {
-      let data = "";
-      rootProc.stdout.on("data", (d) => data += d.toString());
-      rootProc.on("close", (code) => resolve(code === 0 ? data.trim() : null));
-    });
-
-    return { remoteUrl, root };
-  } catch {
-    return { remoteUrl: null, root: null };
-  }
-}
-
-function generateCourseId(remoteUrl: string, repoRoot: string, cwd: string): string {
-  try {
-    // 1. Extract slug from URL (e.g., https://github.com/user/repo.git -> user/repo)
-    let slug = "";
-    if (remoteUrl.startsWith("http")) {
-      const parts = remoteUrl.replace(/\.git$/, "").split("/");
-      slug = parts.slice(-2).join("/");
-    } else if (remoteUrl.startsWith("git@")) {
-      const parts = remoteUrl.replace(/\.git$/, "").split(":");
-      slug = parts[1] || "";
-    }
-
-    if (!slug) return "local/course";
-
-    // 2. Get relative path using Node's path.relative for safety
-    const relPath = relative(repoRoot.trim(), cwd.trim()).replace(/\\/g, "/");
-
-    // 3. Combine (if relPath is empty, it means cwd == root)
-    return relPath ? `${slug}/${relPath}` : slug;
-  } catch {
-    return "local/course";
-  }
-}
-
 function openBrowser(url: string) {
   const start = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
   spawn(start, [url], { shell: true }).unref();
 }
-
-// cloneCourse removed, moved to CourseLoader
 
 // Helper to run the server
 async function runServer(runtimeCwd: string, isOffline: boolean, containerFile: string | null) {
@@ -307,10 +247,6 @@ program
     }
   });
 
-
-
-// ... existing imports ...
-
 program
   .command("init")
   .description("Initialize a new course in the current directory")
@@ -319,219 +255,137 @@ program
   .action(async (options) => {
     const cwd = process.cwd();
     const isOffline = !!options.offline;
-    const lang = options.course;
+    let courseId = options.course;
 
-    // 1. Generic / Offline Flow (Legacy) or no course specified checks
-    if (!lang || lang === 'generic' || isOffline) {
-      // ... (Keep existing logic for generic/offline if needed, or simpler: just error if not consistent)
-      // For brevity in this replacement, I will focus on the GIT FLOW.
-      // If isOffline, we fallback to old "Download and Pack" behavior? 
-      // Let's keep a simplified fallback for offline.
-      if (isOffline) {
-        console.log("[INFO] Offline mode: Skipping Git Sync.");
-        // Fallback to old load & pack logic... 
-        // (User can restore previous logic here if they want strictly offline files)
-        // For now, let's implement the Git flow primarily.
-      }
+    // 0. Check existing configuration (Resume flow)
+    const existingConfig = await SyncManager.loadConfig(cwd);
+    if (existingConfig) {
+      console.log(`[INIT] Found existing progy.toml. Resuming course '${existingConfig.course.id}'...`);
+      courseId = existingConfig.course.id;
     }
 
-    // 2. Authentication & Git Token
+    if (!courseId && !isOffline) {
+       console.error("❌ Please specify a course ID (e.g., 'progy init -c rust') or run inside an existing course.");
+       process.exit(1);
+    }
+
+    if (isOffline) {
+        console.log("[INFO] Offline mode: Skipping Git Sync.");
+        // Simplified offline fallback (Legacy Template Logic could go here)
+        console.warn("⚠️  Offline init not fully supported in this version. Use online mode to sync first.");
+        return;
+    }
+
+    // 1. Authentication
     let token = await loadToken();
-    if (!token && !isOffline) {
+    let gitCreds: { user: string, token: string } | null = null;
+
+    if (!token) {
       console.error("❌ Authentication required. Run 'progy login' first.");
       process.exit(1);
     }
 
-    let gitCreds: { user: string, token: string } | null = null;
-    if (token) {
-      try {
-        console.log("[SYNC] Checking Git credentials...");
-        const res = await fetch(`${BACKEND_URL}/api/git/credentials`, {
+    try {
+      const res = await fetch(`${BACKEND_URL}/api/git/credentials`, {
           headers: { "Authorization": `Bearer ${token}` }
-        });
-        if (res.ok) {
+      });
+      if (res.ok) {
           gitCreds = await res.json() as any;
           console.log(`[SYNC] Connected as GitHub user: ${gitCreds?.user}`);
-        } else {
-          console.warn(`[SYNC] Git auth check failed: ${res.status} ${res.statusText}`);
-          console.warn("⚠️  You may need to re-login to grant 'repo' permissions.");
-          console.warn("👉 Run 'progy login' and try again.");
-          console.warn("Falling back to local mode.");
-        }
-      } catch (e: any) {
-        console.warn(`[SYNC] API unreachable: ${e.message}. Falling back to local mode.`);
+      } else {
+          throw new Error("Git auth failed");
       }
+    } catch (e) {
+      console.warn("⚠️  Authentication check failed. Please re-login.");
+      process.exit(1);
     }
 
-    // 3. Git Init / Clone Flow
-    if (gitCreds && lang) {
-      try {
-        // A. Ensure Repo Exists
-        console.log(`[SYNC] Ensuring repository for '${lang}'...`);
+    try {
+        // 2. Resolve Official Course URL
+        console.log(`[SYNC] Resolving official course '${courseId}'...`);
+        const officialSource = await CourseLoader.resolveSource(courseId);
+
+        // 3. Ensure User Repository Exists
+        console.log(`[SYNC] Checking user repository...`);
         const ensureRes = await fetch(`${BACKEND_URL}/api/git/ensure-repo`, {
           method: "POST",
           headers: {
             "Authorization": `Bearer ${token}`,
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ courseId: lang })
+          body: JSON.stringify({ courseId })
         });
 
-        if (!ensureRes.ok) throw new Error("Failed to ensure repository");
-        const repoInfo = await ensureRes.json() as { repoUrl: string, isNew: boolean };
+        if (!ensureRes.ok) throw new Error("Failed to ensure user repository");
+        const userRepoInfo = await ensureRes.json() as { repoUrl: string, isNew: boolean };
 
-        // B. Clone
-        console.log(`[SYNC] Cloning from ${repoInfo.repoUrl}...`);
-        // Check if directory is empty?
-        const files = await readdir(cwd);
-        if (files.length > 0) {
-          // If files exist, we might need to init and pull, or warn.
-          // For now, let's assume empty user data or merge.
-          // Ideally: GitUtils.init, remote add, pull.
-          if (await exists(join(cwd, ".git"))) {
-            console.log("[SYNC] .git already exists. Pulling...");
-            await GitUtils.pull(cwd);
-          } else {
-            // Init and pull
-            await GitUtils.init(cwd);
-            await GitUtils.addRemote(cwd, gitCreds.token, repoInfo.repoUrl);
-            await GitUtils.pull(cwd);
-          }
+        // 4. Setup User Workspace (Clone/Pull User Repo)
+        // Check if we are already in a git repo
+        if (await exists(join(cwd, ".git"))) {
+             const { remoteUrl } = await GitUtils.getGitInfo(cwd);
+             // Safety check: Are we in the right repo?
+             if (remoteUrl && remoteUrl.includes(userRepoInfo.repoUrl.replace("https://github.com/", ""))) {
+                 console.log(`[SYNC] Pulling latest user progress...`);
+                 await GitUtils.pull(cwd);
+             } else {
+                 console.warn(`[WARN] Current git remote (${remoteUrl}) differs from expected (${userRepoInfo.repoUrl}). Skipping user pull.`);
+             }
         } else {
-          await GitUtils.clone(repoInfo.repoUrl, cwd, gitCreds.token);
+             // Clone User Repo
+             // If directory is not empty, we might have issues.
+             // Ideally init should be run in empty dir or matching dir.
+             const files = await readdir(cwd);
+             if (files.length > 0 && !existingConfig) {
+                 console.warn(`[WARN] Directory not empty. Initializing in place...`);
+                 await GitUtils.init(cwd);
+                 await GitUtils.addRemote(cwd, gitCreds.token, userRepoInfo.repoUrl);
+                 await GitUtils.pull(cwd);
+             } else {
+                 console.log(`[SYNC] Cloning user repository...`);
+                 await GitUtils.clone(userRepoInfo.repoUrl, cwd, gitCreds.token);
+             }
         }
 
-        // C. If New, Hydrate
-        if (repoInfo.isNew) {
-          console.log("[SYNC] New repository detected. Hydrating template...");
-          const tempDir = join(tmpdir(), `progy-tmpl-${Date.now()}`);
-          await CourseLoader.load(lang, tempDir);
+        // 5. Sync Official Content (Layering)
+        console.log(`[SYNC] Downloading official course content...`);
+        const cacheDir = await SyncManager.ensureOfficialCourse(courseId, officialSource.url, officialSource.branch);
 
-          // Copy content
-          // We need to be careful not to overwrite .git
-          const tmplFiles = await readdir(tempDir);
-          for (const f of tmplFiles) {
-            if (f === ".git") continue;
-            await cp(join(tempDir, f), join(cwd, f), { recursive: true });
-          }
+        console.log(`[SYNC] Updating workspace...`);
+        // Force=false preserves user exercises
+        await SyncManager.applyLayering(cwd, cacheDir, false);
 
-          // Mark as Official since it came from a verified template
-          try {
-            const courseJsonPath = join(cwd, "course.json");
-            if (await exists(courseJsonPath)) {
-              const courseConfig = JSON.parse(await readFile(courseJsonPath, "utf-8"));
-              courseConfig.isOfficial = true;
-              await writeFile(courseJsonPath, JSON.stringify(courseConfig, null, 2));
+        // 6. Final Configuration (If new or missing)
+        if (!existingConfig) {
+            console.log(`[SYNC] Configuring workspace...`);
+
+            // Save progy.toml
+            await SyncManager.saveConfig(cwd, {
+                course: {
+                    id: courseId,
+                    repo: officialSource.url,
+                    branch: officialSource.branch
+                }
+            });
+
+            // Generate .gitignore
+            await SyncManager.generateGitIgnore(cwd, courseId);
+
+            // Initial Push of Config if new
+            if (userRepoInfo.isNew || !(await exists(join(cwd, "progy.toml")))) {
+                 await GitUtils.configUser(cwd, "Progy Bot", "bot@progy.dev");
+                 await GitUtils.exec(["add", "."], cwd); // .gitignore filters this!
+                 await GitUtils.exec(["commit", "-m", "Initialize course workspace"], cwd);
+                 await GitUtils.exec(["push", "-u", "origin", "main"], cwd);
             }
-          } catch (e) {
-            console.warn("[WARN] Failed to mark course as official:", e);
-          }
-
-          // Initial Commit
-          await GitUtils.configUser(cwd, "Progy Bot", "bot@progy.dev"); // Or use real user info?
-          await GitUtils.commitAndPush(cwd, "Initial commit from Progy Template");
-          console.log("[SYNC] Template pushed to remote.");
-
-          await rm(tempDir, { recursive: true, force: true });
         }
 
-        console.log("[SUCCESS] Course initialized and synced!");
-        console.log("Run 'progy dev' to start learning.");
-        return;
+        console.log("[SUCCESS] Course initialized!");
+        console.log("Run 'progy dev' to start.");
 
-      } catch (e: any) {
-        console.error(`[SYNC ERROR] ${e.message}`);
-        console.log("Falling back to local-only mode...");
-      }
-    }
-
-    // ... FALLBACK / LEGACY LOGIC (Copy of previous code for offline/fallback) ...
-    // Since I replaced the block, I should probably keep the original logic here as an else/fallback
-    // checking logic again:
-    // This is getting long.
-    // I will just put a simplified fallback here for invalid git or offline.
-
-    console.log(`[INFO] Initializing locally (No sync)...`);
-    const targetLang = lang || "generic";
-
-    // Check if it's an internal template
-    if (TEMPLATES[targetLang]) {
-      console.log(`[INFO] Using internal template for '${targetLang}'...`);
-      const template = TEMPLATES[targetLang];
-      const courseId = targetLang === "generic" ? "my-course" : `${targetLang}-fundamentals`;
-
-      // Scaffold in CWD directly (similar to create-course but in current dir if empty?)
-      // Init typically expects to populate current dir.
-
-      // 1. Create course.json
-      const configStr = JSON.stringify(template.courseJson, null, 2)
-        .replace(/{{id}}/g, courseId)
-        .replace(/{{name}}/g, `${targetLang} Fundamentals`);
-      await writeFile(join(cwd, "course.json"), configStr);
-
-      // 2. SETUP.md
-      await writeFile(join(cwd, "SETUP.md"), template.setupMd);
-
-      // 3. Content
-      await mkdir(join(cwd, "content", "01_intro"), { recursive: true });
-      await writeFile(join(cwd, "content", "01_intro", "README.md"), template.introReadme);
-      await writeFile(join(cwd, "content", "01_intro", template.introFilename), template.introCode);
-
-      // 4. Runner (Generic/Go)
-      if (targetLang === "go") {
-        const runnerDir = join(cwd, "runner");
-        await mkdir(runnerDir, { recursive: true });
-        const runnerCode = `package main
-import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"os/exec"
-)
-type SRPOutput struct {
-	Success     bool            \`json:"success"\`
-	Summary     string          \`json:"summary"\`
-	Raw         string          \`json:"raw"\`
-}
-func main() {
-	if len(os.Args) < 3 { os.Exit(1) }
-	id := os.Args[2]
-	cmd := exec.Command("go", "test", "-v", "./content/"+id)
-	output, _ := cmd.CombinedOutput()
-	raw := string(output)
-	srp := SRPOutput{ Success: cmd.ProcessState.Success(), Raw: raw, Summary: "Test execution completed" }
-	json, _ := json.MarshalIndent(srp, "", "  ")
-	fmt.Println("__SRP_BEGIN__")
-	fmt.Println(string(json))
-	fmt.Println("__SRP_END__")
-    if !srp.Success { os.Exit(0) }
-}
-`;
-        await writeFile(join(runnerDir, "main.go"), runnerCode);
-        await writeFile(join(cwd, "go.mod"), `module ${courseId}\n\ngo 1.21\n`);
-      }
-
-      console.log("[SUCCESS] Course initialized locally from template.");
-    } else {
-      // Fallback to external load if not an internal template
-      try {
-        const tempDir = join(tmpdir(), `progy-init-${Date.now()}`);
-        await CourseLoader.load(targetLang, tempDir);
-        const tmplFiles = await readdir(tempDir);
-        for (const f of tmplFiles) {
-          await cp(join(tempDir, f), join(cwd, f), { recursive: true });
-        }
-        await rm(tempDir, { recursive: true, force: true });
-        console.log("[SUCCESS] Course initialized locally.");
-      } catch (e: any) {
-        console.error(`[ERROR] Failed to initialize: ${e.message}`);
-        console.log("Tip: Check your internet connection or try 'progy login' first.");
+    } catch (e: any) {
+        console.error(`[ERROR] Init failed: ${e.message}`);
         process.exit(1);
-      }
     }
-
-    await startCourse(undefined, { offline: isOffline });
-
   });
 
 // Moved 'start' command to end to avoid default command shadowing issues
@@ -779,6 +633,12 @@ program
     const token = await loadToken();
     if (!token) console.warn("⚠️  Offline mode. Changes might not be pushed if auth is required.");
 
+    // Enforce .gitignore policy
+    const config = await SyncManager.loadConfig(cwd);
+    if (config?.course?.id) {
+        await SyncManager.generateGitIgnore(cwd, config.course.id);
+    }
+
     // Acquire Lock
     if (!(await GitUtils.lock(cwd))) {
       console.warn("⚠️  Another Progy process is syncing. Please wait.");
@@ -807,8 +667,8 @@ program
       console.log(`[SYNC] Saving progress...`);
 
       // 1. Commit
-      // 1. Commit
       // We use "add ." to ensure new files are tracked
+      // With the enforced .gitignore, only whitelisted files (exercises/config) will be added.
       await GitUtils.exec(["add", "."], cwd);
       const commit = await GitUtils.exec(["commit", "-m", options.message], cwd);
 
@@ -850,13 +710,20 @@ program
       return;
     }
 
+    // Load Progy Config
+    const config = await SyncManager.loadConfig(cwd);
+    if (!config) {
+        console.error("❌ Missing progy.toml. Is this a valid Progy workspace?");
+        return;
+    }
+
     if (!(await GitUtils.lock(cwd))) {
       console.warn("⚠️  Another Progy process is syncing. Please wait.");
       return;
     }
 
     try {
-      // Refresh Token
+      // 1. Refresh User Repo Auth
       const token = await loadToken();
       if (token) {
         try {
@@ -869,18 +736,71 @@ program
           }
         } catch { }
       }
-      console.log(`[SYNC] Pulling latest changes...`);
+
+      // 2. Sync Official Content (Upstream)
+      console.log(`[SYNC] Checking official course updates...`);
+      const cacheDir = await SyncManager.ensureOfficialCourse(
+          config.course.id,
+          config.course.repo,
+          config.course.branch
+      );
+
+      console.log(`[SYNC] Applying official updates...`);
+      await SyncManager.applyLayering(cwd, cacheDir, false);
+
+      // 3. Sync User Content (Downstream)
+      console.log(`[SYNC] Pulling your progress...`);
       const res = await GitUtils.pull(cwd);
+
       if (res.success) {
-        console.log(`[SUCCESS] Course updated.`);
+        // Update last sync time
+        config.sync = { last_sync: new Date().toISOString() };
+        await SyncManager.saveConfig(cwd, config);
+        console.log(`[SUCCESS] Workspace synchronized.`);
       } else {
-        console.error(`[ERROR] Failed to sync: ${res.stderr}`);
+        console.error(`[ERROR] Failed to pull user changes: ${res.stderr}`);
+        console.log("Tip: Resolve conflicts manually in the 'content' directory.");
       }
+    } catch (e: any) {
+        console.error(`[ERROR] Sync failed: ${e.message}`);
     } finally {
       await GitUtils.unlock(cwd);
     }
   });
 
+
+program
+  .command("reset")
+  .description("Reset a specific file to its original state")
+  .argument("<path>", "Path to the file (e.g., content/intro/hello.rs)")
+  .action(async (path) => {
+    const cwd = process.cwd();
+    const targetFile = relative(cwd, resolve(path)); // Normalize relative path
+
+    // Load Config
+    const config = await SyncManager.loadConfig(cwd);
+    if (!config) {
+        console.error("❌ Not a valid Progy workspace (missing progy.toml).");
+        process.exit(1);
+    }
+
+    try {
+        console.log(`[RESET] restoring ${targetFile}...`);
+
+        // Ensure cache is available (we don't pull to save time, unless missing)
+        const cacheDir = SyncManager.getCacheDir(config.course.id);
+        if (!(await exists(cacheDir))) {
+             console.log("[SYNC] Cache missing. Downloading course...");
+             await SyncManager.ensureOfficialCourse(config.course.id, config.course.repo, config.course.branch);
+        }
+
+        // Reset
+        await SyncManager.resetExercise(cwd, cacheDir, targetFile);
+        console.log(`[SUCCESS] File reset to original state.`);
+    } catch (e: any) {
+        console.error(`[ERROR] Reset failed: ${e.message}`);
+    }
+  });
 
 program
   .command("start", { isDefault: true })

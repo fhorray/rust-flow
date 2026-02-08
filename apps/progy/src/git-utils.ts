@@ -46,6 +46,7 @@ export class GitUtils {
 
   // Construct an authenticated URL for cloning/pushing
   static getAuthUrl(repoUrl: string, token: string): string {
+    if (!token) return repoUrl;
     // Format: https://x-access-token:<token>@github.com/user/repo.git
     const url = new URL(repoUrl);
     url.username = "x-access-token";
@@ -83,6 +84,16 @@ export class GitUtils {
     } catch {
       return { success: false, stdout: "", stderr: "Invalid remote URL" };
     }
+  }
+
+  static async getGitInfo(cwd: string): Promise<{ remoteUrl: string | null; root: string | null }> {
+    const remoteRes = await this.exec(["remote", "get-url", "origin"], cwd);
+    const rootRes = await this.exec(["rev-parse", "--show-toplevel"], cwd);
+
+    return {
+      remoteUrl: remoteRes.success ? remoteRes.stdout.trim() : null,
+      root: rootRes.success ? rootRes.stdout.trim() : null
+    };
   }
 
   static async configUser(cwd: string, name: string, email: string): Promise<void> {
