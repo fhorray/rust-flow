@@ -1,4 +1,4 @@
-import * as z from "zod/mini";
+import { z } from "zod";
 import { cp, exists, mkdir, readFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { spawn } from "node:child_process";

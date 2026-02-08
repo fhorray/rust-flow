@@ -1,6 +1,6 @@
 import { atom } from 'nanostores';
 
-export type ViewMode = 'editor' | 'map';
+export type ViewMode = 'editor' | 'map' | 'git';
 export type SidebarTab = 'learning' | 'practice';
 export type ContentTab = 'description' | 'output' | 'quiz' | 'ai';
 

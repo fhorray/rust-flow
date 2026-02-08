@@ -39,7 +39,7 @@ export const $showFriendly = atom<boolean>(true);
 // ... (rest of file)
 
 import { callAi } from '../lib/ai-client';
-import { setActiveContentTab, showPremiumGate } from './ui-store';
+import { $activeContentTab, setActiveContentTab, showPremiumGate } from './ui-store';
 import { $user, $isOffline, $localSettings } from './user-store';
 
 export const $isAiLocked = computed([$user, $isOffline, $localSettings], (user, isOffline, settings) => {
@@ -206,6 +206,7 @@ export const runTests = async () => {
   if (!selected) return;
 
   $isRunning.set(true);
+  $activeContentTab.set('output');
   try {
     const res = await fetch('/api/exercises/run', {
       method: 'POST',

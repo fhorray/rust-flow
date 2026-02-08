@@ -4,9 +4,11 @@ import { cors } from 'hono/cors'
 import { drizzle } from 'drizzle-orm/d1'
 import * as schema from './db/schema'
 import { eq, and } from 'drizzle-orm'
+import { verifySession } from './auth-utils'
 import { streamText, generateText } from "ai";
 import { getModel, constructSystemPrompt, constructExplanationPrompt, constructGeneratePrompt, type AIConfig, type AIContext } from "./ai/service";
 import billing from './endpoints/billing'
+import git from './endpoints/git'
 
 const app = new Hono<{
   Bindings: CloudflareBindings
@@ -20,6 +22,8 @@ app.use('*', cors({
 }))
 
 app.route('/api/billing', billing)
+app.route('/api/git', git)
+
 
 // Debugging Middleware for Stripe/Auth
 app.use("/api/auth/*", async (c, next) => {
@@ -40,65 +44,7 @@ app.get('/api/registry', (c) => {
   return c.json({ courses: c.env.COURSES })
 })
 
-// Helper for robust session verification
-async function verifySession(c: any) {
-  const auth = authServer(c.env)
-  const authHeader = c.req.header('Authorization')
-  const db = drizzle(c.env.DB)
-
-  let token = ''
-  if (authHeader?.startsWith('Bearer ')) {
-    token = authHeader.split(' ')[1]
-  }
-
-  try {
-    // 1. Better Auth check
-    const session = await auth.api.getSession({
-      headers: c.req.raw.headers
-    })
-
-    if (session) {
-      return session
-    }
-
-    // 2. Manual Lookup
-    if (token) {
-      // Try both id and token match
-      const sessionRow = await db.select()
-        .from(schema.session)
-        .where(eq(schema.session.token, token))
-        .get()
-
-      if (sessionRow) {
-        const userRow = await db.select()
-          .from(schema.user)
-          .where(eq(schema.user.id, sessionRow.userId))
-          .get()
-
-        if (userRow) {
-          return { user: userRow, session: sessionRow }
-        }
-      } else {
-        // Check if it matches ID instead
-        const sessionById = await db.select()
-          .from(schema.session)
-          .where(eq(schema.session.id, token))
-          .get()
-        if (sessionById) {
-          const userRow = await db.select()
-            .from(schema.user)
-            .where(eq(schema.user.id, sessionById.userId))
-            .get()
-          if (userRow) return { user: userRow, session: sessionById }
-        }
-      }
-    }
-    return null
-  } catch (err: any) {
-    console.error(`[AUTH-ERROR-CRITICAL] ${err.message}`, err.stack)
-    return null
-  }
-}
+// verifySession moved to auth-utils.ts
 
 app.get('/api/auth/get-session', async (c) => {
   const session = await verifySession(c)

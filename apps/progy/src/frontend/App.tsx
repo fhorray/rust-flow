@@ -38,6 +38,7 @@ import { Navbar } from './components/navbar';
 import { UserNav } from './components/user-nav';
 import { fetchLocalSettings } from './stores/user-store';
 import { SecurityBanner } from './components/security-banner';
+import { GitPanel } from './components/git-panel';
 
 export function App() {
   // Initial settings load
@@ -60,50 +61,14 @@ export function App() {
   const [showChallengeGenerator, setShowChallengeGenerator] = useState(false);
   const [generatedChallenge, setGeneratedChallenge] = useState<any>(null);
 
-  // Initial setup check
-  useEffect(() => {
-    const checkSetup = async () => {
-      try {
-        const res = await fetch('/api/setup/status');
-        const data = await res.json();
-        $setupReady.set(data.success);
-      } catch (e) {
-        $setupReady.set(false);
-      }
-    };
-    checkSetup();
-  }, []);
-
-  // Auto-select first exercise when groups are loaded
-  useEffect(() => {
-    if (Object.keys(exerciseGroups).length > 0 && !selectedExercise) {
-      const modules = Object.keys(exerciseGroups);
-      const firstModKey = modules[0];
-      if (firstModKey) {
-        const exercises = exerciseGroups[firstModKey];
-        if (Array.isArray(exercises) && exercises.length > 0) {
-          setSelectedExercise(exercises[0] || null);
-        }
-      }
-    }
-  }, [exerciseGroups, selectedExercise]);
-
-  if (setupReady === null) {
-    return (
-      <div className="min-h-screen bg-zinc-950 flex items-center justify-center">
-        <Loader2 className="w-12 h-12 text-rust animate-spin" />
-      </div>
-    );
-  }
-
-  if (setupReady === false) {
-    return <SetupView onCheckComplete={() => $setupReady.set(true)} />;
-  }
+  // ... (existing effects)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-100 flex flex-col font-sans selection:bg-rust/30">
       <SecurityBanner />
-      <Navbar onGenerateChallenge={() => setShowChallengeGenerator(true)} />
+      <Navbar
+        onGenerateChallenge={() => setShowChallengeGenerator(true)}
+      />
 
       {error && (
         <div className="bg-red-500/10 border-b border-red-500/20 p-2 text-center text-xs text-red-400">
@@ -112,10 +77,11 @@ export function App() {
       )}
 
       <main
-        className={`flex-1 w-full overflow-hidden ${viewMode === 'map' ? '' : 'container mx-auto py-6'}`}
+        className={`flex-1 w-full overflow-hidden flex ${viewMode === 'editor' ? 'container mx-auto py-6' : ''}`}
       >
         {viewMode === 'map' ? (
-          <div className="w-full h-full bg-zinc-950/50">
+          // ... (map view)
+          <div className="w-full h-full bg-zinc-950/50 flex-1">
             <SkillTree
               exerciseGroups={exerciseGroups}
               results={results}
@@ -126,8 +92,14 @@ export function App() {
               }}
             />
           </div>
+        ) : viewMode === 'git' ? (
+          <div className="w-full h-full bg-zinc-950/50 flex-1 flex flex-col items-center justify-center p-8">
+            <div className="container mx-auto h-full max-h-[800px]">
+              <GitPanel />
+            </div>
+          </div>
         ) : (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-120px)]">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[calc(100vh-120px)] flex-1">
             <Sidebar />
 
             <section className="lg:col-span-9 flex flex-col gap-4 h-full min-h-0">

@@ -28,6 +28,7 @@ export interface CourseConfig {
   api_keys?: Record<string, string>;
   setup?: SetupConfig;
   repo?: string;
+  isOfficial?: boolean;
 }
 
 export interface ProgressStats {

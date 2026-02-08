@@ -1,6 +1,6 @@
 import React from 'react';
 import { useStore } from '@nanostores/react';
-import { Zap, Layout, Map, Flame, Book, Wand2 } from 'lucide-react';
+import { Zap, Layout, Map, Flame, Book, Wand2, GitBranch, Share2 } from 'lucide-react';
 import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { Button } from './ui/button';
@@ -62,6 +62,13 @@ export function Navbar({ onGenerateChallenge }: NavbarProps) {
                 >
                   <Map className="w-3 h-3" />
                   COURSE MAP
+                </TabsTrigger>
+                <TabsTrigger
+                  value="git"
+                  className="text-[10px] font-black px-3 gap-1.5 h-7 data-[state=active]:bg-zinc-800"
+                >
+                  <Share2 className="w-3 h-3" />
+                  SYNC (GIT)
                 </TabsTrigger>
               </TabsList>
             </Tabs>

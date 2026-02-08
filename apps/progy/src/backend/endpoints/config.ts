@@ -3,7 +3,10 @@ import type { ServerType } from "../types";
 import { ensureConfig, currentConfig, PROG_CWD } from "../helpers";
 
 const checkOfficial = () => {
-  // 1. Check currentConfig (populated during init)
+  // 0. Check explicit flag (set during init via CLI)
+  if (currentConfig?.isOfficial === true) return true;
+
+  // 1. Check currentConfig repo URL
   if (currentConfig?.repo?.includes("fhorray/progy-courses")) return true;
 
   // 2. Check Git (for advanced users or linked repos)
