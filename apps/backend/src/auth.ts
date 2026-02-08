@@ -1,7 +1,7 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
-import { eq, and } from "drizzle-orm";
+import { eq, and, or } from "drizzle-orm";
 import * as schema from "./db/schema";
 import { deviceAuthorization } from "better-auth/plugins/device-authorization";
 import { createAuthClient } from "better-auth/client";
@@ -68,42 +68,27 @@ export const authServer = (env: CloudflareBindings) => {
       session: async ({ session, user }: any) => {
         const db = drizzle(env.DB);
 
-        // 1. If user table already has premium status, trust it
-        if (user.subscription && user.subscription !== "free") {
-          return {
-            ...session,
-            user: {
-              ...session.user,
-              subscription: user.subscription,
-              hasLifetime: user.hasLifetime
-            }
-          };
-        }
-
-        // 2. Otherwise check the subscription table (e.g. for recently completed ones)
+        // 1. Check for any active "pro" or "pro-discount" subscription in the subscription table
+        // This takes precedence over the user's base 'subscription' field (which might be 'lifetime')
         // @ts-ignore
         const activeSub = await db.select().from(schema.subscription).where(
           and(
             eq(schema.subscription.referenceId, user.id),
-            eq(schema.subscription.plan, "pro")
+            or(
+              eq(schema.subscription.plan, "pro"),
+              eq(schema.subscription.plan, "pro-discount")
+            )
           )
         ).get();
 
-        if (activeSub && (activeSub.status === "active" || activeSub.status === "trialing")) {
-          return {
-            ...session,
-            user: {
-              ...session.user,
-              subscription: "pro",
-              hasLifetime: user.hasLifetime
-            }
-          }
-        }
+        const isActuallyPro = activeSub && (activeSub.status === "active" || activeSub.status === "trialing");
+
         return {
           ...session,
           user: {
             ...session.user,
-            hasLifetime: user.hasLifetime
+            subscription: isActuallyPro ? "pro" : (user.subscription || "free"),
+            hasLifetime: !!user.hasLifetime || user.subscription === "lifetime"
           }
         };
       }
@@ -138,7 +123,7 @@ export const authServer = (env: CloudflareBindings) => {
             console.log(`[STRIPE-HOOK] Subscription complete for ${subscription.referenceId}: ${plan.name}`);
             const db = drizzle(env.DB);
             // Map pro-discount to pro
-            const status = (plan.name === "standard" || plan.name === "pro-discount") ? "pro" : plan.name;
+            const status = (plan.name === "standard" || plan.name === "pro-discount" || plan.name === "pro") ? "pro" : plan.name;
             await db.update(schema.user)
               .set({ subscription: status })
               .where(eq(schema.user.id, subscription.referenceId))

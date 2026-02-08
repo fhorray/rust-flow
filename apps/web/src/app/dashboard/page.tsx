@@ -290,7 +290,7 @@ export default function Dashboard() {
             </CardContent>
 
             <CardFooter className="p-6 pt-0">
-              {isPro ? (
+              {plan === "pro" || plan === "pro-discount" ? (
                 <Button
                   variant="outline"
                   size="sm"
@@ -301,7 +301,7 @@ export default function Dashboard() {
                   {isLoadingBilling && <Loader2 className="w-3 h-3 mr-2 animate-spin" />}
                   Manage Subscription
                 </Button>
-              ) : hasLifetime && !isPro ? (
+              ) : hasLifetime ? (
                 <Button
                   size="sm"
                   onClick={handleMasterAIUpgrade}
