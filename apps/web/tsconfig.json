@@ -27,9 +27,6 @@
       "@/*": [
         "./src/*"
       ],
-      "@consts": [
-        "../../constants.ts"
-      ]
     },
     "types": [
       "./cloudflare-env.d.ts",
