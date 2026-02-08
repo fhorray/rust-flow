@@ -10,6 +10,7 @@ import { ideRoutes } from "./endpoints/ide";
 import { authRoutes } from "./endpoints/auth";
 import { settingsRoutes } from "./endpoints/settings";
 import { gitRoutes } from "./endpoints/git";
+import { notesRoutes } from "./endpoints/notes";
 
 const IS_TS = import.meta.file.endsWith(".ts");
 const PUBLIC_DIR = join(import.meta.dir, IS_TS ? "../../public" : "../public");
@@ -38,6 +39,7 @@ try {
       ...authRoutes,
       ...settingsRoutes,
       ...gitRoutes,
+      ...notesRoutes,
     },
     development: { hmr: process.env.ENABLE_HMR === "true" },
     async fetch(req) {

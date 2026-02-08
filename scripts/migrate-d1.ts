@@ -17,7 +17,7 @@ if (migrations.length === 0) {
   process.exit(0);
 }
 
-console.log(`🚀 Found ${migrations.length} migrations. Applying to ${isRemote ? 'REMOTE' : 'LOCAL'} D1...`);
+console.log(`🚀 Found ${migrations.length} migrations. Applying to ${isRemote ? '🌊 REMOTE (Cloudflare D1)' : '💻 LOCAL (SQLite)'}...`);
 
 for (const migration of migrations) {
   const filePath = join(migrationDir, migration);
@@ -35,18 +35,20 @@ for (const migration of migrations) {
   ];
 
   const result = spawnSync('bun', wranglerArgs, {
-    stdio: 'inherit',
+    stdio: 'pipe',
     shell: true,
     cwd: BACKEND_ROOT
   });
 
   if (result.status !== 0) {
     console.error(`❌ Failed to apply migration: ${migration}`);
-    // We don't exit here because D1 often fails if table already exists (0000_awesome...)
-    // But in a more robust setup, we'd check if it's a real error.
+    console.error(result.stderr.toString());
+    console.error(result.stdout.toString());
+    console.error(`   (This might happen if the migration was already applied. Check D1 dashboard if unsure.)`);
+    // Optional: break; if you want to stop on first error
   } else {
     console.log(`✅ Success: ${migration}`);
   }
 }
 
-console.log('\n✨ All done!');
+console.log('\n✨ Database migration process completed!');

@@ -1,20 +1,26 @@
 import { useStore } from '@nanostores/react';
-import { Book, Brain, Loader2, Sparkles, Terminal } from 'lucide-react';
+import { Book, Brain, HistoryIcon, Loader2, LockIcon, Sparkles, Terminal } from 'lucide-react';
 import {
+  $aiHistory,
   $aiResponse,
   $description,
   $descriptionQuery,
   $friendlyOutput,
   $isAiLoading,
+  $isAiLocked,
   $isRunning,
   $output,
   $quizData,
   $quizQuery,
   $selectedExercise,
   $showFriendly,
+  explainExercise,
   fetchProgress,
+  getAiHint,
   setShowFriendly,
 } from '../stores/course-store';
+import { Button } from './ui/button';
+import { PremiumGateModal } from './modals/premium-gate-modal';
 import { MarkdownRenderer } from './markdown-renderer';
 import { QuizView } from './quiz-view';
 import { Label } from './ui/label';
@@ -262,48 +268,147 @@ export function ContentTabs() {
         className="flex-1 min-h-0 m-0 outline-none"
       >
         <ScrollArea className="h-full p-6">
-          {(aiResponse || isAiLoading) && (
-            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-2 text-rust font-black uppercase tracking-widest text-[10px]">
-                  <Sparkles className={`w-4 h-4 ${isAiLoading ? 'animate-pulse' : ''}`} /> AI Mentor
-                </div>
-                <div className="flex items-center gap-2">
-                  {isAiLoading && <Loader2 className="w-3 h-3 animate-spin text-rust" />}
-                  <button
-                    onClick={() => {
-                      $aiResponse.set(null);
-                      $isAiLoading.set(false);
-                      setActiveContentTab('description');
-                    }}
-                    className="text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
-                  >
-                    Limpar
-                  </button>
+          {/* LOCKED STATE */}
+          {useStore($isAiLocked) ? (
+            <div className="flex flex-col items-center justify-center h-full text-zinc-500 gap-6 py-12 text-center">
+              <div className="w-16 h-16 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800">
+                <div className="w-12 h-12 bg-zinc-900 rounded-full flex items-center justify-center border border-zinc-800 shadow-inner">
+                  <LockIcon className="w-6 h-6 text-zinc-700" />
                 </div>
               </div>
+              <div className="space-y-2 max-w-xs">
+                <h3 className="text-zinc-100 font-bold">AI Mentor Locked</h3>
+                <p className="text-xs text-zinc-500">
+                  Upgrade to Pro to get instant hints, code explanations, and personalized guidance.
+                </p>
+              </div>
+              <PremiumGateModal>
+                <Button className="font-bold bg-gradient-to-r from-rust to-orange-500 hover:from-rust/90 hover:to-orange-500/90 text-white">
+                  Unlock AI Mentor
+                </Button>
+              </PremiumGateModal>
+            </div>
+          ) : (
+            <>
+              {/* LOADING OR RESPONSE */}
+              {(aiResponse || isAiLoading) ? (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="flex items-center justify-between mb-6">
+                    <div className="flex items-center gap-2 text-rust font-black uppercase tracking-widest text-[10px]">
+                      <Sparkles className={`w-4 h-4 ${isAiLoading ? 'animate-pulse' : ''}`} /> AI Mentor
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {isAiLoading && <Loader2 className="w-3 h-3 animate-spin text-rust" />}
+                      <button
+                        onClick={() => {
+                          $aiResponse.set(null);
+                          $isAiLoading.set(false);
+                        }}
+                        className="text-zinc-500 hover:text-zinc-300 transition-colors text-xs"
+                      >
+                        Back to History
+                      </button>
+                    </div>
+                  </div>
 
-              {!aiResponse && isAiLoading ? (
-                <div className="flex flex-col items-center justify-center py-20 bg-zinc-900/20 border border-zinc-800/50 rounded-2xl border-dashed">
-                  <Loader2 className="w-8 h-8 animate-spin text-rust mb-4" />
-                  <p className="text-sm text-zinc-500 italic">O Mentor IA está analisando seu código...</p>
-                </div>
-              ) : (
-                <div className="prose prose-invert prose-sm max-w-none bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 shadow-2xl">
-                  <MarkdownRenderer content={aiResponse || ''} />
-                  {isAiLoading && (
-                    <div className="mt-4 flex items-center gap-2 text-zinc-500 italic text-[10px]">
-                      <span className="flex gap-1">
-                        <span className="w-1 h-1 bg-rust rounded-full animate-bounce [animation-delay:-0.3s]"></span>
-                        <span className="w-1 h-1 bg-rust rounded-full animate-bounce [animation-delay:-0.15s]"></span>
-                        <span className="w-1 h-1 bg-rust rounded-full animate-bounce"></span>
-                      </span>
-                      IA está escrevendo...
+                  {!aiResponse && isAiLoading ? (
+                    <div className="flex flex-col items-center justify-center py-20 bg-zinc-900/20 border border-zinc-800/50 rounded-2xl border-dashed">
+                      <Loader2 className="w-8 h-8 animate-spin text-rust mb-4" />
+                      <p className="text-sm text-zinc-500 italic">O Mentor IA está analisando seu código...</p>
+                    </div>
+                  ) : (
+                    <div className="prose prose-invert prose-sm max-w-none bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 shadow-2xl">
+                      <MarkdownRenderer content={aiResponse || ''} />
+                      {isAiLoading && (
+                        <div className="mt-4 flex items-center gap-2 text-zinc-500 italic text-[10px]">
+                          <span className="flex gap-1">
+                            <span className="w-1 h-1 bg-rust rounded-full animate-bounce [animation-delay:-0.3s]"></span>
+                            <span className="w-1 h-1 bg-rust rounded-full animate-bounce [animation-delay:-0.15s]"></span>
+                            <span className="w-1 h-1 bg-rust rounded-full animate-bounce"></span>
+                          </span>
+                          IA está escrevendo...
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
+              ) : (
+                /* EMPTY STATE / HISTORY */
+                <div className="space-y-8">
+                  <div className="text-center space-y-4 py-8">
+                    <div className="w-12 h-12 bg-rust/10 rounded-full flex items-center justify-center mx-auto border border-rust/20">
+                      <Sparkles className="w-6 h-6 text-rust" />
+                    </div>
+                    <div>
+                      <h3 className="text-zinc-100 font-bold mb-1">Ready to Help!</h3>
+                      <p className="text-xs text-zinc-500 max-w-xs mx-auto">
+                        Stuck? Ask for a hint or get a full explanation of the code.
+                      </p>
+                    </div>
+                    <div className="flex items-center justify-center gap-3">
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={getAiHint}
+                        className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700/50 text-xs"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-2 text-rust" /> get Hint
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={explainExercise}
+                        className="bg-zinc-800/50 hover:bg-zinc-800 border-zinc-700/50 text-xs"
+                      >
+                        <Sparkles className="w-3.5 h-3.5 mr-2 text-purple-400" /> Explain Code
+                      </Button>
+                    </div>
+                  </div>
+
+                  {/* HISTORY */}
+                  {(() => {
+                    const history = useStore($aiHistory) || [];
+                    const exerciseHistory = history
+                      .filter((h: any) => h.exerciseId === selectedExercise?.id)
+                      .sort((a: any, b: any) => b.timestamp - a.timestamp);
+
+                    if (exerciseHistory.length === 0) return null;
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-500 uppercase tracking-widest px-1">
+                          <HistoryIcon className="w-3 h-3" /> History
+                        </div>
+                        <div className="space-y-2">
+                          {exerciseHistory.map((item: any) => (
+                            <button
+                              key={item.id}
+                              onClick={() => $aiResponse.set(item.content)}
+                              className="w-full text-left p-3 rounded-xl bg-zinc-900/30 border border-zinc-800/50 hover:bg-zinc-800/50 hover:border-zinc-700/50 transition-all group"
+                            >
+                              <div className="flex items-center justify-between mb-1">
+                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${item.type === 'hint'
+                                  ? 'bg-rust/10 text-rust border-rust/20'
+                                  : 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                  }`}>
+                                  {item.type === 'hint' ? 'HINT' : 'EXPLANATION'}
+                                </span>
+                                <span className="text-[10px] text-zinc-600 group-hover:text-zinc-500">
+                                  {new Date(item.timestamp).toLocaleTimeString()}
+                                </span>
+                              </div>
+                              <p className="text-xs text-zinc-400 line-clamp-2 pl-1 border-l-2 border-zinc-800 group-hover:border-zinc-600">
+                                {item.content.replace(/[#*`]/g, '')}
+                              </p>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
               )}
-            </div>
+            </>
           )}
         </ScrollArea>
       </TabsContent>

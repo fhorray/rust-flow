@@ -9,6 +9,7 @@ export const user = sqliteTable("user", {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
   subscription: text('subscription').default('free'), // Custom field
+  hasLifetime: integer('has_lifetime', { mode: 'boolean' }).default(false), // Tracks lifetime ownership
   stripeCustomerId: text('stripe_customer_id'), // New field from plugin
   metadata: text('metadata'), // JSON string for persistent settings
 });

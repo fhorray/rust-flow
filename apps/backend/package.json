@@ -5,9 +5,9 @@
     "dev": "wrangler dev",
     "deploy": "wrangler deploy --minify",
     "cf-typegen": "wrangler types --env-interface CloudflareBindings",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "bun ../../scripts/migrate-d1.ts --remote",
-    "db:migrate:local": "bun ../../scripts/migrate-d1.ts --local",
+    "db:gen": "drizzle-kit generate",
+    "db:up:local": "bun ../../scripts/migrate-d1.ts --local",
+    "db:up:remote": "bun ../../scripts/migrate-d1.ts --remote",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

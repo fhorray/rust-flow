@@ -99,20 +99,42 @@ import { persistentAtom } from '@nanostores/persistent';
  * @returns {boolean} True if AI features are locked, false otherwise.
  */
 export const $isAiLocked = computed([$user, $isOffline, $localSettings], (user, isOffline, settings) => {
-  // If Pro, never locked
+  // If Pro, never locked (includes AI access)
   if (user?.subscription === 'pro') return false;
 
-  // If has local key for selected provider, never locked
-  const provider = settings.aiProvider || 'openai';
-  const hasKey = (provider === 'openai' && settings.openaiKey) ||
-    (provider === 'anthropic' && settings.anthropicKey) ||
-    (provider === 'google' && settings.geminiKey) ||
-    (provider === 'xai' && settings.xaiKey);
+  // Check for API keys
+  const hasKey = (settings.aiProvider === 'openai' && settings.openaiKey) ||
+    (settings.aiProvider === 'anthropic' && settings.anthropicKey) ||
+    (settings.aiProvider === 'google' && settings.geminiKey) ||
+    (settings.aiProvider === 'xai' && settings.xaiKey) ||
+    // Fallback if provider not set but key exists (legacy behavior robustness)
+    (!settings.aiProvider && (settings.openaiKey || settings.anthropicKey || settings.geminiKey || settings.xaiKey));
 
-  if (hasKey) return false;
+  // Determine if user has Lifetime access
+  const hasLifetime = user?.hasLifetime || user?.subscription === 'lifetime';
 
-  // Otherwise, if Free or Offline, it's locked
-  return user?.subscription === 'free' || isOffline || !user;
+  // If user has Lifetime access, they MUST provide a key to unlock AI
+  // Logic: Lifetime + Key = Unlocked
+  if (hasLifetime && hasKey) return false;
+
+  // Otherwise, if Free, Offline, or Lifetime-without-key, it's locked
+  return true;
+});
+
+/**
+ * Computes the AI interaction history.
+ */
+export type AiInteraction = {
+  id: string;
+  type: 'hint' | 'explain';
+  content: string;
+  timestamp: number;
+  exerciseId: string;
+};
+
+export const $aiHistory = persistentAtom<AiInteraction[]>('progy:aiHistory', [], {
+  encode: JSON.stringify,
+  decode: JSON.parse,
 });
 
 /**
@@ -139,7 +161,22 @@ export const getAiHint = async () => {
         error: $friendlyOutput.get() || $output.get()
       }
     });
-    if (data.hint) $aiResponse.set(data.hint);
+
+    if (data.hint) {
+      $aiResponse.set(data.hint);
+      // Add to history
+      const newInteraction: AiInteraction = {
+        id: crypto.randomUUID(),
+        type: 'hint',
+        content: data.hint,
+        timestamp: Date.now(),
+        exerciseId: selected.id
+      };
+      $aiHistory.set([...$aiHistory.get(), newInteraction]);
+
+      // Background Sync to GitHub
+      syncAiToGithub(selected, 'hint', data.hint).catch(console.error);
+    }
   } catch (err: any) {
     $aiResponse.set(`Error: ${err.message || 'Failed to get AI hint.'}`);
   } finally {
@@ -160,7 +197,6 @@ export const explainExercise = async () => {
   if (!selected || $isAiLoading.get() || (currentAi && !currentAi.startsWith('Error:'))) return;
 
   if ($isAiLocked.get()) {
-
     return;
   }
 
@@ -211,17 +247,67 @@ export const explainExercise = async () => {
       .replace(/\\t/g, '\t')
       .replace(/\\r/g, '\r');
 
-    $aiResponse.set(final.trim());
+    final = final.trim();
+    $aiResponse.set(final);
     setActiveContentTab('ai');
 
-    // If result tab "description" is active, maybe we want to switch to the new AI tab?
-    // We'll handle tab switching in the component if needed.
+    // Add to history
+    const newInteraction: AiInteraction = {
+      id: crypto.randomUUID(),
+      type: 'explain',
+      content: final,
+      timestamp: Date.now(),
+      exerciseId: selected.id
+    };
+    $aiHistory.set([...$aiHistory.get(), newInteraction]);
+
+    // Background Sync to GitHub
+    syncAiToGithub(selected, 'explanation', final).catch(console.error);
+
   } catch (err: any) {
     $aiResponse.set(`Error: ${err.message || 'Failed to get explanation.'}`);
   } finally {
     $isAiLoading.set(false);
   }
 };
+
+/**
+ * Syncs AI content to GitHub by saving a file and pushing it.
+ */
+async function syncAiToGithub(exercise: Exercise, type: 'hint' | 'explanation', content: string) {
+  try {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `progy-notes/${exercise.module}/${exercise.id}-${type}-${timestamp}.md`;
+
+    const fileContent = `# AI ${type === 'hint' ? 'Hint' : 'Explanation'} - ${exercise.exerciseName}\n\n${content}`;
+
+    // 1. Save File
+    const saveRes = await fetch('/api/notes/save', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ path: filename, content: fileContent })
+    });
+    if (!saveRes.ok) throw new Error('Failed to save note');
+
+    // 2. Commit
+    const commitRes = await fetch('/api/local/git/commit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: `docs: save AI ${type} for ${exercise.exerciseName}` })
+    });
+    if (!commitRes.ok) throw new Error('Failed to commit note');
+
+    // 3. Sync (Push)
+    const syncRes = await fetch('/api/local/git/sync', {
+      method: 'POST'
+    });
+    if (!syncRes.ok) throw new Error('Failed to push note');
+
+    console.log('[AI] Synced to GitHub:', filename);
+  } catch (err) {
+    console.error('[AI] GitHub Sync failed:', err);
+  }
+}
 
 /**
  * Computed property that returns the exercise groups.

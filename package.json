@@ -2,7 +2,9 @@
   "name": "progy-monorepo",
   "private": true,
   "scripts": {
-    "dev": "bun --cwd apps/web dev",
+    "dev": "bunx concurrently \"bun run dev:web\" \"bun run dev:backend\" --names \"WEB,API\" --prefix-colors \"blue,magenta\"",
+    "dev:backend": "bun run --cwd apps/backend dev",
+    "dev:web": "bun run --cwd apps/web dev",
     "build": "bun scripts/build.ts",
     "cleanup": "bun scripts/cleanup.ts",
     "deploy:backend": "bun run --cwd apps/backend deploy",
@@ -12,7 +14,11 @@
     "pkg:minor": "bun pm --cwd apps/progy version minor --force",
     "pkg:patch": "bun pm --cwd apps/progy version patch --force",
     "pkg:publish": "bun publish --cwd apps/progy",
-    "db:clean": "wrangler d1 execute progy --remote --file=scripts/clean-db.sql"
+    "db:clean": "wrangler d1 execute progy --remote --file=scripts/clean-db.sql",
+    "db:gen": "bun run --cwd apps/backend db:gen",
+    "db:up": "bun run --cwd apps/backend db:up:local",
+    "db:deploy": "bun run --cwd apps/backend db:up:remote",
+    "db:studio": "bun run --cwd apps/backend db:studio"
   },
   "workspaces": [
     "apps/*"

@@ -10,6 +10,7 @@ export interface User {
   image?: string;
   metadata?: string; // JSON string
   subscription?: string;
+  hasLifetime?: boolean;
 }
 
 export interface Session {
