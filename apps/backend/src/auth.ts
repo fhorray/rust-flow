@@ -63,46 +63,38 @@ export const authServer = (env: CloudflareBindings) => {
         enabled: true,
       },
     },
-    trustHost: true,
     callbacks: {
       session: async ({ session, user }: any) => {
         const db = drizzle(env.DB);
 
-        // 1. If user table already has premium status, trust it
-        if (user.subscription && user.subscription !== "free") {
-          return {
-            ...session,
-            user: {
-              ...session.user,
-              subscription: user.subscription,
-              hasLifetime: user.hasLifetime
-            }
-          };
-        }
+        // Priority:
+        // 1. If there's an active "pro" subscription in the dedicated table, they are PRO
+        // 2. Otherwise trust the "subscription" field in the user table
 
-        // 2. Otherwise check the subscription table (e.g. for recently completed ones)
+        let effectiveSubscription = user.subscription || "free";
+
+        // Check for active recurring subscriptions (covers Pro, Pro-Discount, etc)
         // @ts-ignore
         const activeSub = await db.select().from(schema.subscription).where(
           and(
             eq(schema.subscription.referenceId, user.id),
-            eq(schema.subscription.plan, "pro")
+            eq(schema.subscription.status, "active")
           )
         ).get();
 
-        if (activeSub && (activeSub.status === "active" || activeSub.status === "trialing")) {
-          return {
-            ...session,
-            user: {
-              ...session.user,
-              subscription: "pro",
-              hasLifetime: user.hasLifetime
-            }
+        if (activeSub) {
+          if (activeSub.plan === "pro" || activeSub.plan === "pro-discount" || activeSub.plan === "standard") {
+            effectiveSubscription = "pro";
+          } else if (activeSub.plan === "lifetime") {
+            effectiveSubscription = "lifetime";
           }
         }
+
         return {
           ...session,
           user: {
             ...session.user,
+            subscription: effectiveSubscription,
             hasLifetime: user.hasLifetime
           }
         };
@@ -174,12 +166,12 @@ export const authServer = (env: CloudflareBindings) => {
               }
             }
 
-            if (planType === "lifetime" || planType === "pro" || planType === "standard") {
+            if (planType === "lifetime" || planType === "pro" || planType === "standard" || planType === "pro-discount") {
               const userEmail = session.customer_details?.email;
               if (userEmail) {
                 console.log(`[STRIPE-WEBHOOK-SYNC] Syncing ${planType} to user ${userEmail}`);
                 const updateData: any = {
-                  subscription: planType === "standard" ? "pro" : planType
+                  subscription: (planType === "standard" || planType === "pro-discount") ? "pro" : planType
                 };
                 if (planType === "lifetime") {
                   updateData.hasLifetime = true;
