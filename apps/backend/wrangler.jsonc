@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "progy",
+  "name": "progy-backend",
   "main": "src/index.ts",
   "compatibility_date": "2026-02-06",
   "account_id": "b9aac465aa71533a0342ac8da7f32813",
