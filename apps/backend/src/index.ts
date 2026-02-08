@@ -9,6 +9,7 @@ import { streamText, generateText } from "ai";
 import { getModel, constructSystemPrompt, constructExplanationPrompt, constructGeneratePrompt, type AIConfig, type AIContext } from "./ai/service";
 import billing from './endpoints/billing'
 import git from './endpoints/git'
+import progress from './endpoints/progress'
 
 const app = new Hono<{
   Bindings: CloudflareBindings;
@@ -56,91 +57,7 @@ app.get('/registry', (c) => {
 
 // verifySession moved to auth-utils.ts and converted to middleware
 
-app.post('/progress/sync', async (c) => {
-  const db = drizzle(c.env.DB)
-  const user = c.get('user')
-
-  if (!user) return c.json({ error: 'Unauthorized' }, 401)
-
-  const { courseId, data } = await c.req.json()
-  if (!courseId || !data) return c.json({ error: 'Missing courseId or data' }, 400)
-
-  const syncId = `${user.id}:${courseId}`
-
-  await db.insert(schema.courseProgress)
-    .values({
-      id: syncId,
-      userId: user.id,
-      courseId,
-      data: typeof data === 'string' ? data : JSON.stringify(data),
-      updatedAt: new Date()
-    })
-    .onConflictDoUpdate({
-      target: schema.courseProgress.id,
-      set: {
-        data: typeof data === 'string' ? data : JSON.stringify(data),
-        updatedAt: new Date()
-      }
-    })
-
-  return c.json({ success: true })
-})
-
-app.get('/progress/get', async (c) => {
-  const db = drizzle(c.env.DB)
-  const user = c.get('user')
-
-  if (!user) return c.json({ error: 'Unauthorized' }, 401)
-
-  const courseId = c.req.query('courseId')
-  if (!courseId) return c.json({ error: 'Missing courseId' }, 400)
-
-  const progress = await db.select()
-    .from(schema.courseProgress)
-    .where(
-      and(
-        eq(schema.courseProgress.userId, user.id),
-        eq(schema.courseProgress.courseId, courseId)
-      )
-    ).get()
-  if (progress?.data) {
-    try {
-      return c.json(JSON.parse(progress.data))
-    } catch (e) {
-      console.error(`[PROGRESS-PARSE-ERROR] Course: ${courseId}, User: ${user.id}`, e)
-      // If corrupted, return null rather than 500
-      return c.json(null)
-    }
-  }
-
-  return c.json(null)
-})
-
-app.get('/progress/list', async (c) => {
-  const db = drizzle(c.env.DB)
-  const user = c.get('user')
-
-  if (!user) return c.json({ error: 'Unauthorized' }, 401)
-
-  const progressList = await db.select()
-    .from(schema.courseProgress)
-    .where(eq(schema.courseProgress.userId, user.id))
-    .all()
-
-  return c.json(progressList.map(p => {
-    let data = {}
-    try {
-      data = JSON.parse(p.data)
-    } catch (e) {
-      console.error(`[PROGRESS-LIST-PARSE-ERROR] Course: ${p.courseId}, User: ${user.id}`, e)
-    }
-    return {
-      courseId: p.courseId,
-      data,
-      updatedAt: p.updatedAt
-    }
-  }))
-})
+app.route('/progress', progress)
 
 app.post('/ai/generate', async (c) => {
   try {
