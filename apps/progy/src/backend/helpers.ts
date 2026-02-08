@@ -20,7 +20,8 @@ export const DEFAULT_PROGRESS: Progress = {
     totalXp: 0,
     currentStreak: 0,
     longestStreak: 0,
-    lastActiveDate: null
+    lastActiveDate: null,
+    totalExercises: 0
   },
   exercises: {},
   quizzes: {},
@@ -354,6 +355,23 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
         });
       }
     }
+  }
+
+  // Calculate total exercises for progress tracking
+  let totalEx = 0;
+  for (const modExercises of Object.values(manifest)) {
+    totalEx += modExercises.length;
+  }
+
+  // Update local progress with total exercises
+  try {
+    const progress = await getProgress();
+    if (progress.stats.totalExercises !== totalEx) {
+      progress.stats.totalExercises = totalEx;
+      await saveProgress(progress);
+    }
+  } catch (e) {
+    console.warn(`[WARN] Failed to update total exercises in progress: ${e}`);
   }
 
   await mkdir(PROG_DIR, { recursive: true });

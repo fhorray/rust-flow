@@ -38,6 +38,9 @@ export const authServer = (env: CloudflareBindings) => {
         subscription: {
           type: "string",
         },
+        hasLifetime: {
+          type: "boolean",
+        },
       },
     },
     secret: env.BETTER_AUTH_SECRET,
@@ -71,7 +74,8 @@ export const authServer = (env: CloudflareBindings) => {
             ...session,
             user: {
               ...session.user,
-              subscription: user.subscription
+              subscription: user.subscription,
+              hasLifetime: user.hasLifetime
             }
           };
         }
@@ -90,11 +94,18 @@ export const authServer = (env: CloudflareBindings) => {
             ...session,
             user: {
               ...session.user,
-              subscription: "pro"
+              subscription: "pro",
+              hasLifetime: user.hasLifetime
             }
           }
         }
-        return session;
+        return {
+          ...session,
+          user: {
+            ...session.user,
+            hasLifetime: user.hasLifetime
+          }
+        };
       }
     },
     plugins: [
@@ -167,8 +178,15 @@ export const authServer = (env: CloudflareBindings) => {
               const userEmail = session.customer_details?.email;
               if (userEmail) {
                 console.log(`[STRIPE-WEBHOOK-SYNC] Syncing ${planType} to user ${userEmail}`);
+                const updateData: any = {
+                  subscription: planType === "standard" ? "pro" : planType
+                };
+                if (planType === "lifetime") {
+                  updateData.hasLifetime = true;
+                }
+
                 await drizzle(env.DB).update(schema.user)
-                  .set({ subscription: planType === "standard" ? "pro" : planType })
+                  .set(updateData)
                   .where(eq(schema.user.email, userEmail))
                   .execute();
               }

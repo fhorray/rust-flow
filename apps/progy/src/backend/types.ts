@@ -36,6 +36,7 @@ export interface ProgressStats {
   currentStreak: number;
   longestStreak: number;
   lastActiveDate: string | null;
+  totalExercises: number; // Added for dashboard progress calculation
 }
 
 export interface ExerciseProgress {

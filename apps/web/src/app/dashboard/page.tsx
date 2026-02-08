@@ -356,15 +356,30 @@ export default function Dashboard() {
                     {/* <CardDescription className="text-xs">React + TypeScript</CardDescription> */}
                   </CardHeader>
                   <CardContent className="pb-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between text-[10px] uppercase font-bold text-zinc-500">
-                        <span>Progress</span>
-                        <span>--%</span>
-                      </div>
-                      <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
-                        <div className="h-full bg-primary w-[0%] group-hover:bg-orange-500 transition-colors"></div>
-                      </div>
-                    </div>
+                    {(() => {
+                      const completedEx = Object.keys(course.data.exercises || {}).length;
+                      const completedQuizzes = Object.keys(course.data.quizzes || {}).length;
+                      const total = course.data.stats?.totalExercises || 1; // Avoid division by zero
+                      const percentage = Math.round((completedEx / total) * 100);
+                      return (
+                        <div className="space-y-2">
+                          <div className="flex justify-between text-[10px] uppercase font-bold text-zinc-500">
+                            <span>Progress</span>
+                            <span>{percentage}%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-zinc-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-primary group-hover:bg-orange-500 transition-all duration-500"
+                              style={{ width: `${percentage}%` }}
+                            ></div>
+                          </div>
+                          <div className="flex justify-between text-[9px] text-zinc-600 font-mono">
+                            <span>{completedEx} / {total} lessons</span>
+                            {completedQuizzes > 0 && <span>{completedQuizzes} quizzes</span>}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </CardContent>
                   <CardFooter className="pt-0 flex justify-end">
                     <Dialog>
