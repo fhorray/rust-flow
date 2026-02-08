@@ -45,7 +45,7 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
             headers: { 'Authorization': `Bearer ${token}` }
           }),
           fetch(`${remoteUrl}/api/registry`),
-          fetch('/api/config')
+          fetch('/config')
         ]);
 
         if (progressRes.ok && registryRes.ok && configRes.ok) {

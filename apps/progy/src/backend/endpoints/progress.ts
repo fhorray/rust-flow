@@ -1,7 +1,7 @@
 import type { ServerType } from "../types";
 import { getProgress, saveProgress, updateStreak, DEFAULT_PROGRESS } from "../helpers";
 
-const getProgressHandler: ServerType<"/api/progress"> = async () => {
+const getProgressHandler: ServerType<"/progress"> = async () => {
   try {
     return Response.json(await getProgress());
   } catch (e) {
@@ -11,7 +11,7 @@ const getProgressHandler: ServerType<"/api/progress"> = async () => {
   }
 };
 
-const updateProgressHandler: ServerType<"/api/progress/update"> = async (req) => {
+const updateProgressHandler: ServerType<"/progress/update"> = async (req) => {
   try {
     const { type, id, success } = await req.json() as any;
     if (!id) return Response.json({ success: false, error: "Missing ID" });
@@ -34,6 +34,6 @@ const updateProgressHandler: ServerType<"/api/progress/update"> = async (req) =>
 };
 
 export const progressRoutes = {
-  "/api/progress": { GET: getProgressHandler },
-  "/api/progress/update": { POST: updateProgressHandler }
+  "/progress": { GET: getProgressHandler },
+  "/progress/update": { POST: updateProgressHandler }
 };

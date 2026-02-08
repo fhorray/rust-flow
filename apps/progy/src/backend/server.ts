@@ -61,7 +61,7 @@ try {
       // If the path doesn't start with /api and doesn't have an extension, serve index.html
       // Handle generic routes (SPA Fallback)
       // If the path doesn't start with /api and doesn't have an extension, serve index.html
-      if (!url.pathname.startsWith('/api') && !url.pathname.includes('.')) {
+      if (!url.pathname.startsWith('') && !url.pathname.includes('.')) {
         return new Response(Bun.file(join(PUBLIC_DIR, "index.html")));
       }
 

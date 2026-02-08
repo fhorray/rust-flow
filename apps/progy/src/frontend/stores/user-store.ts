@@ -40,14 +40,14 @@ interface TokenResponse {
 
 // --- Queries ---
 
-export const $configQuery = createFetcherStore<ConfigResponse>(['/api/config']);
-export const $tokenQuery = createFetcherStore<TokenResponse>(['/api/auth/token']);
-export const $localSettingsQuery = createFetcherStore<LocalSettings>(['/api/local-settings']);
+export const $configQuery = createFetcherStore<ConfigResponse>(['/config']);
+export const $tokenQuery = createFetcherStore<TokenResponse>(['/auth/token']);
+export const $localSettingsQuery = createFetcherStore<LocalSettings>(['/local-settings']);
 
 // --- Derived State ---
 
 // Use API_URL from constants as base default
-const BASE_API_URL = API_URL.endsWith('/api') ? API_URL.slice(0, -4) : API_URL;
+const BASE_API_URL = API_URL.endsWith('') ? API_URL.slice(0, -4) : API_URL;
 
 export const $remoteApiUrl = computed($configQuery, (config) => {
   return config.data?.remoteApiUrl || BASE_API_URL;
@@ -59,7 +59,7 @@ export const $isOfficial = computed($configQuery, (config) => config.data?.isOff
 // Authenticated Session Query
 export const $sessionQuery = createFetcherStore([
   $remoteApiUrl,
-  '/api/auth/get-session',
+  '/auth/get-session',
   computed($tokenQuery, (t) => t.data?.token)
 ], {
   fetcher: async (baseUrl, path, token) => {
@@ -99,14 +99,14 @@ export const fetchLocalSettings = () => $localSettingsQuery.revalidate();
  */
 export const updateLocalSettings = async (settings: Partial<LocalSettings>) => {
   try {
-    const res = await fetch('/api/local-settings', {
+    const res = await fetch('/local-settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(settings),
     });
     if (res.ok) {
       // Optimistic update using mutateCache
-      mutateCache('/api/local-settings', { ...$localSettings.get(), ...settings });
+      mutateCache('/local-settings', { ...$localSettings.get(), ...settings });
       // Revalidate to ensure consistency
       $localSettingsQuery.revalidate();
     }
@@ -155,12 +155,12 @@ export const updateMetadata = async (metadata: any) => {
 export const logout = async () => {
   try {
     // 1. Clear local token on CLI server
-    await fetch('/api/auth/token', { method: 'POST' });
+    await fetch('/auth/token', { method: 'POST' });
 
     // 2. Revalidate queries
     // Invalidating token query will cause it to re-fetch, return null, 
     // which cascades to session query returning null.
-    revalidateKeys(['/api/auth/token']);
+    revalidateKeys(['/auth/token']);
 
     console.log('[AUTH] Logged out successfully');
   } catch (e) {

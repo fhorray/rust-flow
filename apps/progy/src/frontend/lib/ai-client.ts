@@ -17,7 +17,7 @@ export async function callAi(options: AiRequestOptions) {
 
   // 1. Resolve Auth Token
   if (!cachedToken) {
-    const tokenRes = await fetch('/api/auth/token');
+    const tokenRes = await fetch('/auth/token');
     const { token } = await tokenRes.json();
     cachedToken = token;
   }

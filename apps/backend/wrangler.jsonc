@@ -8,8 +8,8 @@
     "nodejs_compat"
   ],
   "vars": {
-    "BETTER_AUTH_URL": "https://progy.francy.workers.dev",
-    "PROGY_API_URL": "https://progy.francy.workers.dev",
+    "BETTER_AUTH_URL": "https://api.progy.dev",
+    "PROGY_API_URL": "https://api.progy.dev",
     "STRIPE_PRICE_ID_PRO": "price_1SyByzGdycZGJETWXJft9raE",
     "STRIPE_PRICE_ID_PRO_DISCOUNT": "price_1SyFpZGdycZGJETWwc9zs2uV",
     "STRIPE_PRICE_ID_LIFETIME": "price_1SyBy8GdycZGJETWNQ2HCROC",

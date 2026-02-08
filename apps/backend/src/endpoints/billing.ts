@@ -24,8 +24,8 @@ billing.post("/checkout", async (c) => {
   });
 
   // Ensure redirect goes back to the frontend dashboard
-  const origin = c.req.header("origin") || "https://progy-web.francy.workers.dev";
-  const redirectBase = origin.includes("localhost") ? origin : "https://progy-web.francy.workers.dev";
+  const origin = c.req.header("origin") || "https://progy.dev";
+  const redirectBase = origin.includes("localhost") ? origin : "https://progy.dev";
 
   let priceId = c.env.STRIPE_PRICE_ID_PRO;
   let mode: Stripe.Checkout.SessionCreateParams.Mode = "subscription";

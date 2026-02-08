@@ -56,7 +56,7 @@ export function ContentTabs() {
 
     if (passed) {
       try {
-        await fetch('/api/progress/update', {
+        await fetch('/progress/update', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

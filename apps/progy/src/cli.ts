@@ -13,8 +13,8 @@ import { SyncManager } from "./sync-manager";
 
 const CONFIG_DIR = join(homedir(), ".progy");
 const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
-const BACKEND_URL = process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
-const FRONTEND_URL = process.env.PROGY_FRONTEND_URL || "https://progy.francy.workers.dev";
+const BACKEND_URL = process.env.PROGY_API_URL || "https://api.progy.dev";
+const FRONTEND_URL = process.env.PROGY_FRONTEND_URL || "https://api.progy.dev";
 
 // Version & Source Check
 import packageJson from "../package.json";

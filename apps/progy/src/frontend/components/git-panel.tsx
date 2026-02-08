@@ -19,7 +19,7 @@ export function GitPanel() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/local/git/status");
+      const res = await fetch("/local/git/status");
       if (!res.ok) throw new Error(await res.text());
       const data = await res.json();
       setChanges(data.changes || []);
@@ -46,7 +46,7 @@ export function GitPanel() {
     try {
       setLoading(true);
       setError(null);
-      const res = await fetch("/api/local/git/commit", {
+      const res = await fetch("/local/git/commit", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message })
@@ -70,7 +70,7 @@ export function GitPanel() {
     try {
       setSyncing(true);
       setError(null);
-      const res = await fetch("/api/local/git/sync", { method: "POST" });
+      const res = await fetch("/local/git/sync", { method: "POST" });
       if (!res.ok) {
         const err = await res.json();
         throw new Error(err.error || "Sync failed");

@@ -3,14 +3,14 @@ import { join } from "node:path";
 import type { ServerType } from "../types";
 import { ensureConfig, currentConfig, runSetupChecks, PROG_CWD } from "../helpers";
 
-const setupStatusHandler: ServerType<"/api/setup/status"> = async () => {
+const setupStatusHandler: ServerType<"/setup/status"> = async () => {
   await ensureConfig();
   if (!currentConfig || !currentConfig.setup) return Response.json({ success: true, checks: [] });
   const results = await runSetupChecks(currentConfig.setup);
   return Response.json({ success: results.every(r => r.status === 'pass'), checks: results });
 };
 
-const setupGuideHandler: ServerType<"/api/setup/guide"> = async () => {
+const setupGuideHandler: ServerType<"/setup/guide"> = async () => {
   await ensureConfig();
   if (!currentConfig || !currentConfig.setup?.guide) return Response.json({ markdown: "# No setup guide available" });
   const guidePath = join(PROG_CWD, currentConfig.setup.guide);
@@ -22,6 +22,6 @@ const setupGuideHandler: ServerType<"/api/setup/guide"> = async () => {
 };
 
 export const setupRoutes = {
-  "/api/setup/status": { GET: setupStatusHandler },
-  "/api/setup/guide": { GET: setupGuideHandler }
+  "/setup/status": { GET: setupStatusHandler },
+  "/setup/guide": { GET: setupGuideHandler }
 };

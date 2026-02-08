@@ -15,18 +15,18 @@ const app = new Hono<{
 }>()
 
 app.use('*', cors({
-  origin: ['http://localhost:3001', 'https://progy.francy.workers.dev', 'https://progy-web.francy.workers.dev'],
+  origin: ['http://localhost:3001', 'https://api.progy.dev', 'https://progy.dev'],
   allowHeaders: ['Content-Type', 'Authorization'],
   allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   credentials: true,
 }))
 
-app.route('/api/billing', billing)
-app.route('/api/git', git)
+app.route('/billing', billing)
+app.route('/git', git)
 
 
 // Debugging Middleware for Stripe/Auth
-app.use("/api/auth/*", async (c, next) => {
+app.use("/auth/*", async (c, next) => {
   if (c.req.path.includes("/stripe/upgrade") || c.req.path.includes("/subscription/upgrade")) {
     console.log(`[DEBUG] Stripe/Subscription Upgrade Request: ${c.req.method} ${c.req.url}`);
     console.log(`[DEBUG] Cookies: ${c.req.header("Cookie")}`);
@@ -40,13 +40,13 @@ app.use("/api/auth/*", async (c, next) => {
   await next();
 });
 
-app.get('/api/registry', (c) => {
+app.get('/registry', (c) => {
   return c.json({ courses: c.env.COURSES })
 })
 
 // verifySession moved to auth-utils.ts
 
-app.get('/api/auth/get-session', async (c) => {
+app.get('/auth/get-session', async (c) => {
   const session = await verifySession(c)
   if (session) {
     console.log(`[SESSION-CHECK] Success: ${session.user.email}`)
@@ -55,7 +55,7 @@ app.get('/api/auth/get-session', async (c) => {
   return c.json(null)
 })
 
-app.post('/api/progress/sync', async (c) => {
+app.post('/progress/sync', async (c) => {
   const db = drizzle(c.env.DB)
   const session = await verifySession(c)
 
@@ -85,7 +85,7 @@ app.post('/api/progress/sync', async (c) => {
   return c.json({ success: true })
 })
 
-app.get('/api/progress/get', async (c) => {
+app.get('/progress/get', async (c) => {
   const db = drizzle(c.env.DB)
   const session = await verifySession(c)
 
@@ -115,7 +115,7 @@ app.get('/api/progress/get', async (c) => {
   return c.json(null)
 })
 
-app.get('/api/progress/list', async (c) => {
+app.get('/progress/list', async (c) => {
   const db = drizzle(c.env.DB)
   const session = await verifySession(c)
 
@@ -141,7 +141,7 @@ app.get('/api/progress/list', async (c) => {
   }))
 })
 
-app.post('/api/ai/generate', async (c) => {
+app.post('/ai/generate', async (c) => {
   try {
     const { prompt, difficulty, config: clientConfig } = await c.req.json() as { prompt: string; difficulty: string; config: AIConfig };
 
@@ -210,7 +210,7 @@ app.post('/api/ai/generate', async (c) => {
   }
 });
 
-app.post('/api/ai/hint', async (c) => {
+app.post('/ai/hint', async (c) => {
   try {
     const { context, config: clientConfig } = await c.req.json() as { context: AIContext; config: AIConfig };
 
@@ -271,7 +271,7 @@ app.post('/api/ai/hint', async (c) => {
   }
 });
 
-app.post('/api/ai/explain', async (c) => {
+app.post('/ai/explain', async (c) => {
   try {
     const { context, config: clientConfig } = await c.req.json() as { context: AIContext; config: AIConfig };
 
@@ -330,7 +330,7 @@ app.post('/api/ai/explain', async (c) => {
   }
 });
 
-app.post('/api/ai/chat', async (c) => {
+app.post('/ai/chat', async (c) => {
   try {
     const { messages, context, config: clientConfig } = await c.req.json() as { messages: any[]; context: AIContext; config: AIConfig };
 
@@ -408,7 +408,7 @@ app.notFound((c) => {
 })
 
 // Better Auth Handler
-app.all('/api/auth/:path{.*}', async (c) => {
+app.all('/auth/:path{.*}', async (c) => {
   try {
     const auth = authServer(c.env)
     console.log(`[AUTH-DEBUG] Handling request for: ${c.req.path}`);
@@ -609,7 +609,7 @@ app.get('/device', async (c) => {
           const message = document.getElementById('message');
           const subtitle = document.getElementById('subtitle');
 
-          const baseURL = "/api/auth"; 
+          const baseURL = "/auth"; 
 
           function showMessage(text, isError = false) {
              message.innerText = text;

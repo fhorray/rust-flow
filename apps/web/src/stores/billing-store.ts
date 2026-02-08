@@ -14,7 +14,7 @@ interface CheckoutResponse {
 export const $checkoutMutation = createMutatorStore<CheckoutParams, CheckoutResponse>(
   async ({ data }) => {
     const { plan, token } = data;
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://progy.francy.workers.dev"}/api/billing/checkout?plan=${plan}`, {
+    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.progy.dev"}/api/billing/checkout?plan=${plan}`, {
       method: "POST",
       credentials: "include",
       headers: {

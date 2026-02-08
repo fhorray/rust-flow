@@ -90,7 +90,7 @@ export default function Dashboard() {
   const handleCheckout = async (plan: "pro" | "lifetime") => {
     setIsLoadingBilling(true);
     try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://progy.francy.workers.dev"}/api/billing/checkout?plan=${plan}`, {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL || "https://api.progy.dev"}/api/billing/checkout?plan=${plan}`, {
         method: "POST",
         credentials: "include",
         headers: {

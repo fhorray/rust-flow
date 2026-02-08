@@ -25,7 +25,7 @@ export function OpenInIdeButton({
 
     setIsLoading(true);
     try {
-      const res = await fetch('/api/ide/open', {
+      const res = await fetch('/ide/open', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path }),

@@ -4,8 +4,8 @@ import { createFetcherStore, mutateCache } from './query-client';
 
 // --- State Queries ---
 
-export const $exerciseGroupsQuery = createFetcherStore<GroupedExercises>(['/api/exercises']);
-export const $progressQuery = createFetcherStore<Progress>(['/api/progress']);
+export const $exerciseGroupsQuery = createFetcherStore<GroupedExercises>(['/exercises']);
+export const $progressQuery = createFetcherStore<Progress>(['/progress']);
 
 // Persist selected exercise to localStorage so it survives refreshes
 export const $selectedExercise = persistentAtom<Exercise | null>('progy:selectedExercise', null, {
@@ -18,7 +18,7 @@ export const $expandedModule = persistentAtom<string | undefined>('progy:expande
 
 // Reactive chain for exercise details (Description)
 export const $descriptionQuery = createFetcherStore<{ code: string; markdown: string }>([
-  '/api/exercises/code?path=',
+  '/exercises/code?path=',
   computed($selectedExercise, (ex) => ex?.path || null),
   '&markdownPath=',
   computed($selectedExercise, (ex) => ex?.markdownPath || null),
@@ -26,7 +26,7 @@ export const $descriptionQuery = createFetcherStore<{ code: string; markdown: st
 
 // Reactive chain for quizzes
 export const $quizQuery = createFetcherStore<any>([
-  '/api/exercises/quiz?path=',
+  '/exercises/quiz?path=',
   computed($selectedExercise, (ex) => (ex?.hasQuiz ? ex.path : null)),
 ]);
 
@@ -282,7 +282,7 @@ async function syncAiToGithub(exercise: Exercise, type: 'hint' | 'explanation', 
     const fileContent = `# AI ${type === 'hint' ? 'Hint' : 'Explanation'} - ${exercise.exerciseName}\n\n${content}`;
 
     // 1. Save File
-    const saveRes = await fetch('/api/notes/save', {
+    const saveRes = await fetch('/notes/save', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ path: filename, content: fileContent })
@@ -290,7 +290,7 @@ async function syncAiToGithub(exercise: Exercise, type: 'hint' | 'explanation', 
     if (!saveRes.ok) throw new Error('Failed to save note');
 
     // 2. Commit
-    const commitRes = await fetch('/api/local/git/commit', {
+    const commitRes = await fetch('/local/git/commit', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message: `docs: save AI ${type} for ${exercise.exerciseName}` })
@@ -298,7 +298,7 @@ async function syncAiToGithub(exercise: Exercise, type: 'hint' | 'explanation', 
     if (!commitRes.ok) throw new Error('Failed to commit note');
 
     // 3. Sync (Push)
-    const syncRes = await fetch('/api/local/git/sync', {
+    const syncRes = await fetch('/local/git/sync', {
       method: 'POST'
     });
     if (!syncRes.ok) throw new Error('Failed to push note');
@@ -417,7 +417,7 @@ export const runTests = async () => {
   $isRunning.set(true);
   $activeContentTab.set('output');
   try {
-    const res = await fetch('/api/exercises/run', {
+    const res = await fetch('/exercises/run', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -434,7 +434,7 @@ export const runTests = async () => {
 
     if (data.success) {
       if (data.progress) {
-        mutateCache('/api/progress', data.progress);
+        mutateCache('/progress', data.progress);
       } else {
         fetchProgress();
       }

@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { homedir } from "node:os";
 
 const CONFIG_NAME = "course.json";
-const getBackendUrl = () => process.env.PROGY_API_URL || "https://progy.francy.workers.dev";
+const getBackendUrl = () => process.env.PROGY_API_URL || "https://api.progy.dev";
 
 // Zod Mini schema for validation
 const CourseConfigSchema = z.object({

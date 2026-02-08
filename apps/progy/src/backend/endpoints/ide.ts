@@ -1,7 +1,7 @@
 import type { ServerType } from "../types";
 import { spawn } from "node:child_process";
 
-const ideOpenHandler: ServerType<"/api/ide/open"> = async (req) => {
+const ideOpenHandler: ServerType<"/ide/open"> = async (req) => {
   try {
     const { path } = await req.json() as { path: string };
     if (!path) return Response.json({ success: false, error: "Missing path" });
@@ -26,5 +26,5 @@ const ideOpenHandler: ServerType<"/api/ide/open"> = async (req) => {
 };
 
 export const ideRoutes = {
-  "/api/ide/open": { POST: ideOpenHandler }
+  "/ide/open": { POST: ideOpenHandler }
 };

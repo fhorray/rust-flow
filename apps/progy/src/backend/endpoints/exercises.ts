@@ -17,7 +17,7 @@ import {
  * Returns the exercises manifest.
  * @returns a JSON object with the exercises manifest.
  */
-const exercisesHandler: ServerType<"/api/exercises"> = async () => {
+const exercisesHandler: ServerType<"/exercises"> = async () => {
   await ensureConfig();
   if (!currentConfig) return Response.json({ error: "No config" });
   const manifest = await scanAndGenerateManifest(currentConfig);
@@ -29,7 +29,7 @@ const exercisesHandler: ServerType<"/api/exercises"> = async () => {
  * @param req The request.
  * @returns A JSON object with the quiz.
  */
-const quizHandler: ServerType<"/api/exercises/quiz"> = async (req) => {
+const quizHandler: ServerType<"/exercises/quiz"> = async (req) => {
   const url = new URL(req.url);
   const filePath = url.searchParams.get('path');
   if (!filePath) return new Response('Missing path', { status: 400 });
@@ -51,7 +51,7 @@ const quizHandler: ServerType<"/api/exercises/quiz"> = async (req) => {
  * @param req The request.
  * @returns A JSON object with the code.
  */
-const codeHandler: ServerType<"/api/exercises/code"> = async (req) => {
+const codeHandler: ServerType<"/exercises/code"> = async (req) => {
   const url = new URL(req.url);
   const filePath = url.searchParams.get('path');
   const markdownPath = url.searchParams.get('markdownPath');
@@ -86,7 +86,7 @@ const codeHandler: ServerType<"/api/exercises/code"> = async (req) => {
  * @param req The request.
  * @returns A JSON object with the result.
  */
-const runHandler: ServerType<"/api/exercises/run"> = async (req) => {
+const runHandler: ServerType<"/exercises/run"> = async (req) => {
   try {
     await ensureConfig();
     const body = await req.json() as { exerciseName: string, id: string };
@@ -147,8 +147,8 @@ const runHandler: ServerType<"/api/exercises/run"> = async (req) => {
 };
 
 export const exercisesRoutes = {
-  "/api/exercises": { GET: exercisesHandler },
-  "/api/exercises/quiz": { GET: quizHandler },
-  "/api/exercises/code": { GET: codeHandler },
-  "/api/exercises/run": { POST: runHandler }
+  "/exercises": { GET: exercisesHandler },
+  "/exercises/quiz": { GET: quizHandler },
+  "/exercises/code": { GET: codeHandler },
+  "/exercises/run": { POST: runHandler }
 };

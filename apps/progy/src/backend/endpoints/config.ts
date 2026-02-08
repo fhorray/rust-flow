@@ -18,16 +18,16 @@ const checkOfficial = () => {
   }
 };
 
-const configHandler: ServerType<"/api/config"> = async () => {
+const configHandler: ServerType<"/config"> = async () => {
   await ensureConfig();
   return Response.json({
     ...(currentConfig || {}),
-    remoteApiUrl: process.env.PROGY_API_URL || "https://progy.francy.workers.dev",
+    remoteApiUrl: process.env.PROGY_API_URL || "https://api.progy.dev",
     isOffline: process.env.PROGY_OFFLINE === "true",
     isOfficial: checkOfficial()
   });
 };
 
 export const configRoutes = {
-  "/api/config": { GET: configHandler }
+  "/config": { GET: configHandler }
 };

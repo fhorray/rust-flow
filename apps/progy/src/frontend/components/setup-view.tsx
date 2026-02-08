@@ -45,12 +45,12 @@ export function SetupView({ onCheckComplete }: SetupViewProps) {
   async function checkStatus() {
     setChecking(true);
     try {
-      const res = await fetch('/api/setup/status');
+      const res = await fetch('/setup/status');
       const data = await res.json();
       setStatus(data);
 
       if (!data.success) {
-        const guideRes = await fetch('/api/setup/guide');
+        const guideRes = await fetch('/setup/guide');
         const guideData = await guideRes.json();
         setGuide(guideData.markdown);
       } else {

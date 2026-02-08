@@ -20,7 +20,7 @@
 		"directory": ".open-next/assets"
 	},
 	"vars": {
-		"NEXT_PUBLIC_API_URL": "https://progy.francy.workers.dev"
+		"NEXT_PUBLIC_API_URL": "https://api.progy.dev"
 	},
 	// "images": {
 	// 	// Enable image optimization

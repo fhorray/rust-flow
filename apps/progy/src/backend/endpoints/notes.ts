@@ -2,7 +2,7 @@ import { writeFile, mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import type { ServerType } from "../types";
 
-const saveNoteHandler: ServerType<"/api/notes/save"> = async (req) => {
+const saveNoteHandler: ServerType<"/notes/save"> = async (req) => {
   try {
     const { path, content } = await req.json() as { path: string, content: string };
 
@@ -34,5 +34,5 @@ const saveNoteHandler: ServerType<"/api/notes/save"> = async (req) => {
 };
 
 export const notesRoutes = {
-  "/api/notes/save": { POST: saveNoteHandler }
+  "/notes/save": { POST: saveNoteHandler }
 };

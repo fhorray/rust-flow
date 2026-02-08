@@ -179,7 +179,7 @@ const sync = async () => {
 };
 
 export const gitRoutes = {
-  "/api/local/git/status": { GET: getStatus },
-  "/api/local/git/commit": { POST: commit },
-  "/api/local/git/sync": { POST: sync }
+  "/local/git/status": { GET: getStatus },
+  "/local/git/commit": { POST: commit },
+  "/local/git/sync": { POST: sync }
 };

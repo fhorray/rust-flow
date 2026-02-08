@@ -1,3 +1,3 @@
 export const healthRoutes = {
-  "/api/health": Response.json({ status: "ok" })
+  "/health": Response.json({ status: "ok" })
 };
