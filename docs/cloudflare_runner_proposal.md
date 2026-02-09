@@ -48,9 +48,165 @@ sequenceDiagram
     API-->>User: Result
 ```
 
-## Implementation Details
+## Detailed Implementation Plan
 
-### 1. Docker Image Strategy
+This section outlines the specific file changes required to implement this architecture in `apps/backend` (Cloudflare Worker) and `apps/progy` (CLI/Local Server).
+
+### 1. `apps/backend` (Cloudflare Worker)
+
+The backend needs to be updated to support the Container binding and the Durable Object that manages it.
+
+#### A. Update `wrangler.jsonc`
+Add the `containers` and `durable_objects` configurations to bind the worker to the container fleet.
+
+```jsonc
+// apps/backend/wrangler.jsonc
+{
+  // ... existing config
+  "containers": [
+    {
+      "max_instances": 10,
+      "class_name": "RunnerContainer",
+      "image": "./docker/rust-runner" // Path to directory containing Dockerfile
+    }
+  ],
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "RUNNER_CONTAINER",
+        "class_name": "RunnerContainer"
+      }
+    ]
+  },
+  "migrations": [
+    // ... existing migrations
+    {
+      "tag": "v2", // Increment tag
+      "new_sqlite_classes": ["RunnerContainer"]
+    }
+  ]
+}
+```
+
+#### B. Create `src/runner/container.ts`
+This file defines the Durable Object that controls the container. We use the `Container` helper class from the Cloudflare Containers SDK to simplify interactions.
+
+```typescript
+// apps/backend/src/runner/container.ts
+import { Container } from "@cloudflare/workers-types/experimental"; // Or specific package
+
+export class RunnerContainer extends Container {
+  // Configuration
+  defaultPort = 8080;
+  sleepAfter = '30s'; // Shut down container after 30s of inactivity to save costs
+
+  constructor(state: DurableObjectState, env: CloudflareBindings) {
+    super(state, env);
+  }
+
+  // The Container class automatically handles onStart/onStop/fetch logic
+  // We can override methods or add custom RPC methods.
+
+  // Custom RPC method to execute code
+  async execute(code: string, language: string) {
+    // The `this.fetch` method on the Container class proxies the request
+    // to the running container instance on `localhost:defaultPort`.
+    const response = await this.fetch("/execute", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ code, language })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Runner failed: ${await response.text()}`);
+    }
+
+    return await response.json();
+  }
+}
+```
+
+#### C. Update `src/index.ts`
+Register the new Durable Object and add a route to handle runner requests.
+
+```typescript
+// apps/backend/src/index.ts
+import { RunnerContainer } from './runner/container';
+
+// ... existing imports
+
+// Register the DO class export so Cloudflare can find it
+export { RunnerContainer };
+
+const app = new Hono<{ Bindings: CloudflareBindings }>();
+
+// ... existing middleware
+
+app.post('/runner/execute', async (c) => {
+  const { code, language } = await c.req.json();
+
+  // Logic to select a container ID. For now, random or hashed by user ID to reuse warm containers.
+  // Using a stable ID allows reusing the same container instance (warm start).
+  const id = c.env.RUNNER_CONTAINER.idFromName("shared-runner-pool-1");
+  const stub = c.env.RUNNER_CONTAINER.get(id);
+
+  // Invoke the RPC method on the DO
+  return c.json(await stub.execute(code, language));
+});
+
+// ... existing routes
+```
+
+### 2. `apps/progy` (CLI / Local Server)
+
+The local server needs to be able to offload execution to the cloud when configured.
+
+#### A. Update `src/backend/endpoints/exercises.ts`
+Modify the `runHandler` to support a remote execution mode.
+
+```typescript
+// apps/progy/src/backend/endpoints/exercises.ts
+
+// ... imports
+import { BACKEND_URL } from "../helpers";
+
+const runHandler: ServerType<"/exercises/run"> = async (req) => {
+  try {
+    await ensureConfig();
+    const body = await req.json();
+
+    // Check for remote execution flag in config or env
+    const useRemoteRunner = process.env.PROGY_USE_REMOTE === "true" || currentConfig.runner.type === "remote";
+
+    if (useRemoteRunner) {
+        // 1. Gather all necessary files (not just the main file, but the full context)
+        // For simplicity, we might zip the directory or just send the main file content for now.
+        const code = await getExerciseCode(body.id); // Helper to get code content
+
+        // 2. Call the Cloud Backend
+        const token = await loadToken(); // Helper from config.ts
+        const res = await fetch(`${BACKEND_URL}/runner/execute`, {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${token}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                code,
+                language: currentConfig.runner.language,
+                exerciseId: body.id
+            })
+        });
+
+        const result = await res.json();
+        // 3. Normalize result to SRP format if needed
+        return Response.json(result);
+    }
+
+    // ... existing local spawn logic ...
+```
+
+## Docker Image Strategy
 
 We will maintain a unified `progy-runner` Docker image or separate images per language family.
 
@@ -74,98 +230,6 @@ CMD ["./server"]
 ```
 
 The `runner-server` is a small HTTP server (written in Go or Rust) that accepts a POST request with code, writes it to disk, runs the test command, and streams the output back.
-
-### 2. Wrangler Configuration
-
-We configure the Worker to bind to the Container fleet.
-
-**`wrangler.jsonc`:**
-
-```jsonc
-{
-  "containers": [
-    {
-      "max_instances": 100,
-      "class_name": "RunnerContainer",
-      "image": "./docker/rust-runner" // Path to Dockerfile
-    }
-  ],
-  "durable_objects": {
-    "bindings": [
-      {
-        "name": "RUNNER_CONTAINER",
-        "class_name": "RunnerContainer"
-      }
-    ]
-  },
-  "migrations": [
-    {
-      "tag": "v1",
-      "new_sqlite_classes": ["RunnerContainer"]
-    }
-  ]
-}
-```
-
-### 3. Worker & Durable Object Logic
-
-**`src/worker.ts`:**
-
-```typescript
-import { WorkerEntrypoint } from "cloudflare:workers";
-
-export class RunnerContainer extends DurableObject {
-  constructor(state, env) {
-    super(state, env);
-    // Initialize container configuration
-  }
-
-  async fetch(request) {
-    // 1. Ensure container is running (handled by DO/Container runtime)
-
-    // 2. Forward execution request to the container's internal HTTP server
-    // The container is accessible via 'localhost' or a specific internal IP mechanism provided by the runtime
-    // *Note: In the current Beta, we use the `container.fetch` API provided by the binding.*
-
-    // This logic assumes we use the `Container` class from @cloudflare/containers
-    // implementation details would follow the specific Beta API.
-
-    return await this.env.RUNNER_CONTAINER.get(this.id).fetch(request);
-  }
-}
-
-export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
-    if (url.pathname === "/execute") {
-      // Route to a specific runner instance (e.g., based on user ID or a random pool)
-      const id = env.RUNNER_CONTAINER.idFromName("rust-runner-pool-1");
-      const stub = env.RUNNER_CONTAINER.get(id);
-      return await stub.fetch(request);
-    }
-    return new Response("Not Found", { status: 404 });
-  }
-};
-```
-
-*Note: The actual implementation will use the `Container` class extension as shown in the Cloudflare docs:*
-
-```typescript
-import { Container } from "@cloudflare/workers-types"; // conceptual import
-
-export class RustRunner extends Container {
-  defaultPort = 8080;
-
-  async execute(code: string) {
-    // Custom logic to interact with the running container
-    const response = await this.fetch("/run", {
-      method: "POST",
-      body: JSON.stringify({ code })
-    });
-    return response.json();
-  }
-}
-```
 
 ## Benefits
 
