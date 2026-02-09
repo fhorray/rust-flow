@@ -1,0 +1,12 @@
+{
+  "id": "docker-example",
+  "name": "Docker Local Example",
+  "runner": {
+    "type": "docker-local",
+    "dockerfile": "Dockerfile",
+    "command": "python3 exercises/{{id}}"
+  },
+  "content": {
+    "exercises": "exercises"
+  }
+}
