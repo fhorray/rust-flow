@@ -1,73 +1,62 @@
-# Project Structure & Overview
+# Project Structure & Architecture
 
-Progy is a monorepo containing the tools and platforms for interactive coding courses. It is built using Bun, React, and TypeScript.
+Progy is a modern, interactive coding platform built on a monorepo structure. It uses a unique "Split State" architecture to manage course content and user progress independently.
 
 ## Monorepo Structure
 
 The project is organized as a monorepo in the `apps/` directory:
 
-- **`apps/progy`**: The core CLI and local runner.
-    - Contains the logic for initializing, packaging, and running courses locally.
-    - Includes the `runner` which executes code and tests.
-    - Includes a local server (`src/backend`) that serves the frontend interface to the user.
-- **`apps/web`**: The web platform (hosted version).
-    - Likely a Next.js or similar web application for the online learning experience.
-- **`apps/backend`**: The backend API for the hosted platform.
-    - Handles user authentication, progress syncing, and other server-side logic.
+- **`apps/progy`**: The core CLI, Local Server, and Runner logic.
+    - **`src/cli.ts`**: Entry point for the CLI.
+    - **`src/commands/`**: Implementation of `init`, `start`, `sync`, etc.
+    - **`src/core/`**: Core logic for Git operations, SyncManager, and CourseLoader.
+    - **`src/backend/`**: The local API server that powers the web UI.
+    - **`src/frontend/`**: The React-based UI for the learning environment.
+- **`apps/web`**: The hosted documentation and marketing platform (Next.js).
+- **`apps/backend`**: The cloud backend (API, Auth, Sync) for the hosted platform.
 
-## Key Concepts
+## Architecture: Split State Model
 
-### 1. Course
-A course is a collection of interactive coding exercises. It is defined by a `course.json` file and a content directory structure.
-Each course runs in a specific environment (e.g., Node.js, Rust, Go) managed by a **Runner**.
+One of Progy's key innovations is how it handles course content vs. user progress.
 
-### 2. Runner
-A program (usually a script or binary) that executes the user's code against tests and returns a structured JSON result (`SRPOutput`).
-Runners are language-specific.
+### 1. Official Course Content (Read-Only)
+- Stored in `~/.progy/courses/<course-id>/`.
+- Managed by `progy sync`.
+- Contains the "truth" of the course: instruction text, initial exercise code, and tests.
 
-### 3. CLI (`progy`)
-The command-line interface used by students to:
-- Initialize a course (`progy init`)
-- Start the learning environment (`progy start`)
-- Create new courses (`progy create-course`)
+### 2. User Workspace (Read-Write)
+- The directory where the user runs `progy init` or `progy start`.
+- Contains the user's solutions and a `.git` directory for their personal history.
+- **Layering**: When `progy sync` runs, it "layers" updates from the Official Cache into the User Workspace.
+    - **Updates**: New lessons or fixes to `README.md` are copied over.
+    - **Preserves**: User-modified files (like `main.rs` in an exercise) are *not* overwritten unless explicitly requested via `progy reset`.
 
-### 4. Interactive Elements
-Progy supports rich markdown content with custom extensions like:
-- `::video[url]`: Embeds a video player.
-- `::note[text]`: Renders a highlighted note block.
-- **Quizzes**: Interactive quizzes defined in `quiz.json` files alongside exercises.
+### 3. The `progy.toml` Manifest
+Located in the root of the User Workspace, this file tracks the course state:
+```toml
+[course]
+id = "rust"
+repo = "https://github.com/progy-courses/rust"
+branch = "main"
 
-## Getting Started
+[sync]
+last_sync = "2023-10-27T10:00:00Z"
+```
 
-To run the project locally:
+## Data Flow
 
-1.  **Install dependencies**:
-    ```bash
-    bun install
-    ```
+1.  **Init**: CLI clones official content to Cache -> Copies to Workspace -> Inits User Git.
+2.  **Run**: CLI starts Server -> Server reads Workspace -> Runner executes User Code -> Returns JSON Result.
+3.  **Save**: CLI commits Workspace -> Pushes to User Remote.
+4.  **Sync**: CLI pulls Official Updates to Cache -> Layers to Workspace -> Pulls User Remote.
 
-2.  **Build the CLI**:
-    ```bash
-    bun run build
-    ```
+## Key Components
 
-3.  **Run the CLI (dev mode)**:
-    You can run the CLI from source using `bun apps/progy/src/cli.ts`.
+### Runner
+A language-specific program that executes student code and returns structured results (SRP). See [Runners](runners.md).
 
-## Development Workflow
+### Course Loader
+Responsible for validating and resolving courses from local paths, Git URLs, or the official registry.
 
-- **CLI Development**: Work in `apps/progy`. The entry point is `src/cli.ts`.
-- **Frontend/UI**: The local runner's UI is in `apps/progy/src/frontend`.
-- **Backend/API**: The local server is in `apps/progy/src/backend`.
-
-## Web & Cloud Architecture
-
-For a deep dive into the hosted components (`apps/web`, `apps/backend`), see [Web and Cloud Architecture](web_architecture.md).
-
-## Advanced Features
-
-For details on Progress Tracking, IDE Integration, and Roadmap features (AI, Cloud), see [Features & Integrations](features.md).
-
-## Contributing
-
-For information on how to build, test, and contribute to Progy, see the [Development Guide](development.md).
+### Sync Manager
+Handles the complex logic of merging official updates with user progress without causing conflicts.
