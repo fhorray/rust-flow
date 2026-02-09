@@ -486,7 +486,7 @@ export default function Home() {
                         3. Real-time Verify
                       </h4>
                       <p className="text-xs text-muted-foreground leading-relaxed italic">
-                        Start coding. Save your progress and click 'Run tests'
+                        Start coding. Save your progress and click &apos;Run tests&apos;
                         to verify your solution instantly.
                       </p>
                     </div>

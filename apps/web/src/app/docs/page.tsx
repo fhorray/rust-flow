@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { BookOpen, Terminal, GraduationCap, Code2, Settings, FileJson, Layers, Play } from "lucide-react"
+import { BookOpen, Terminal, GraduationCap, Code2, Settings, FileJson, Play, Zap, BrainCircuit, CheckCircle, ChevronRight, X } from "lucide-react"
 
 import {
   Sidebar,
@@ -22,7 +22,7 @@ import { Separator } from "@/components/ui/separator"
 
 // --- Content Components ---
 
-function IntroContent() {
+function IntroContent({ setActiveId }: { setActiveId: (id: string) => void }) {
   return (
     <div className="space-y-6 py-10 animate-in fade-in duration-500">
       <h1 className="text-4xl font-bold tracking-tight">Progy Documentation</h1>
@@ -32,23 +32,30 @@ function IntroContent() {
       </p>
 
       <div className="grid gap-6 md:grid-cols-2 mt-8">
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow p-6">
-          <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-            <GraduationCap className="h-5 w-5 text-primary" />
-            For Students
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            Learn how to install the CLI, start your first course, and save your progress.
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow p-6 flex flex-col items-start cursor-pointer group" onClick={() => setActiveId('student-tutorial')}>
+          <div className="p-2 rounded-lg bg-primary/10 text-primary mb-4 group-hover:scale-110 transition-transform">
+            <GraduationCap className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-bold mb-2">Student Tutorial</h3>
+          <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
+            New to Progy? Learn how to start a course, run tests, and use the AI helper in less than 5 minutes.
           </p>
+          <div className="mt-auto flex items-center text-sm font-medium text-primary">
+            Start Learning <ChevronRight className="ml-1 w-4 h-4" />
+          </div>
         </div>
-        <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow p-6">
-          <h3 className="text-lg font-semibold flex items-center gap-2 mb-2">
-            <Code2 className="h-5 w-5 text-primary" />
-            For Instructors
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            Create interactive courses, custom runners, and engaging content.
+
+        <div className="rounded-xl border bg-card text-card-foreground shadow-sm hover:shadow-md transition-shadow p-6 flex flex-col items-start cursor-pointer group" onClick={() => setActiveId('instructor-create')}>
+          <div className="p-2 rounded-lg bg-secondary text-secondary-foreground mb-4 group-hover:scale-110 transition-transform">
+             <Code2 className="h-6 w-6" />
+          </div>
+          <h3 className="text-lg font-bold mb-2">Instructor Guide</h3>
+          <p className="text-muted-foreground mb-4 text-sm leading-relaxed">
+            Want to build your own course? Learn about the course structure, runners, and how to publish.
           </p>
+          <div className="mt-auto flex items-center text-sm font-medium text-foreground">
+            Create Course <ChevronRight className="ml-1 w-4 h-4" />
+          </div>
         </div>
       </div>
     </div>
@@ -91,41 +98,120 @@ function InstallationContent() {
   )
 }
 
-function StudentFirstCourseContent() {
-  return (
-    <div className="space-y-6 py-6 animate-in fade-in duration-500">
-      <h1 className="text-3xl font-bold tracking-tight">Your First Course</h1>
-      <p className="text-lg text-muted-foreground">
-        Follow these steps to start learning with Progy.
-      </p>
-
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">1. Initialize a Course</h2>
-        <p className="text-muted-foreground">
-          Navigate to a directory where you want to store your course files and run:
-        </p>
-        <div className="bg-muted p-4 rounded-lg font-mono text-sm border overflow-x-auto">
-          progy init --course rust
+function StudentTutorialContent() {
+    return (
+      <div className="space-y-10 py-6 animate-in fade-in duration-500 max-w-3xl">
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-primary text-sm font-bold uppercase tracking-widest">
+            <Zap className="w-4 h-4" /> Quick Start
+          </div>
+          <h1 className="text-4xl font-black tracking-tight">Interactive Tutorial</h1>
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            Master the Progy interface. Learn how to verify your code, get AI assistance, and navigate the platform.
+          </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Replace <code>rust</code> with the ID of the course you want to take (e.g., <code>go</code>, <code>typescript</code>).
-        </p>
-      </section>
 
-      <section className="space-y-4">
-        <h2 className="text-xl font-semibold">2. Start the Environment</h2>
-        <p className="text-muted-foreground">
-          Once initialized, start the learning platform:
-        </p>
-        <div className="bg-muted p-4 rounded-lg font-mono text-sm border overflow-x-auto">
-          progy start
+        <div className="grid gap-12 relative border-l-2 border-primary/20 pl-8 ml-4">
+          {/* Step 1 */}
+          <div className="relative space-y-4">
+            <div className="absolute -left-[41px] top-0 w-6 h-6 rounded-full bg-background border-2 border-primary flex items-center justify-center text-[10px] font-bold text-primary">
+                1
+            </div>
+            <h3 className="text-xl font-bold">The Workspace</h3>
+            <p className="text-muted-foreground">
+                When you run <code>progy start</code>, your browser opens the Progy Workspace. This is your command center.
+            </p>
+            <div className="rounded-xl border bg-muted/30 p-2 shadow-sm">
+                 <div className="aspect-[16/9] bg-gradient-to-br from-neutral-900 to-black rounded-lg flex items-center justify-center relative overflow-hidden group">
+                     {/* Placeholder for Workspace Screenshot */}
+                    <div className="absolute inset-x-0 top-0 h-8 bg-white/5 border-b border-white/5 flex items-center px-4 gap-2">
+                         <div className="w-2 h-2 rounded-full bg-red-500/50"></div>
+                         <div className="w-2 h-2 rounded-full bg-yellow-500/50"></div>
+                         <div className="w-2 h-2 rounded-full bg-green-500/50"></div>
+                    </div>
+                    <div className="flex gap-4 w-full h-full pt-12 px-4 pb-4">
+                        <div className="w-1/4 bg-white/5 rounded border border-white/5 p-4 hidden md:block">
+                            <div className="w-20 h-3 bg-white/10 rounded mb-4"></div>
+                            <div className="space-y-2">
+                                <div className="w-full h-2 bg-white/5 rounded"></div>
+                                <div className="w-2/3 h-2 bg-white/5 rounded"></div>
+                            </div>
+                        </div>
+                        <div className="flex-1 bg-white/5 rounded border border-white/5 p-4 font-mono text-xs text-muted-foreground">
+                            <span className="text-blue-400">fn</span> main() {'{'} <br/>
+                            &nbsp;&nbsp; println!(<span className="text-green-400">&quot;Hello World&quot;</span>); <br/>
+                            {'}'}
+                        </div>
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-[1px] opacity-0 group-hover:opacity-100 transition-opacity">
+                        <span className="bg-background/80 text-foreground px-3 py-1 rounded-full text-xs font-bold border shadow-lg">Editor View</span>
+                    </div>
+                 </div>
+            </div>
+          </div>
+
+          {/* Step 2 */}
+          <div className="relative space-y-4">
+             <div className="absolute -left-[41px] top-0 w-6 h-6 rounded-full bg-background border-2 border-primary flex items-center justify-center text-[10px] font-bold text-primary">
+                2
+            </div>
+            <h3 className="text-xl font-bold">Running Tests</h3>
+            <p className="text-muted-foreground">
+                After editing your code (e.g., <code>main.rs</code>), save the file. Progy automatically detects changes.
+                Click the <span className="text-foreground font-bold bg-muted px-1.5 py-0.5 rounded text-xs">Run Tests</span> button or press <kbd className="bg-muted px-1.5 py-0.5 rounded text-xs font-mono border">Cmd+Enter</kbd> to verify your solution.
+            </p>
+            <div className="flex flex-col md:flex-row gap-4">
+                <div className="flex-1 p-4 rounded-lg border bg-card flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-green-500 font-bold text-sm">
+                        <CheckCircle className="w-4 h-4" /> Tests Passed
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        If your code is correct, you&apos;ll see a green success message and can proceed to the next lesson.
+                    </p>
+                </div>
+                <div className="flex-1 p-4 rounded-lg border bg-card flex flex-col gap-2">
+                    <div className="flex items-center gap-2 text-red-500 font-bold text-sm">
+                        <X className="w-4 h-4" /> Compilation Error
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                        If there are errors, Progy provides a detailed breakdown of what went wrong.
+                    </p>
+                </div>
+            </div>
+          </div>
+
+          {/* Step 3 */}
+          <div className="relative space-y-4">
+            <div className="absolute -left-[41px] top-0 w-6 h-6 rounded-full bg-background border-2 border-primary flex items-center justify-center text-[10px] font-bold text-primary">
+                3
+            </div>
+            <h3 className="text-xl font-bold flex items-center gap-2">
+                <BrainCircuit className="w-5 h-5 text-purple-500" />
+                AI Assistance
+            </h3>
+            <p className="text-muted-foreground">
+                Stuck? Progy&apos;s AI Mentor is context-aware. It knows the exercise constraints and your current code.
+            </p>
+            <ul className="space-y-3">
+                <li className="flex items-start gap-3 p-3 rounded-lg bg-purple-500/10 border border-purple-500/20">
+                    <Zap className="w-4 h-4 text-purple-500 mt-1 shrink-0" />
+                    <div>
+                        <span className="font-bold text-sm block mb-1">Get Hint</span>
+                        <p className="text-xs text-muted-foreground">Provides a subtle nudge in the right direction without revealing the answer.</p>
+                    </div>
+                </li>
+                <li className="flex items-start gap-3 p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+                    <BookOpen className="w-4 h-4 text-blue-500 mt-1 shrink-0" />
+                    <div>
+                        <span className="font-bold text-sm block mb-1">Explain Code</span>
+                        <p className="text-xs text-muted-foreground">Highlights complex syntax or logic in your code and explains it in plain English.</p>
+                    </div>
+                </li>
+            </ul>
+          </div>
         </div>
-        <p className="text-muted-foreground">
-          This will open your default browser to <code>http://localhost:3000</code> (or the next available port).
-        </p>
-      </section>
-    </div>
-  )
+      </div>
+    )
 }
 
 function StudentCLIContent() {
@@ -133,7 +219,7 @@ function StudentCLIContent() {
     <div className="space-y-6 py-6 animate-in fade-in duration-500">
       <h1 className="text-3xl font-bold tracking-tight">CLI Reference</h1>
       <p className="text-lg text-muted-foreground">
-        A quick reference for the most common commands you'll use as a student.
+        A quick reference for the most common commands you&apos;ll use as a student.
       </p>
 
       <div className="grid gap-4">
@@ -149,39 +235,6 @@ function StudentCLIContent() {
             <p className="text-sm text-muted-foreground">{item.desc}</p>
           </div>
         ))}
-      </div>
-    </div>
-  )
-}
-
-function StudentPlatformContent() {
-  return (
-    <div className="space-y-6 py-6 animate-in fade-in duration-500">
-      <h1 className="text-3xl font-bold tracking-tight">Platform Features</h1>
-      <p className="text-lg text-muted-foreground">
-        The Progy web interface is designed to keep you in the flow.
-      </p>
-
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-2">
-          <div className="aspect-video bg-muted rounded-lg flex items-center justify-center border text-muted-foreground text-sm">
-            [Editor Screenshot Placeholder]
-          </div>
-          <h3 className="font-semibold">Code Editor</h3>
-          <p className="text-sm text-muted-foreground">
-            A full-featured code editor with syntax highlighting and basic intelligent completion for the course language.
-          </p>
-        </div>
-
-        <div className="space-y-2">
-          <div className="aspect-video bg-muted rounded-lg flex items-center justify-center border text-muted-foreground text-sm">
-            [Terminal/Output Placeholder]
-          </div>
-          <h3 className="font-semibold">Interactive Runner</h3>
-          <p className="text-sm text-muted-foreground">
-            See test results in real-time. The runner output is parsed into friendly messages, but you can always view the raw log.
-          </p>
-        </div>
       </div>
     </div>
   )
@@ -284,7 +337,7 @@ function InstructorRunnersContent() {
     <div className="space-y-6 py-6 animate-in fade-in duration-500">
       <h1 className="text-3xl font-bold tracking-tight">Runners</h1>
       <p className="text-lg text-muted-foreground">
-        Runners are the bridge between the student's code and Progy's feedback system.
+        Runners are the bridge between the student&apos;s code and Progy&apos;s feedback system.
       </p>
 
       <section className="space-y-4">
@@ -340,19 +393,14 @@ const navData = {
       url: "#",
       items: [
         {
-          title: "Your First Course",
-          id: "student-first-course",
+          title: "Tutorial: How to Use",
+          id: "student-tutorial",
           icon: Play,
         },
         {
           title: "CLI Reference",
           id: "student-cli",
           icon: Terminal,
-        },
-        {
-          title: "Platform Features",
-          id: "student-platform",
-          icon: Layers,
         },
       ],
     },
@@ -387,11 +435,10 @@ export default function DocsPage() {
 
   const renderContent = () => {
     switch (activeId) {
-      case "intro": return <IntroContent />;
+      case "intro": return <IntroContent setActiveId={setActiveId} />;
       case "installation": return <InstallationContent />;
-      case "student-first-course": return <StudentFirstCourseContent />;
+      case "student-tutorial": return <StudentTutorialContent />;
       case "student-cli": return <StudentCLIContent />;
-      case "student-platform": return <StudentPlatformContent />;
       case "instructor-create": return <InstructorCreateContent />;
       case "instructor-structure": return <InstructorStructureContent />;
       case "instructor-runners": return <InstructorRunnersContent />;
@@ -401,7 +448,7 @@ export default function DocsPage() {
              {navData.navMain.find(g => g.items.find(i => i.id === activeId))?.items.find(i => i.id === activeId)?.title}
           </h1>
           <div className="p-8 border border-dashed rounded-lg bg-muted/50 text-center text-muted-foreground animate-pulse">
-            Content for "{activeId}" is coming soon...
+            Content for &quot;{activeId}&quot; is coming soon...
           </div>
         </div>
       );
