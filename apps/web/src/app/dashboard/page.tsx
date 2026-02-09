@@ -55,9 +55,17 @@ function PaymentStatusHandler() {
   return null;
 }
 
+type CourseData = {
+  exercises?: Record<string, unknown>;
+  quizzes?: Record<string, unknown>;
+  stats?: {
+    totalExercises?: number;
+  };
+};
+
 type CourseProgress = {
   courseId: string;
-  data: unknown;
+  data: CourseData;
   updatedAt: string;
 };
 
@@ -172,7 +180,7 @@ export default function Dashboard() {
   }
 
   const plan = session.user.subscription || 'free';
-  // @ts-expect-error - Check for custom fields if better-auth types aren't updated yet
+  // Check for custom fields if better-auth types aren't updated yet
   const hasLifetime = session.user.hasLifetime || plan === 'lifetime';
   const isPro = plan === 'pro';
 

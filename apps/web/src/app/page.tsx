@@ -53,7 +53,7 @@ export default function Home() {
 
   const userPlan = session?.user?.subscription || 'free';
   const isPro = userPlan === 'pro';
-  // @ts-expect-error - Custom field might be missing in types
+  // Custom field might be missing in types
   const isLifetime = session?.user?.hasLifetime || userPlan === 'lifetime';
 
   const handleLifetimeCheckout = async () => {
