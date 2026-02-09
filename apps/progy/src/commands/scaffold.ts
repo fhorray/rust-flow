@@ -35,6 +35,15 @@ async function resolveShortPath(shortPath: string): Promise<string> {
   return currentDir;
 }
 
+function getExerciseExtension(config: CourseConfig): string {
+  const cmd = config.runner.command || '';
+  if (cmd.includes('python')) return 'py';
+  if (cmd.includes('rustc') || cmd.includes('cargo')) return 'rs';
+  if (cmd.includes('tsx') || cmd.includes('ts-node')) return 'ts';
+  if (cmd.includes('sql') || cmd.includes('psql')) return 'sql';
+  return 'txt';
+}
+
 
 export async function addModule(name: string, options: { title?: string }) {
   const contentDir = join(PROG_CWD, "content");
@@ -61,12 +70,13 @@ export async function addExercise(modShort: string, name: string) {
     const num = await getNextNumber(modulePath);
     const folderName = `${num}_${name.toLowerCase().replace(/\s+/g, "_")}`;
     const exercisePath = join(modulePath, folderName);
+    const extension = getExerciseExtension(config);
 
     await mkdir(exercisePath, { recursive: true });
 
     const title = name.charAt(0).toUpperCase() + name.slice(1);
 
-    await writeFile(join(exercisePath, `exercise`), EXERCISE_STARTER);
+    await writeFile(join(exercisePath, `exercise.${extension}`), EXERCISE_STARTER);
     await writeFile(join(exercisePath, "README.md"), EXERCISE_README.replace("{{title}}", title));
 
     console.log(`✅ Created exercise: ${folderName} in ${modShort}`);
