@@ -1,0 +1,8 @@
+[
+  {
+    "question": "What is the result of 2 + 2?",
+    "options": ["3", "4", "5", "22"],
+    "answer": 1,
+    "explanation": "Basic math: 2 + 2 equals 4."
+  }
+]

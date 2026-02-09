@@ -10,11 +10,11 @@
     "deploy:backend": "bun run --cwd apps/backend deploy",
     "build:web": "bun run --cwd apps/web build:cf",
     "deploy:web": "bun run --cwd apps/web deploy",
-    "pkg:major": "bun pm --cwd apps/progy version major --force",
-    "pkg:minor": "bun pm --cwd apps/progy version minor --force",
-    "pkg:patch": "bun pm --cwd apps/progy version patch --force",
-    "pkg:publish": "bun publish --cwd apps/progy",
-    "db:clean": "wrangler d1 execute progy --remote --file=scripts/clean-db.sql",
+    "pkg:major": "bun pm --cwd apps/cli version major --force",
+    "pkg:minor": "bun pm --cwd apps/cli version minor --force",
+    "pkg:patch": "bun pm --cwd apps/cli version patch --force",
+    "pkg:publish": "bun publish --cwd apps/cli",
+    "db:clean": "wrangler d1 execute cli --remote --file=scripts/clean-db.sql",
     "db:gen": "bun run --cwd apps/backend db:gen",
     "db:up": "bun run --cwd apps/backend db:up:local",
     "db:deploy": "bun run --cwd apps/backend db:up:remote",
@@ -26,5 +26,4 @@
   "devDependencies": {
     "@types/bun": "latest"
   }
-
 }

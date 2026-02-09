@@ -1,0 +1,19 @@
+{
+  "title": "Variables & Types Quiz",
+  "questions": [
+    {
+      "question": "What does SELECT * do?",
+      "type": "multiple-choice",
+      "options": [
+        {
+          "id": "a",
+          "text": "Selects all rows and columns",
+          "isCorrect": true
+        },
+        { "id": "b", "text": "Selects only the ID column", "isCorrect": false },
+        { "id": "c", "text": "Deletes all rows", "isCorrect": false },
+        { "id": "d", "text": "Updates all rows", "isCorrect": false }
+      ]
+    }
+  ]
+}

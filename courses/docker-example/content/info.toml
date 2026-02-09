@@ -1,0 +1,7 @@
+[module]
+title = "Docker Basics"
+message = "Introduction to containerized environments."
+
+[exercises]
+01_hello = "Hello World"
+02_math = "Simple Math"

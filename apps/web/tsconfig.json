@@ -26,10 +26,10 @@
     "baseUrl": ".",
     "paths": {
       "@/*": [
-        "./src/*"
+        "./*"
       ],
       "@consts": [
-        "../../constants.ts"
+        "./constants.ts"
       ]
     },
     "types": [

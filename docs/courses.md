@@ -35,7 +35,7 @@ my-course/
 
 ## `course.json`
 
-The `course.json` file defines the course metadata and runner configuration.
+The `course.json` file defines the course metadata and runner configuration. For a complete guide on all available fields and configurations, see the [Course Configuration Guide](./course-configuration.md).
 
 ```json
 {
@@ -69,9 +69,11 @@ The `course.json` file defines the course metadata and runner configuration.
 ## Writing Content
 
 ### Markdown Syntax
+
 Progy uses standard Markdown with some custom extensions:
 
 - **Videos**: Embed a video player.
+
   ```markdown
   ::video[https://example.com/video.mp4]
   ```
@@ -82,6 +84,7 @@ Progy uses standard Markdown with some custom extensions:
   ```
 
 ### Modules (`info.toml`)
+
 Each module directory (e.g., `01_intro`) should have an `info.toml` file to define its title and the order of exercises.
 
 ```toml
@@ -97,7 +100,9 @@ quiz1 = "Module Quiz"
 The keys (e.g., `ex1`, `quiz1`) must match the directory names inside the module.
 
 ### Exercises
+
 An exercise directory contains:
+
 1.  **`README.md`**: The lesson text and instructions.
 2.  **Code Files**: The starter code (e.g., `index.js`, `main.rs`). The system automatically detects:
     - `exercise.rs`, `main.rs` (Rust)
