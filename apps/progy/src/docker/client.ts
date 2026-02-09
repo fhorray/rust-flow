@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, SpawnOptions } from "node:child_process";
 
 export interface DockerRunOptions {
   cwd: string;
@@ -37,6 +37,7 @@ export class DockerClient {
     console.log(`   Context: ${contextPath}`);
     console.log(`   Dockerfile: ${dockerfilePath}`);
 
+    // 'inherit' allows the user to see the build steps in real-time
     const exitCode = await this.runCommand(
       ["build", "-t", tag, "-f", dockerfilePath, contextPath],
       { stdio: "inherit" }
@@ -69,7 +70,8 @@ export class DockerClient {
     tag: string,
     opts: DockerRunOptions
   ): Promise<DockerRunResult> {
-    // Determine mount path format based on OS
+    // When using spawn without shell: true, we should not quote the paths manually.
+    // Node.js handles the argument passing to the executable.
     const mountArg = `${opts.cwd}:/workspace`;
 
     const args = [
@@ -81,6 +83,10 @@ export class DockerClient {
       "--cpus=2",              // Limit CPU (Safety)
       "--memory=2g",           // Limit RAM (Safety)
     ];
+
+    if (opts.tty) {
+      args.push("-t");
+    }
 
     // Inject Environment Variables
     if (opts.env) {
@@ -97,10 +103,15 @@ export class DockerClient {
     let output = "";
 
     return new Promise((resolve) => {
-      const child = spawn("docker", args);
+      // We pipe output to capture it for the SRP result
+      const child = spawn("docker", args, { stdio: ["ignore", "pipe", "pipe"] });
 
-      child.stdout.on("data", (d) => { output += d.toString(); });
-      child.stderr.on("data", (d) => { output += d.toString(); });
+      if (child.stdout) {
+          child.stdout.on("data", (d) => { output += d.toString(); });
+      }
+      if (child.stderr) {
+          child.stderr.on("data", (d) => { output += d.toString(); });
+      }
 
       child.on("close", (code) => {
         resolve({ exitCode: code || 0, output });
@@ -119,7 +130,7 @@ export class DockerClient {
     return new Promise((resolve, reject) => {
       const child = spawn("docker", args, {
         stdio: options.stdio || (options.silent ? "ignore" : "pipe"),
-        shell: true // Helpful for Windows
+        shell: true // Helpful for Windows in some cases, but checkAvailability needs it?
       });
 
       child.on("close", (code) => resolve(code || 0));

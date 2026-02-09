@@ -1,0 +1,12 @@
+[
+  {
+    "question": "What does the runner script do?",
+    "options": [
+      "Executes the student code and captures output",
+      "Compiles the code",
+      "Deletes the code",
+      "Nothing"
+    ],
+    "answer": 0
+  }
+]

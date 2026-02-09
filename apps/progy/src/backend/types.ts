@@ -1,8 +1,8 @@
 export interface RunnerConfig {
-  type?: 'local' | 'docker-local' | 'docker-compose';
   command: string;
   args: string[];
   cwd?: string;
+  type?: 'process' | 'docker-local' | 'docker-compose';
   dockerfile?: string;
   image_tag?: string;
   network_access?: boolean;

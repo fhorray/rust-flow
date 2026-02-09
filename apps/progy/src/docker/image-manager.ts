@@ -10,7 +10,7 @@ export class ImageManager {
 
   /**
    * Ensures the image is built and up-to-date.
-   * Uses a hash of the Dockerfile + context folder mtime to invalidate cache.
+   * If the image does not exist, it builds it using the provided context and Dockerfile.
    */
   async ensureImage(tag: string, contextPath: string, dockerfileRel: string): Promise<void> {
     const dockerfileAbs = join(contextPath, dockerfileRel);
@@ -23,18 +23,15 @@ export class ImageManager {
       return;
     }
 
-    // 2. Advanced: Check for staleness (Optional)
-    // We can store a metadata hash in a label on the image.
-    // docker inspect --format '{{ index .Config.Labels "progy.hash" }}' tag
-    // For MVP, we skip this complexity and assume if it exists, it's good.
-    // Instructors can tell students to run `progy clean` or `docker rmi` to force rebuild.
+    // TODO: Implement staleness check based on file hash or mtime.
+    // For now, we assume existing image is sufficient.
   }
 
   /**
-   * Generates a unique tag based on course ID and version.
+   * Generates a unique tag based on course ID.
    */
   generateTag(courseId: string): string {
-    // Sanitize ID
+    // Sanitize ID to be Docker-compatible (lowercase, alphanumeric, dashes)
     const safeId = courseId.toLowerCase().replace(/[^a-z0-9]/g, "-");
     return `progy-course-${safeId}:latest`;
   }
