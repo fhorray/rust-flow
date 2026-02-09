@@ -1,7 +1,7 @@
 import { useStore } from '@nanostores/react';
 import { atom, computed } from 'nanostores';
 import { createFetcherStore, mutateCache, revalidateKeys } from './query-client';
-import { API_URL } from '@consts';
+import { API_URL } from '../../../../../improvements/constants';
 
 export interface User {
   id: string;

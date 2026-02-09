@@ -33,7 +33,7 @@
         "./*"
       ],
       "@consts": [
-        "../../constants.ts"
+        "../../improvements/constants.ts"
       ]
     }
   }
