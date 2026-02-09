@@ -133,7 +133,7 @@ function StudentCLIContent() {
     <div className="space-y-6 py-6 animate-in fade-in duration-500">
       <h1 className="text-3xl font-bold tracking-tight">CLI Reference</h1>
       <p className="text-lg text-muted-foreground">
-        A quick reference for the most common commands you'll use as a student.
+        A quick reference for the most common commands you&apos;ll use as a student.
       </p>
 
       <div className="grid gap-4">
@@ -284,7 +284,7 @@ function InstructorRunnersContent() {
     <div className="space-y-6 py-6 animate-in fade-in duration-500">
       <h1 className="text-3xl font-bold tracking-tight">Runners</h1>
       <p className="text-lg text-muted-foreground">
-        Runners are the bridge between the student's code and Progy's feedback system.
+        Runners are the bridge between the student&apos;s code and Progy&apos;s feedback system.
       </p>
 
       <section className="space-y-4">
@@ -401,7 +401,7 @@ export default function DocsPage() {
              {navData.navMain.find(g => g.items.find(i => i.id === activeId))?.items.find(i => i.id === activeId)?.title}
           </h1>
           <div className="p-8 border border-dashed rounded-lg bg-muted/50 text-center text-muted-foreground animate-pulse">
-            Content for "{activeId}" is coming soon...
+            Content for &quot;{activeId}&quot; is coming soon...
           </div>
         </div>
       );
