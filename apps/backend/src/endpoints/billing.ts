@@ -48,7 +48,8 @@ billing.post("/checkout", async (c) => {
   }
 
   const checkoutSession = await stripe.checkout.sessions.create({
-    customer_email: session.user.email,
+    customer_email: session.user.stripeCustomerId ? undefined : session.user.email,
+    customer: session.user.stripeCustomerId || undefined,
     line_items: [
       {
         price: priceId,

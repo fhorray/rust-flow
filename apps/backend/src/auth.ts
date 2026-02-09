@@ -11,7 +11,7 @@ import Stripe from "stripe";
 
 export const authServer = (env: CloudflareBindings) => {
   const stripeClient = new Stripe(env.STRIPE_SECRET_KEY || "", {
-    apiVersion: "2026-01-28.clover", // Fixed version type helper
+    apiVersion: "2026-01-28.clover",
     httpClient: Stripe.createFetchHttpClient()
   });
 
@@ -165,19 +165,31 @@ export const authServer = (env: CloudflareBindings) => {
 
             if (planType === "lifetime" || planType === "pro" || planType === "standard") {
               const userEmail = session.customer_details?.email;
-              if (userEmail) {
-                console.log(`[STRIPE-WEBHOOK-SYNC] Syncing ${planType} to user ${userEmail}`);
+              const userId = session.metadata?.userId;
+              const customerId = session.customer as string;
+
+              if (userId || userEmail) {
+                console.log(`[STRIPE-WEBHOOK-SYNC] Syncing ${planType} to user ${userId || userEmail}`);
                 const updateData: any = {
-                  subscription: planType === "standard" ? "pro" : planType
+                  subscription: planType === "standard" ? "pro" : planType,
+                  stripeCustomerId: customerId
                 };
                 if (planType === "lifetime") {
                   updateData.hasLifetime = true;
                 }
 
-                await drizzle(env.DB).update(schema.user)
-                  .set(updateData)
-                  .where(eq(schema.user.email, userEmail))
-                  .execute();
+                const db = drizzle(env.DB);
+                if (userId) {
+                  await db.update(schema.user)
+                    .set(updateData)
+                    .where(eq(schema.user.id, userId))
+                    .execute();
+                } else if (userEmail) {
+                  await db.update(schema.user)
+                    .set(updateData)
+                    .where(eq(schema.user.email, userEmail))
+                    .execute();
+                }
               }
             }
           }
