@@ -16,6 +16,17 @@ def main():
         # We assume the file is relative to /workspace
         full_path = f"/workspace/{file_to_run}"
         
+        if not os.path.exists(full_path):
+             srp = {
+                "success": False,
+                "summary": "File Not Found",
+                "raw": f"Could not find file: {file_to_run}"
+            }
+             print("__SRP_BEGIN__")
+             print(json.dumps(srp))
+             print("__SRP_END__")
+             return
+
         result = subprocess.run(
             ["python3", full_path],
             capture_output=True,
@@ -45,6 +56,15 @@ def main():
         print(json.dumps(srp))
         print("__SRP_END__")
 
+    except subprocess.TimeoutExpired:
+        srp = {
+            "success": False,
+            "summary": "Timeout Error",
+            "raw": "Code execution timed out after 5 seconds."
+        }
+        print("__SRP_BEGIN__")
+        print(json.dumps(srp))
+        print("__SRP_END__")
     except Exception as e:
         srp = {
             "success": False,

@@ -1,0 +1,14 @@
+{
+  "id": "sql-basics",
+  "name": "SQL Basics with Postgres",
+  "description": "Learn SQL by running queries against a real PostgreSQL database.",
+  "runner": {
+    "type": "docker-compose",
+    "compose_file": "docker-compose.yml",
+    "service_to_run": "tester",
+    "command": "python3 /app/runner.py {{exercise}}"
+  },
+  "content": {
+    "exercises": "exercises"
+  }
+}

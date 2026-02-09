@@ -152,7 +152,7 @@ async function handleDockerLocalRunner(body: { exerciseName: string, id: string 
 async function handleDockerComposeRunner(body: { exerciseName: string, id: string }) {
   const client = new DockerComposeClient();
   const config = currentConfig!;
-  
+
   const composeFile = join(PROG_CWD, config.runner.compose_file || "docker-compose.yml");
   const service = config.runner.service_to_run || "app";
   const command = (config.runner.command || "echo 'No command'").replace("{{exercise}}", body.exerciseName).replace("{{id}}", body.id || "");
@@ -174,6 +174,10 @@ async function handleProcessRunner(body: { exerciseName: string, id: string }) {
   const idParts = id?.split('/') || [];
   const module = idParts[0] || "";
 
+  const runnerCmd = currentConfig!.runner.command;
+  const runnerArgs = currentConfig!.runner.args.map((a: string) =>
+    a.replace("{{exercise}}", exerciseName).replace("{{id}}", id || "").replace("{{module}}", module)
+  );
   const runnerCmd = currentConfig!.runner.command;
   const runnerArgs = currentConfig!.runner.args.map((a: string) =>
     a.replace("{{exercise}}", exerciseName).replace("{{id}}", id || "").replace("{{module}}", module)
@@ -212,17 +216,17 @@ const runHandler: ServerType<"/exercises/run"> = async (req) => {
     const runnerType = currentConfig!.runner.type || 'process';
 
     if (runnerType === 'docker-local') {
-        result = await handleDockerLocalRunner(body);
+      result = await handleDockerLocalRunner(body);
     } else if (runnerType === 'docker-compose') {
-        result = await handleDockerComposeRunner(body);
+      result = await handleDockerComposeRunner(body);
     } else {
-        result = await handleProcessRunner(body);
+      result = await handleProcessRunner(body);
     }
 
     // Progress
     let progressData: any = {};
     if (result && result.success && body.id) {
-        progressData = await updateProgressForSuccess(body.id);
+      progressData = await updateProgressForSuccess(body.id);
     }
 
     return Response.json({

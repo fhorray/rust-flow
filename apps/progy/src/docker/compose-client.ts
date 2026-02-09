@@ -79,7 +79,7 @@ export class DockerComposeClient {
         child.on("close", async (code) => {
           resolve({ exitCode: code || 0, output });
         });
-        
+
         child.on("error", (err) => {
           resolve({ exitCode: 1, output: `Failed to spawn ${this.executable}: ${err.message}` });
         });
@@ -90,7 +90,7 @@ export class DockerComposeClient {
       // 3. Cleanup
       await this.down(composeFile);
     }
-    
+
     return { exitCode, output };
   }
 
@@ -98,12 +98,12 @@ export class DockerComposeClient {
     const args = [];
     if (this.isV2) args.push("compose");
     args.push("-f", composeFile, "down");
-    
+
     // We don't care about output, but we await completion
     await new Promise<void>((resolve) => {
-        const child = spawn(this.executable, args, { stdio: "ignore" });
-        child.on("close", () => resolve());
-        child.on("error", () => resolve()); // Ignore errors during cleanup
+      const child = spawn(this.executable, args, { stdio: "ignore" });
+      child.on("close", () => resolve());
+      child.on("error", () => resolve()); // Ignore errors during cleanup
     });
   }
 

@@ -1,0 +1,12 @@
+[
+  {
+    "question": "What does SELECT * do?",
+    "options": [
+      "Selects all rows and columns",
+      "Selects only the ID column",
+      "Deletes all rows",
+      "Updates all rows"
+    ],
+    "answer": 0
+  }
+]
