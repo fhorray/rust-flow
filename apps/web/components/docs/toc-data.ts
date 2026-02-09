@@ -12,9 +12,17 @@ export const tocMap: Record<string, TocItem[]> = {
   'student-tutorial': [
     { id: 'the-workspace', label: 'The Workspace' },
     { id: 'validation-loop', label: 'Validation Loop' },
+    { id: 'progress-tracking', label: 'Progress Tracking' },
+    { id: 'sync-to-cloud', label: 'Sync to Cloud' },
+  ],
+  'student-progress': [
+    { id: 'how-xp-works', label: 'How XP Works' },
+    { id: 'streaks', label: 'Streaks' },
+    { id: 'cloud-sync-vs-offline-mode', label: 'Cloud vs Offline' },
   ],
   'student-cli': [
     { id: 'cli-commands', label: 'Commands' },
+    { id: 'common-flags', label: 'Common Flags' },
   ],
   'instructor-create': [
     { id: 'scaffold-a-new-course', label: 'Scaffold a New Course' },
@@ -49,7 +57,13 @@ export const tocMap: Record<string, TocItem[]> = {
     { id: 'cli-tools', label: 'CLI Tools' },
     { id: 'scaffolding-shortcuts', label: 'Scaffolding Shortcuts' },
   ],
+  'instructor-best-practices': [
+    { id: 'best-practices', label: 'All Practices' },
+  ],
   'instructor-examples': [
     { id: 'examples', label: 'Examples' },
+  ],
+  troubleshooting: [
+    { id: 'troubleshooting', label: 'Common Issues' },
   ],
 };

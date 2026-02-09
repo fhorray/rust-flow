@@ -10,6 +10,7 @@ import { tocMap } from '@/components/docs/toc-data';
 import { IntroContent } from '@/components/docs/intro-content';
 import { InstallationContent } from '@/components/docs/installation-content';
 import { StudentTutorialContent } from '@/components/docs/student-tutorial-content';
+import { StudentProgressContent } from '@/components/docs/student-progress-content';
 import { StudentCLIContent } from '@/components/docs/student-cli-content';
 import { InstructorCreateContent } from '@/components/docs/instructor-create-content';
 import { InstructorStructureContent } from '@/components/docs/instructor-structure-content';
@@ -18,7 +19,9 @@ import { InstructorSRPContent } from '@/components/docs/instructor-srp-content';
 import { InstructorRunnersContent } from '@/components/docs/instructor-runners-content';
 import { InstructorContentContent } from '@/components/docs/instructor-content-content';
 import { InstructorCLIContent } from '@/components/docs/instructor-cli-content';
+import { InstructorBestPracticesContent } from '@/components/docs/instructor-best-practices-content';
 import { InstructorExamplesContent } from '@/components/docs/instructor-examples-content';
+import { TroubleshootingContent } from '@/components/docs/troubleshooting-content';
 import { UnderConstruction } from '@/components/docs/under-construction';
 
 const DocsPage = () => {
@@ -32,6 +35,8 @@ const DocsPage = () => {
         return <InstallationContent />;
       case 'student-tutorial':
         return <StudentTutorialContent />;
+      case 'student-progress':
+        return <StudentProgressContent />;
       case 'student-cli':
         return <StudentCLIContent />;
       case 'instructor-create':
@@ -48,8 +53,12 @@ const DocsPage = () => {
         return <InstructorContentContent />;
       case 'instructor-cli':
         return <InstructorCLIContent />;
+      case 'instructor-best-practices':
+        return <InstructorBestPracticesContent />;
       case 'instructor-examples':
         return <InstructorExamplesContent />;
+      case 'troubleshooting':
+        return <TroubleshootingContent />;
       default:
         return <UnderConstruction />;
     }

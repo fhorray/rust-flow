@@ -13,6 +13,9 @@ import {
   Puzzle,
   FileText,
   Rocket,
+  Trophy,
+  AlertTriangle,
+  CheckSquare,
 } from 'lucide-react';
 
 export const navData = {
@@ -28,6 +31,7 @@ export const navData = {
       title: 'Student Guide',
       items: [
         { title: 'The Workspace', id: 'student-tutorial', icon: Play },
+        { title: 'Progress & XP', id: 'student-progress', icon: Trophy },
         { title: 'CLI Reference', id: 'student-cli', icon: Command },
       ],
     },
@@ -41,7 +45,14 @@ export const navData = {
         { title: 'Custom Runners', id: 'instructor-runners', icon: Settings },
         { title: 'Content & Quizzes', id: 'instructor-content', icon: FileText },
         { title: 'CLI Tools', id: 'instructor-cli', icon: Command },
+        { title: 'Best Practices', id: 'instructor-best-practices', icon: CheckSquare },
         { title: 'Complete Examples', id: 'instructor-examples', icon: Code2 },
+      ],
+    },
+    {
+      title: 'Help',
+      items: [
+        { title: 'Troubleshooting', id: 'troubleshooting', icon: AlertTriangle },
       ],
     },
   ],

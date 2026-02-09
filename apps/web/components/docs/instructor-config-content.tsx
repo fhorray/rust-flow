@@ -18,10 +18,11 @@ export function InstructorConfigContent() {
           code={`{
   "id": "python-mastery",
   "name": "Python Mastery: From Zero to Hero",
-  "description": "A comprehensive guide to modern Python.",
   "runner": {
     "type": "process",
-    "command": "python3 {{exercise}}"
+    "command": "python3",
+    "args": ["runner.py", "{{exercise}}"],
+    "cwd": "."
   },
   "content": {
     "root": ".",

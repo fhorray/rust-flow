@@ -280,7 +280,7 @@ export default function Home() {
 
       <main>
         {/* Hero Section */}
-        <section className="relative pt-24 pb-20 md:pt-40 md:pb-32 overflow-hidden">
+        <section className="relative pt-24 pb-20 md:pt-36 md:pb-32 overflow-hidden">
           {/* Glow Scene */}
           <div className="absolute inset-0 pointer-events-none overflow-hidden">
             <div className="spotlight opacity-30 md:opacity-40"></div>
@@ -291,7 +291,7 @@ export default function Home() {
             ></div>
           </div>
 
-          {/* Floating Icons - Hidden on small mobile */}
+          {/* Floating Icons */}
           <div className="absolute top-32 left-10 md:left-40 animate-float opacity-10 hidden lg:block">
             <Code className="w-10 h-10 text-primary" />
           </div>
@@ -307,12 +307,14 @@ export default function Home() {
               variant="outline"
               className="mb-6 border-primary/20 text-primary py-1 px-4 backdrop-blur-md bg-primary/5 rounded-full text-[9px] font-black tracking-[0.3em] uppercase"
             >
-              BUILD • SOLVE • VERIFY
+              BUILD • SOLVE • VERIFYY
             </Badge>
+
             <h1 className="text-3xl sm:text-5xl md:text-7xl font-black tracking-tighter mb-6 max-w-4xl leading-[1.05] reveal">
               Master Code <br />
               <span className="text-primary italic">Locally.</span>
             </h1>
+
             <p
               className="text-sm sm:text-base md:text-lg text-muted-foreground max-w-xl mb-10 leading-relaxed reveal"
               style={{ transitionDelay: '0.1s' }}
@@ -321,6 +323,43 @@ export default function Home() {
               learning. <br className="hidden md:block" />
               Free for the community. Build any course, in any language.
             </p>
+
+            {/* Value Propositions */}
+            <div
+              className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 mb-10 reveal"
+              style={{ transitionDelay: '0.15s' }}
+            >
+              {[
+                {
+                  icon: <Layers className="w-3.5 h-3.5" />,
+                  text: 'Git-Native Courses',
+                },
+                {
+                  icon: <Globe className="w-3.5 h-3.5" />,
+                  text: 'Any Language',
+                },
+                {
+                  icon: <Zap className="w-3.5 h-3.5" />,
+                  text: 'Real-Time Feedback',
+                },
+                {
+                  icon: <ShieldCheck className="w-3.5 h-3.5" />,
+                  text: 'Docker Isolation',
+                },
+                {
+                  icon: <BrainCircuit className="w-3.5 h-3.5" />,
+                  text: 'AI Mentor',
+                },
+              ].map((prop) => (
+                <div
+                  key={prop.text}
+                  className="flex items-center gap-2 text-[10px] sm:text-[11px] font-bold text-muted-foreground uppercase tracking-widest"
+                >
+                  <span className="text-primary">{prop.icon}</span>
+                  {prop.text}
+                </div>
+              ))}
+            </div>
 
             {/* CLI Box */}
             <div
@@ -348,8 +387,9 @@ export default function Home() {
               </div>
             </div>
 
+            {/* CTAs */}
             <div
-              className="flex flex-col sm:flex-row items-center justify-center gap-4 reveal w-full sm:w-auto"
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 reveal w-full sm:w-auto mb-12"
               style={{ transitionDelay: '0.3s' }}
             >
               <Button
@@ -358,13 +398,36 @@ export default function Home() {
               >
                 Get Started Free
               </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="h-11 w-full sm:w-auto px-8 text-[11px] font-black uppercase tracking-[0.2em] rounded-lg border-white/10 hover:bg-white/5 transition-colors"
-              >
-                Explore Library <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
+              <Link href="/docs">
+                <Button
+                  size="lg"
+                  variant="outline"
+                  className="h-11 w-full sm:w-auto px-8 text-[11px] font-black uppercase tracking-[0.2em] rounded-lg border-white/10 hover:bg-white/5 transition-colors"
+                >
+                  Read the Docs <ChevronRight className="w-4 h-4 ml-1" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Stats */}
+            <div
+              className="flex flex-wrap items-center justify-center gap-8 pt-8 border-t border-white/5 reveal"
+              style={{ transitionDelay: '0.4s' }}
+            >
+              {[
+                { value: '∞', label: 'Languages Supported' },
+                { value: '3', label: 'Runner Types' },
+                { value: '0ms', label: 'Cloud Required' },
+              ].map((stat) => (
+                <div key={stat.label} className="text-center">
+                  <div className="text-xl md:text-2xl font-black text-foreground tracking-tighter">
+                    {stat.value}
+                  </div>
+                  <div className="text-[8px] font-black uppercase tracking-[0.2em] text-muted-foreground/50 mt-1">
+                    {stat.label}
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </section>
@@ -486,8 +549,8 @@ export default function Home() {
                         3. Real-time Verify
                       </h4>
                       <p className="text-xs text-muted-foreground leading-relaxed italic">
-                        Start coding. Save your progress and click &apos;Run tests&apos;
-                        to verify your solution instantly.
+                        Start coding. Save your progress and click &apos;Run
+                        tests&apos; to verify your solution instantly.
                       </p>
                     </div>
                   </div>

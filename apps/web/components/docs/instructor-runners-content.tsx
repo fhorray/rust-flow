@@ -26,8 +26,11 @@ export function InstructorRunnersContent() {
           code={`{
   "runner": {
     "type": "docker-local",
+    "command": "python3",
+    "args": ["/workspace/runner.py", "{{exercise}}"],
+    "cwd": "/workspace",
     "dockerfile": "Dockerfile",
-    "command": "python3 /workspace/runner.py {{exercise}}"
+    "image_tag": "my-course-runner"
   }
 }`}
           language="json"
@@ -107,6 +110,9 @@ if __name__ == "__main__":
           code={`{
   "runner": {
     "type": "docker-compose",
+    "command": "npm",
+    "args": ["test"],
+    "cwd": "/workspace",
     "compose_file": "docker-compose.yml",
     "service_to_run": "app_test"
   }
