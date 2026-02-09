@@ -1,0 +1,78 @@
+import { BACKEND_URL, FRONTEND_URL } from "../core/paths";
+import { saveToken } from "../core/config";
+import { spawn } from "node:child_process";
+
+function openBrowser(url: string) {
+  const start = process.platform === "win32" ? "start" : process.platform === "darwin" ? "open" : "xdg-open";
+  spawn(start, [url], { shell: true }).unref();
+}
+
+export async function login() {
+  // @ts-ignore
+  const { createAuthClient } = await import("better-auth/client");
+  // @ts-ignore
+  const { deviceAuthorizationClient } = await import("better-auth/client/plugins");
+
+  const authClient = createAuthClient({
+    baseURL: BACKEND_URL,
+    basePath: "/auth",
+    plugins: [deviceAuthorizationClient()],
+  });
+
+  try {
+    console.log("[INFO] Requesting login session...");
+
+    const { data, error } = await authClient.device.code({
+      client_id: "progy-cli",
+    });
+
+    if (error) {
+      throw new Error(error.error_description || "Failed to initiate device authorization");
+    }
+
+    const { device_code, user_code, verification_uri, interval } = data;
+    const verificationUrl = verification_uri.startsWith("http")
+      ? verification_uri
+      : `${FRONTEND_URL}${verification_uri}`;
+
+    console.log(`\nPlease authenticate in your browser:`);
+    console.log(`\x1b[36m${verificationUrl}\x1b[0m`);
+    console.log(`Code: \x1b[33m${user_code}\x1b[0m\n`);
+
+    openBrowser(verificationUrl);
+
+    console.log("[WAIT] Waiting for authorization...");
+
+    const poll = async (): Promise<string | null> => {
+      while (true) {
+        const { data: tokenData, error: tokenError } = await authClient.device.token({
+          grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+          device_code,
+          client_id: 'progy-cli'
+        });
+
+        if (tokenData?.access_token) {
+          return tokenData.access_token;
+        }
+
+        if (tokenError) {
+          const code = tokenError.error;
+          if (code === 'access_denied' || code === 'expired_token') {
+            throw new Error(tokenError.error_description || code);
+          }
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, (interval || 5) * 1000));
+      }
+    };
+
+    const token = await poll();
+    if (token) {
+      await saveToken(token);
+      console.log("[SUCCESS] Logged in successfully!");
+    }
+  } catch (e: any) {
+    console.error(`[ERROR] Login failed: ${e.message || e}`);
+    process.exit(1);
+  }
+}

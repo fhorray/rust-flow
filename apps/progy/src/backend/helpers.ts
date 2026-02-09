@@ -1,16 +1,21 @@
-import { readdir, readFile, writeFile, mkdir, exists } from "node:fs/promises";
+import { readdir, readFile, writeFile, mkdir, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { homedir } from "node:os";
 import { spawn } from "node:child_process";
 import type { Progress, CourseConfig, SRPOutput, ProgressStats, SetupConfig } from "./types";
+import {
+  PROG_CWD,
+  PROG_DIR,
+  PROGRESS_PATH,
+  COURSE_CONFIG_PATH,
+  MANIFEST_PATH
+} from "../core/paths";
+import {
+  getGlobalConfig,
+  updateGlobalConfig,
+  loadToken
+} from "../core/config";
 
-export const PROG_CWD = process.env.PROG_CWD || process.cwd();
-export const CONFIG_DIR = join(homedir(), ".progy");
-export const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");
-export const COURSE_CONFIG_PATH = join(PROG_CWD, "course.json");
-export const PROG_DIR = join(PROG_CWD, ".progy");
-export const MANIFEST_PATH = join(PROG_DIR, "exercises.json");
-export const PROGRESS_PATH = join(PROG_DIR, "progress.json");
+export { PROG_CWD, PROG_DIR, PROGRESS_PATH, COURSE_CONFIG_PATH, MANIFEST_PATH };
 
 export const IS_OFFLINE = process.env.PROGY_OFFLINE === "true";
 export const BACKEND_URL = process.env.PROGY_API_URL || "https://api.progy.dev";
@@ -28,23 +33,19 @@ export const DEFAULT_PROGRESS: Progress = {
   achievements: []
 };
 
-export interface AIConfig {
-  provider?: 'openai' | 'anthropic' | 'google' | 'xai' | 'ollama';
-  model?: string;
-  apiKey?: string;
-  baseUrl?: string; // For Ollama or custom endpoints
-}
-
-export interface GlobalConfig {
-  token?: string;
-  ai?: AIConfig;
-  [key: string]: any;
-}
-
 // State
 export let currentConfig: CourseConfig | null = null;
 export let exerciseManifestCache: Record<string, any[]> | null = null;
 export let exerciseManifestTimestamp: number = 0;
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    const s = await Bun.file(path).stat();
+    return s.isFile() || s.isDirectory();
+  } catch {
+    return false;
+  }
+}
 
 export async function getCourseConfig(): Promise<CourseConfig | null> {
   try {
@@ -66,21 +67,6 @@ export async function ensureConfig() {
   return currentConfig;
 }
 
-export async function getGlobalConfig() {
-  if (await exists(GLOBAL_CONFIG_PATH)) {
-    return JSON.parse(await readFile(GLOBAL_CONFIG_PATH, "utf-8"));
-  }
-  return {};
-}
-
-export async function updateGlobalConfig(updates: any) {
-  const current = await getGlobalConfig();
-  const next = { ...current, ...updates };
-  await mkdir(CONFIG_DIR, { recursive: true });
-  await writeFile(GLOBAL_CONFIG_PATH, JSON.stringify(next, null, 2));
-  return next;
-}
-
 export async function getProgress(): Promise<Progress> {
   if (IS_OFFLINE) {
     try {
@@ -98,12 +84,12 @@ export async function getProgress(): Promise<Progress> {
 
   // ONLINE mode
   await ensureConfig();
-  const config = await getGlobalConfig();
+  const token = await loadToken();
 
-  if (config?.token && currentConfig?.id) {
+  if (token && currentConfig?.id) {
     console.log(`[ONLINE] Fetching progress for ${currentConfig.id}...`);
     try {
-      const cloudProgress = await fetchProgressFromCloud(currentConfig.id, config.token);
+      const cloudProgress = await fetchProgressFromCloud(currentConfig.id, token);
       if (cloudProgress) {
         console.log(`[ONLINE] Loaded cloud progress. XP: ${cloudProgress.stats.totalXp}`);
         return cloudProgress;
@@ -113,7 +99,6 @@ export async function getProgress(): Promise<Progress> {
       }
     } catch (e) {
       console.error(`[CRITICAL] Failed to fetch cloud progress: ${e}`);
-      // Propagate error to prevent overwriting cloud data with empty state
       throw e;
     }
   }
@@ -134,16 +119,15 @@ export async function saveProgress(progress: Progress) {
 
   // ONLINE mode
   await ensureConfig();
-  const config = await getGlobalConfig();
-  if (config?.token && currentConfig?.id) {
-    await syncProgressWithCloud(currentConfig.id, progress, config.token);
+  const token = await loadToken();
+  if (token && currentConfig?.id) {
+    await syncProgressWithCloud(currentConfig.id, progress, token);
   }
 }
 
 async function syncProgressWithCloud(courseId: string, progress: Progress, token: string) {
-  const remoteUrl = process.env.PROGY_API_URL || "https://api.progy.dev";
   try {
-    const res = await fetch(`${remoteUrl}/progress/sync`, {
+    const res = await fetch(`${BACKEND_URL}/progress/sync`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -162,9 +146,8 @@ async function syncProgressWithCloud(courseId: string, progress: Progress, token
 }
 
 async function fetchProgressFromCloud(courseId: string, token: string): Promise<Progress | null> {
-  const remoteUrl = process.env.PROGY_API_URL || "https://api.progy.dev";
   try {
-    const res = await fetch(`${remoteUrl}/progress/get?courseId=${courseId}`, {
+    const res = await fetch(`${BACKEND_URL}/progress/get?courseId=${courseId}`, {
       headers: {
         'Authorization': `Bearer ${token}`
       }
@@ -238,7 +221,7 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
       }
     }
 
-    if (await exists(entryPath) && (await Bun.file(entryPath).stat()).isFile()) {
+    if (await exists(entryPath) && (await stat(entryPath)).isFile()) {
       try {
         const content = await readFile(entryPath, "utf-8");
         const titleMatch = content.match(/\/\/\s*(?:Title|title):\s*(.+)/);
@@ -272,9 +255,9 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
 
   for (const mod of modules) {
     const modPath = join(absExercisesPath, mod);
-    const stats = await Bun.file(modPath).stat();
+    const s = await stat(modPath);
 
-    if (stats.isDirectory()) {
+    if (s.isDirectory()) {
       manifest[mod] = [];
       const entries = await readdir(modPath, { withFileTypes: true });
       let moduleTitle = beautify(mod);
@@ -284,8 +267,6 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
       if (await exists(infoTomlPath)) {
         try {
           const infoContent = await readFile(infoTomlPath, "utf-8");
-          // Pre-process: Bun.TOML.parse fails on bare keys starting with digits (e.g. 01_mutability)
-          // We wrap them in quotes if They start with a digit and are followed by alphanumeric/chars until =
           const fixedContent = infoContent.replace(/^(\s*)(\d+[\w-]*)\s*=/gm, '$1"$2" =');
           const parsed = Bun.TOML.parse(fixedContent) as any;
           if (parsed.module?.message) moduleTitle = parsed.module.message;
@@ -357,13 +338,11 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
     }
   }
 
-  // Calculate total exercises for progress tracking
   let totalEx = 0;
   for (const modExercises of Object.values(manifest)) {
     totalEx += modExercises.length;
   }
 
-  // Update local progress with total exercises
   try {
     const progress = await getProgress();
     if (progress.stats.totalExercises !== totalEx) {

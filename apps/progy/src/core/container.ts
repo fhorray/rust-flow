@@ -1,12 +1,10 @@
-
 import AdmZip from "adm-zip";
-import { stat, mkdir, rm, cp, readdir, readFile } from "node:fs/promises";
-import { join, dirname, basename } from "node:path";
+import { stat, mkdir, rm } from "node:fs/promises";
+import { join, basename } from "node:path";
 import { createHash } from "node:crypto";
-import { homedir } from "node:os";
+import { CONFIG_DIR } from "./paths";
 
-const PROGY_HOME = join(homedir(), ".progy");
-const RUNTIME_ROOT = join(PROGY_HOME, "runtime");
+const RUNTIME_ROOT = join(CONFIG_DIR, "runtime");
 
 const IGNORED_PATTERNS = [
   "target",
@@ -21,6 +19,15 @@ const zipFilter = (path: string) => {
   const parts = path.split(/[/\\]/);
   return !parts.some(part => IGNORED_PATTERNS.includes(part));
 };
+
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export class CourseContainer {
   /**
@@ -37,20 +44,13 @@ export class CourseContainer {
    * Returns the path to the runtime directory
    */
   static async unpack(sourceFile: string): Promise<string> {
-    // Generate unique ID based on file path and specific stats to avoid collisions
-    // We mix filename + mtime so if user updates file outside, we get new runtime
-    // OR we always overwrite. Overwriting is safer for consistency.
     const fileStats = await stat(sourceFile);
     const uniqueKey = `${sourceFile}-${fileStats.mtimeMs}`;
     const hash = createHash("md5").update(uniqueKey).digest("hex").substring(0, 8);
 
-    // Clean filename for directory name
     const courseId = basename(sourceFile, ".progy").replace(/[^a-zA-Z0-9-]/g, "_");
-
-    // Runtime path: ~/.progy/runtime/[courseId]-[hash]
     const runtimeDir = join(RUNTIME_ROOT, `${courseId}-${hash}`);
 
-    // Prepare directory
     if (await exists(runtimeDir)) {
       await rm(runtimeDir, { recursive: true, force: true });
     }
@@ -58,9 +58,7 @@ export class CourseContainer {
 
     const zip = new AdmZip(sourceFile);
 
-    // Extract everything
     await new Promise<void>((resolve, reject) => {
-      // 3rd arg is keepOriginalPermission (boolean)
       zip.extractAllToAsync(runtimeDir, true, false, (err?: Error) => {
         if (err) reject(err);
         else resolve();
@@ -75,20 +73,7 @@ export class CourseContainer {
    */
   static async sync(runtimeDir: string, destFile: string) {
     const zip = new AdmZip();
-    // Re-pack everything from runtime, filtering heavy folders
     zip.addLocalFolder(runtimeDir, "", zipFilter);
     await zip.writeZipPromise(destFile);
-  }
-}
-
-// Helper for exists since fs.exists is deprecated/callback-based in some versions of node types,
-// but node:fs/promises has access via stat check usually or access.
-// Let's perform a simple check
-async function exists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch {
-    return false;
   }
 }

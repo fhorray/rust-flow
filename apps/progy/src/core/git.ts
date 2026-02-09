@@ -1,8 +1,6 @@
-
 import { spawn } from "node:child_process";
 import { join } from "node:path";
 import { writeFile, unlink, stat } from "node:fs/promises";
-import { homedir } from "node:os";
 
 export interface GitResult {
   success: boolean;
@@ -11,12 +9,11 @@ export interface GitResult {
 }
 
 export class GitUtils {
-
-  static async exec(args: string[], cwd: string, token?: string): Promise<GitResult> {
+  static async exec(args: string[], cwd: string): Promise<GitResult> {
     return new Promise((resolve) => {
       const proc = spawn("git", args, {
         cwd,
-        env: { ...process.env }, // Inherit env
+        env: { ...process.env },
         stdio: "pipe"
       });
 
@@ -44,14 +41,16 @@ export class GitUtils {
     });
   }
 
-  // Construct an authenticated URL for cloning/pushing
   static getAuthUrl(repoUrl: string, token: string): string {
     if (!token) return repoUrl;
-    // Format: https://x-access-token:<token>@github.com/user/repo.git
-    const url = new URL(repoUrl);
-    url.username = "x-access-token";
-    url.password = token;
-    return url.toString();
+    try {
+      const url = new URL(repoUrl);
+      url.username = "x-access-token";
+      url.password = token;
+      return url.toString();
+    } catch {
+      return repoUrl;
+    }
   }
 
   static async clone(repoUrl: string, cwd: string, token: string, branch = "main"): Promise<GitResult> {
@@ -70,7 +69,6 @@ export class GitUtils {
 
   static async addRemote(cwd: string, token: string, repoUrl: string): Promise<GitResult> {
     const authUrl = this.getAuthUrl(repoUrl, token);
-    // Remove if exists first to be safe?
     await this.exec(["remote", "remove", "origin"], cwd);
     return this.exec(["remote", "add", "origin", authUrl], cwd);
   }
@@ -81,7 +79,6 @@ export class GitUtils {
 
     try {
       const urlStr = getUrl.stdout.trim();
-      // Handle potential existing auth
       const url = new URL(urlStr);
       url.username = "x-access-token";
       url.password = token;
@@ -106,31 +103,11 @@ export class GitUtils {
     await this.exec(["config", "user.email", email], cwd);
   }
 
-  static async status(cwd: string): Promise<boolean> {
-    // Check if there are changes
-    const res = await this.exec(["status", "--porcelain"], cwd);
-    return res.success && res.stdout.length > 0;
-  }
-
-  static async commitAndPush(cwd: string, message: string): Promise<GitResult> {
-    await this.exec(["add", "."], cwd);
-    const commit = await this.exec(["commit", "-m", message], cwd);
-    if (!commit.success && !commit.stdout.includes("nothing to commit")) {
-      return commit;
-    }
-    return this.exec(["push", "origin", "main"], cwd); // Force push to main
-  }
-
-  static async abortRebase(cwd: string): Promise<void> {
-    await this.exec(["rebase", "--abort"], cwd);
-  }
-
   static async pull(cwd: string): Promise<GitResult> {
     const res = await this.exec(["pull", "--rebase", "origin", "main"], cwd);
     if (!res.success) {
-      // If rebase failed, abort triggers to return to clean state
       if (res.stderr.includes("conflict") || res.stdout.includes("conflict")) {
-        await this.abortRebase(cwd);
+        await this.exec(["rebase", "--abort"], cwd);
         return {
           success: false,
           stdout: res.stdout,
@@ -141,11 +118,6 @@ export class GitUtils {
     return res;
   }
 
-  // Simple Lock Mechanism
-  // stored in ~/.progy/locks/ or better just .git/progy.lock? 
-  // Let's use ~/.progy because we want to lock the *process* across terminals/UI.
-  // Actually, per-repo lock is better. .git/progy-sync.lock
-
   static getLockPath(cwd: string) {
     return join(cwd, ".git", "progy-sync.lock");
   }
@@ -153,10 +125,9 @@ export class GitUtils {
   static async lock(cwd: string): Promise<boolean> {
     const lockFile = this.getLockPath(cwd);
     try {
-      await stat(lockFile); // Check if exists
-      return false; // File exists, locked
+      await stat(lockFile);
+      return false;
     } catch {
-      // File does not exist, safe to lock
       await writeFile(lockFile, new Date().toISOString());
       return true;
     }

@@ -4,7 +4,7 @@ import { join } from "node:path";
 import { tmpdir } from "node:os";
 import { spawn } from "node:child_process";
 
-const CLI_PATH = join(import.meta.dir, "cli.ts");
+const CLI_PATH = join(import.meta.dir, "..", "cli.ts");
 
 // Helper to run CLI
 function runCLI(args: string[], cwd: string): Promise<{ stdout: string; stderr: string; exitCode: number }> {
@@ -50,15 +50,15 @@ describe("CLI Instructor Commands", () => {
   test("validate should pass on valid course", async () => {
     const result = await runCLI(["validate", "."], testDir);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("Course is Valid!");
+    expect(result.stdout).toContain("✅ Course is Valid");
     expect(result.stdout).toContain("cli-test-course");
   });
 
   test("pack should create .progy file", async () => {
     const result = await runCLI(["pack"], testDir);
     expect(result.exitCode).toBe(0);
-    expect(result.stdout).toContain("Packaging course");
-    expect(result.stdout).toContain("Created: cli-test-course.progy");
+    expect(result.stdout).toContain("[SUCCESS] Created");
+    expect(result.stdout).toContain("cli-test-course.progy");
   });
 
   test("validate should fail on invalid directory", async () => {
@@ -81,7 +81,7 @@ describe("CLI Instructor Commands", () => {
     }
 
     expect(result.exitCode).toBe(0);
-    expect(stdout).toContain("Initialized generic course");
+    expect(stdout).toContain("Course initialized!");
 
     // Check files
     const courseJson = await Bun.file(join(initDir, "course.json")).text();

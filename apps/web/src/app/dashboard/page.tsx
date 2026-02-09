@@ -136,9 +136,8 @@ export default function Dashboard() {
     try {
       const { data, error } = await authClient.subscription.billingPortal({
         customerType: 'user',
-        returnUrl: '/dashboard',
+        returnUrl: `${process.env.NEXT_PUBLIC_WEB_URL || 'https://progy.dev'}/dashboard`,
         // locale: TODO add localization,
-        referenceId: session?.user.subscription,
       });
 
       if (data?.url) {

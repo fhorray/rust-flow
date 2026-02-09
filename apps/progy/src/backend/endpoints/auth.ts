@@ -1,5 +1,5 @@
+import { getGlobalConfig, updateGlobalConfig } from "@/src/core/config";
 import type { ServerType } from "../types";
-import { getGlobalConfig, updateGlobalConfig } from "../helpers";
 
 const getTokenHandler: ServerType<"/auth/token"> = async () => {
   const config = await getGlobalConfig();
@@ -7,7 +7,7 @@ const getTokenHandler: ServerType<"/auth/token"> = async () => {
 };
 
 const logoutHandler: ServerType<"/auth/token"> = async () => {
-  await updateGlobalConfig({ token: null });
+  await updateGlobalConfig({ token: "" });
   return Response.json({ success: true });
 };
 

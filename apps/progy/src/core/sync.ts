@@ -1,8 +1,7 @@
-
-import { join, dirname, sep } from "node:path";
-import { homedir } from "node:os";
+import { join, dirname } from "node:path";
 import { mkdir, writeFile, readFile, copyFile, readdir, stat, rm } from "node:fs/promises";
-import { GitUtils } from "./git-utils";
+import { GitUtils } from "./git";
+import { getCourseCachePath } from "./paths";
 
 export interface ProgyConfig {
   course: {
@@ -16,20 +15,22 @@ export interface ProgyConfig {
   };
 }
 
-export class SyncManager {
-  static getCacheDir(courseId: string) {
-    return join(homedir(), ".progy", "courses", courseId);
+async function exists(path: string): Promise<boolean> {
+  try {
+    await stat(path);
+    return true;
+  } catch {
+    return false;
   }
+}
 
+export class SyncManager {
   static async ensureOfficialCourse(courseId: string, repoUrl: string, branch = "main", path?: string): Promise<string> {
-    const cacheDir = this.getCacheDir(courseId);
-
+    const cacheDir = getCourseCachePath(courseId);
     const gitDir = join(cacheDir, ".git");
-    const hasGit = await this.exists(gitDir);
 
-    if (hasGit) {
+    if (await exists(gitDir)) {
       console.log(`[SYNC] Updating official course cache: ${courseId}...`);
-      // Use fetch + reset --hard to force exact sync with upstream
       await GitUtils.exec(["fetch", "origin"], cacheDir);
       await GitUtils.exec(["reset", "--hard", `origin/${branch}`], cacheDir);
     } else {
@@ -41,10 +42,8 @@ export class SyncManager {
         await GitUtils.exec(["init"], cacheDir);
         await GitUtils.addRemote(cacheDir, "", repoUrl);
         await GitUtils.sparseCheckout(cacheDir, [path]);
-        // Pull with depth 1 for speed
         await GitUtils.exec(["pull", "--depth=1", "origin", branch], cacheDir);
       } else {
-        // public clone
         await GitUtils.clone(repoUrl, cacheDir, "", branch);
       }
     }
@@ -53,7 +52,7 @@ export class SyncManager {
 
   static async loadConfig(cwd: string): Promise<ProgyConfig | null> {
     const configPath = join(cwd, "progy.toml");
-    if (!(await this.exists(configPath))) return null;
+    if (!(await exists(configPath))) return null;
 
     try {
       const content = await readFile(configPath, "utf-8");
@@ -114,11 +113,9 @@ last_sync = "${new Date().toISOString()}"
     let extList: string[] = [];
     const lowerId = courseId.toLowerCase();
 
-    // Try exact match first
     if (extensions[lowerId]) {
       extList = extensions[lowerId];
     } else {
-      // Try prefix match (e.g. rust-advanced -> rust)
       for (const [key, val] of Object.entries(extensions)) {
         if (lowerId.startsWith(key)) {
           extList = val;
@@ -127,32 +124,16 @@ last_sync = "${new Date().toISOString()}"
       }
     }
 
-    // Fallback: If no match, warn and allow common source files?
-    // Or strictly allow nothing? Strict is safer per requirements.
-    if (extList.length === 0) {
-      console.warn(`[WARN] Unknown language for course '${courseId}'. gitignore might be too strict.`);
-      console.warn(`       Please manually edit .gitignore to whitelist your source files.`);
-    }
-
-    // Ignore everything by default
     let content = `*
 !.gitignore
 !progy.toml
+!content/
+!content/**/
 `;
-
-    // Whitelist content directory structure to reach exercises
-    // !content/ allows entering the directory
-    // !content/**/ allows entering subdirectories
-    content += `!content/\n`;
-    content += `!content/**/\n`;
-
     for (const ext of extList) {
       content += `!content/**/*${ext}\n`;
     }
-
-    // Allow Progy Notes (AI/User Notes)
-    content += `!progy-notes/\n`;
-    content += `!progy-notes/**\n`;
+    content += `!progy-notes/\n!progy-notes/**\n`;
 
     await writeFile(join(cwd, ".gitignore"), content);
   }
@@ -175,17 +156,14 @@ last_sync = "${new Date().toISOString()}"
       if (entry.isDirectory()) {
         await this.copyRecursive(srcPath, destPath, force);
       } else {
-        // Logic to preserve user exercise files
         const relPath = srcPath.replace(src, "").replace(/\\/g, "/");
         const isContent = relPath.includes("/content/");
 
         let shouldOverwrite = true;
-
         if (isContent) {
-          // Heuristic: If it looks like source code, treat as exercise file
           const isCode = /\.(rs|go|ts|js|py|lua|c|cpp|h|toml|mod|sum|json)$/.test(entry.name);
           if (isCode && !force) {
-            if (await this.exists(destPath)) {
+            if (await exists(destPath)) {
               shouldOverwrite = false;
             }
           }
@@ -202,21 +180,12 @@ last_sync = "${new Date().toISOString()}"
     const srcPath = join(cacheDir, relativePath);
     const destPath = join(cwd, relativePath);
 
-    if (await this.exists(srcPath)) {
+    if (await exists(srcPath)) {
       await mkdir(dirname(destPath), { recursive: true });
       await copyFile(srcPath, destPath);
       console.log(`[RESET] Restored ${relativePath}`);
     } else {
       throw new Error(`File ${relativePath} not found in official course.`);
-    }
-  }
-
-  private static async exists(path: string) {
-    try {
-      await stat(path);
-      return true;
-    } catch {
-      return false;
     }
   }
 }

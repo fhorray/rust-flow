@@ -42,10 +42,10 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
       try {
         const [progressRes, registryRes, configRes] = await Promise.all([
           fetch(`${remoteUrl}/api/progress/list`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+            headers: { Authorization: `Bearer ${token}` },
           }),
-          fetch(`${remoteUrl}/api/registry`),
-          fetch('/config')
+          fetch(`${remoteUrl}/registry`),
+          fetch('/config'),
         ]);
 
         if (progressRes.ok && registryRes.ok && configRes.ok) {
@@ -67,9 +67,12 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
     fetchData();
   }, [remoteUrl, token]);
 
-  const filteredCourses = courses.filter(c =>
-    c.courseId.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    registry[c.courseId]?.description?.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredCourses = courses.filter(
+    (c) =>
+      c.courseId.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      registry[c.courseId]?.description
+        ?.toLowerCase()
+        .includes(searchQuery.toLowerCase()),
   );
 
   const handleCourseClick = (courseId: string) => {
@@ -84,7 +87,6 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/80 backdrop-blur-sm z-[100] animate-in fade-in duration-300" />
         <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-2xl bg-zinc-950 border border-zinc-800 rounded-3xl shadow-2xl z-[101] overflow-hidden animate-in fade-in zoom-in-95 duration-300">
-
           {/* Header */}
           <div className="p-6 border-b border-zinc-800 bg-zinc-900/50 flex items-center justify-between">
             <div className="flex items-center gap-3">
@@ -125,21 +127,33 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
               {loading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <div key={i} className="h-24 bg-zinc-900/50 rounded-2xl animate-pulse border border-zinc-800/50" />
+                  <div
+                    key={i}
+                    className="h-24 bg-zinc-900/50 rounded-2xl animate-pulse border border-zinc-800/50"
+                  />
                 ))
               ) : filteredCourses.length === 0 ? (
                 <div className="text-center py-12 bg-zinc-900/30 rounded-3xl border border-dashed border-zinc-800">
                   <Trophy className="w-10 h-10 text-zinc-700 mx-auto mb-3" />
-                  <p className="text-sm font-bold text-zinc-400">No courses found</p>
-                  <p className="text-xs text-zinc-600 mt-1">Start a new course to see it here!</p>
+                  <p className="text-sm font-bold text-zinc-400">
+                    No courses found
+                  </p>
+                  <p className="text-xs text-zinc-600 mt-1">
+                    Start a new course to see it here!
+                  </p>
                 </div>
               ) : (
                 filteredCourses.map((course) => {
                   const isActive = course.courseId === currentCourseId;
                   const info = registry[course.courseId];
-                  const completedCount = Object.values(course.data.exercises).filter(ex => ex.status === 'pass').length;
+                  const completedCount = Object.values(
+                    course.data.exercises,
+                  ).filter((ex) => ex.status === 'pass').length;
                   const totalExercises = 10; // Placeholder, in a real scenario we'd get this from registry
-                  const progress = Math.min(100, Math.round((completedCount / totalExercises) * 100));
+                  const progress = Math.min(
+                    100,
+                    Math.round((completedCount / totalExercises) * 100),
+                  );
 
                   return (
                     <div
@@ -147,9 +161,10 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
                       onClick={() => handleCourseClick(course.courseId)}
                       className={`
                         relative bg-zinc-900/50 border rounded-2xl p-4 transition-all duration-300 cursor-pointer overflow-hidden group
-                        ${isActive
-                          ? 'border-rust/50 shadow-[0_0_15px_-5px_rgba(206,65,43,0.3)] opacity-100'
-                          : 'border-zinc-800 opacity-50 hover:opacity-100 hover:border-zinc-700 hover:bg-zinc-900'
+                        ${
+                          isActive
+                            ? 'border-rust/50 shadow-[0_0_15px_-5px_rgba(206,65,43,0.3)] opacity-100'
+                            : 'border-zinc-800 opacity-50 hover:opacity-100 hover:border-zinc-700 hover:bg-zinc-900'
                         }
                       `}
                     >
@@ -169,7 +184,9 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
                       <div className="flex items-center justify-between">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">
-                            <span className={`text-sm font-black transition-colors uppercase tracking-tight ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'}`}>
+                            <span
+                              className={`text-sm font-black transition-colors uppercase tracking-tight ${isActive ? 'text-white' : 'text-zinc-400 group-hover:text-zinc-200'}`}
+                            >
                               {course.courseId}
                             </span>
                             <span className="text-[10px] text-zinc-500 font-medium px-1.5 py-0.5 bg-zinc-950/50 rounded-md border border-zinc-800">
@@ -177,25 +194,36 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
                             </span>
                           </div>
                           <p className="text-xs text-zinc-500 font-medium line-clamp-1 mb-3 group-hover:text-zinc-400 transition-colors">
-                            {info?.description || "Interactive programming course"}
+                            {info?.description ||
+                              'Interactive programming course'}
                           </p>
 
                           <div className="flex items-center gap-4">
                             <div className="flex items-center gap-1.5">
-                              <Trophy className={`w-3.5 h-3.5 ${isActive ? 'text-rust-light' : 'text-zinc-600 group-hover:text-rust-light/70'} transition-colors`} />
-                              <span className="text-[11px] font-bold text-zinc-400 group-hover:text-zinc-300 transition-colors">{course.data.stats.totalXp} XP</span>
+                              <Trophy
+                                className={`w-3.5 h-3.5 ${isActive ? 'text-rust-light' : 'text-zinc-600 group-hover:text-rust-light/70'} transition-colors`}
+                              />
+                              <span className="text-[11px] font-bold text-zinc-400 group-hover:text-zinc-300 transition-colors">
+                                {course.data.stats.totalXp} XP
+                              </span>
                             </div>
                             <div className="flex items-center gap-1.5">
-                              <Clock className={`w-3.5 h-3.5 ${isActive ? 'text-orange-400' : 'text-zinc-600 group-hover:text-orange-400/70'} transition-colors`} />
+                              <Clock
+                                className={`w-3.5 h-3.5 ${isActive ? 'text-orange-400' : 'text-zinc-600 group-hover:text-orange-400/70'} transition-colors`}
+                              />
                               <span className="text-[11px] font-bold text-zinc-400 group-hover:text-zinc-300 transition-colors">
-                                {new Date(course.updatedAt).toLocaleDateString()}
+                                {new Date(
+                                  course.updatedAt,
+                                ).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
                         </div>
 
                         <div className="flex flex-col items-end gap-2">
-                          <span className={`text-lg font-black italic ${isActive ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'} transition-colors`}>
+                          <span
+                            className={`text-lg font-black italic ${isActive ? 'text-white' : 'text-zinc-600 group-hover:text-zinc-400'} transition-colors`}
+                          >
                             {progress}%
                           </span>
                         </div>
@@ -210,10 +238,13 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
           <div className="p-4 bg-zinc-900/80 border-t border-zinc-800 flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="w-2 h-2 rounded-full bg-rust animate-pulse" />
-              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">Cloud Sync Active</span>
+              <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Cloud Sync Active
+              </span>
             </div>
             <p className="text-[10px] text-zinc-600 font-medium italic">
-              Total XP: {courses.reduce((acc, c) => acc + (c.data.stats.totalXp || 0), 0)}
+              Total XP:{' '}
+              {courses.reduce((acc, c) => acc + (c.data.stats.totalXp || 0), 0)}
             </p>
           </div>
         </Dialog.Content>

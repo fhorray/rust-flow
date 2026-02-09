@@ -2,7 +2,7 @@ import { expect, test, describe, beforeAll, afterAll } from "bun:test";
 import { mkdir, writeFile, rm } from "node:fs/promises";
 import { join } from "node:path";
 import { tmpdir } from "node:os";
-import { CourseLoader } from "../course-loader";
+import { CourseLoader } from "../core/loader";
 
 describe("CourseLoader Security Validation", () => {
   const testDir = join(tmpdir(), `progy-test-${Date.now()}`);

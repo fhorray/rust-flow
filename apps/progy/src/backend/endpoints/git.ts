@@ -1,4 +1,4 @@
-import { GitUtils } from "../../git-utils";
+import { GitUtils } from "@/src/core/git";
 import { getCourseConfig } from "../helpers";
 import { join, relative } from "node:path";
 
