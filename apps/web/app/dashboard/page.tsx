@@ -138,6 +138,41 @@ export default function Dashboard() {
     }
   }, [session]);
 
+  // Scroll Reveal Logic
+  useEffect(() => {
+    if (isPending) return;
+    const reveals = document.querySelectorAll('.reveal');
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            entry.target.classList.add('active');
+          }
+        });
+      },
+      { threshold: 0.1 },
+    );
+
+    reveals.forEach((reveal) => observer.observe(reveal));
+    return () => reveals.forEach((reveal) => observer.unobserve(reveal));
+  }, [isPending, session]);
+
+  if (isPending) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
+        <Loader2 className="w-10 h-10 text-primary animate-spin mb-4" />
+        <p className="text-[10px] font-black uppercase tracking-[0.3em] text-muted-foreground animate-pulse">
+          Authenticating...
+        </p>
+      </div>
+    );
+  }
+
+  if (!session) {
+    router.push('/');
+    return null;
+  }
+
   const fetchProgress = async () => {
     try {
       const res = await fetch(
