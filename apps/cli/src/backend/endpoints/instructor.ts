@@ -338,6 +338,47 @@ const validateHandler: ServerType = async () => {
     });
   }
 };
+
+// ─── Reorder Handler ────────────────────────────────────────────────────────
+
+const reorderHandler: ServerType<"/instructor/reorder"> = async (req) => {
+  const blocked = guardEditor();
+  if (blocked) return blocked;
+
+  try {
+    const { parentPath, order } = await req.json() as { parentPath: string; order: string[] };
+    if (!parentPath || !Array.isArray(order)) {
+      return Response.json({ error: "Invalid parameters" }, { status: 400 });
+    }
+
+    const absParent = sanitizePath(parentPath);
+    const existing = await readdir(absParent);
+
+    // Filter only those in the order list to prevent accidents
+    const toRename = existing.filter(f => order.includes(f));
+
+    // 1. Rename to temporary to avoid collisions
+    for (const name of toRename) {
+      await rename(join(absParent, name), join(absParent, `__tmp_${name}`));
+    }
+
+    // 2. Rename to new numbered names
+    for (let i = 0; i < order.length; i++) {
+      const oldName = order[i];
+      const newPrefix = (i + 1).toString().padStart(2, "0");
+      // remove old prefix if exists (e.g. 03_hello -> hello)
+      const cleanName = oldName.replace(/^\d+_/, "");
+      const newName = `${newPrefix}_${cleanName}`;
+
+      await rename(join(absParent, `__tmp_${oldName}`), join(absParent, newName));
+    }
+
+    return Response.json({ success: true });
+  } catch (e: any) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+};
+
 // ─── Export Routes ──────────────────────────────────────────────────────────
 
 export const instructorRoutes = {
@@ -363,5 +404,8 @@ export const instructorRoutes = {
   },
   "/instructor/validate": {
     POST: validateHandler,
+  },
+  "/instructor/reorder": {
+    POST: reorderHandler,
   },
 };

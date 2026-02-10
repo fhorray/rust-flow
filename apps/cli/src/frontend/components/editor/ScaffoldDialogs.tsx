@@ -114,6 +114,90 @@ export function NewModuleDialog({ onClose, onCreated }: { onClose: () => void; o
   );
 }
 
+// ─── Rename Dialog ──────────────────────────────────────────────────────────
+
+export function RenameDialog({ path, onClose, onRenamed }: { path: string; onClose: () => void; onRenamed: () => void }) {
+  const [newName, setNewName] = useState(path.split('/').pop() || '');
+  const [isRenaming, setIsRenaming] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleRename = async () => {
+    if (!newName.trim()) { setError('Name is required'); return; }
+    if (newName === (path.split('/').pop() || '')) { onClose(); return; }
+
+    setIsRenaming(true);
+    setError('');
+
+    const parentDir = path.split('/').slice(0, -1).join('/');
+    const newPath = parentDir ? `${parentDir}/${newName}` : newName;
+
+    try {
+      const res = await fetch(`/instructor/fs?path=${encodeURIComponent(path)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPath }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        onRenamed();
+        onClose();
+      } else {
+        setError(data.error || 'Failed to rename');
+      }
+    } catch (e: any) {
+      setError(e.message);
+    } finally {
+      setIsRenaming(false);
+    }
+  };
+
+  return (
+    <DialogBackdrop onClose={onClose}>
+      <div className="p-5">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-zinc-100">Rename Item</h3>
+          <button onClick={onClose} className="p-1 rounded hover:bg-zinc-800 text-zinc-500">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-zinc-400 mb-1.5">New Name</label>
+            <input
+              type="text"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              className="w-full bg-zinc-800/80 border border-zinc-700 rounded-lg px-3 py-2 text-sm text-zinc-100 outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500/50"
+              autoFocus
+              onKeyDown={(e) => e.key === 'Enter' && handleRename()}
+            />
+          </div>
+          {error && (
+            <p className="text-xs text-red-400 bg-red-500/10 px-3 py-2 rounded-lg">{error}</p>
+          )}
+        </div>
+
+        <div className="flex justify-end gap-2 mt-5">
+          <button
+            onClick={onClose}
+            className="px-3 py-1.5 text-xs text-zinc-400 hover:text-zinc-200 transition-colors"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleRename}
+            disabled={isRenaming || !newName.trim()}
+            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium rounded-lg transition-colors disabled:opacity-50"
+          >
+            {isRenaming ? 'Renaming...' : 'Rename'}
+          </button>
+        </div>
+      </div>
+    </DialogBackdrop>
+  );
+}
+
 // ─── New Exercise Dialog ────────────────────────────────────────────────────
 
 export function NewExerciseDialog({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {

@@ -4,6 +4,7 @@ import { EditorState, type Extension } from '@codemirror/state';
 import { keymap } from '@codemirror/view';
 import { indentWithTab } from '@codemirror/commands';
 import { oneDark } from '@codemirror/theme-one-dark';
+import { StreamLanguage } from '@codemirror/language';
 
 // Languages
 import { rust } from '@codemirror/lang-rust';
@@ -16,13 +17,20 @@ import { go } from '@codemirror/lang-go';
 import { markdown } from '@codemirror/lang-markdown';
 import { html } from '@codemirror/lang-html';
 import { css } from '@codemirror/lang-css';
+import { yaml } from '@codemirror/lang-yaml';
+import { toml } from '@codemirror/legacy-modes/mode/toml';
+import { dockerFile } from '@codemirror/legacy-modes/mode/dockerfile';
+import { shell } from '@codemirror/legacy-modes/mode/shell';
 
 import { updateTabContent, saveActiveFile } from '../../stores/editor-store';
 
 // ─── Language Detection ─────────────────────────────────────────────────────
 
 function getLanguageExtension(path: string): Extension[] {
-  const ext = path.split('.').pop()?.toLowerCase();
+  const fileName = path.split('/').pop()?.toLowerCase() || '';
+  const ext = fileName.split('.').pop()?.toLowerCase();
+
+  if (fileName === 'dockerfile') return [StreamLanguage.define(dockerFile)];
 
   switch (ext) {
     case 'rs': return [rust()];
@@ -41,7 +49,12 @@ function getLanguageExtension(path: string): Extension[] {
     case 'md': return [markdown()];
     case 'html': return [html()];
     case 'css': return [css()];
-    case 'toml': return []; // No official toml lang for CM6 in core, usually uses stream parsing or nothing
+    case 'yaml':
+    case 'yml': return [yaml()];
+    case 'toml': return [StreamLanguage.define(toml)];
+    case 'sh':
+    case 'bash':
+    case 'zsh': return [StreamLanguage.define(shell)];
     default: return [];
   }
 }

@@ -9,6 +9,7 @@ import {
   closeTab,
   updateTabContent,
   loadFileTree,
+  openModuleSettings
 } from '../../stores/editor-store';
 import { FileTree } from './FileTree';
 import { MarkdownEditor } from './MarkdownEditor';
@@ -18,10 +19,11 @@ import { QuizEditor } from './QuizEditor';
 import { GraphView } from './GraphView';
 import { ModuleSettings } from './ModuleSettings';
 import { CourseSettings } from './CourseSettings';
-import { X, Save, BookOpen, Pencil, CheckCircle, AlertTriangle, Shield, PanelLeftClose, PanelLeft, Network, Settings } from 'lucide-react';
+import { X, Save, BookOpen, Pencil, CheckCircle, AlertTriangle, Shield, PanelLeftClose, PanelLeft, Network, Settings, Terminal } from 'lucide-react';
 import { openPage } from '@nanostores/router';
 import { $router } from '../../stores/router';
 import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '../ui/resizable';
+import { CommandPalette } from './CommandPalette';
 
 // ─── Tiptap Editor Styles (injected once) ───────────────────────────────────
 
@@ -240,7 +242,7 @@ function ModeSwitcher() {
   return (
     <div className="flex items-center bg-zinc-800/60 rounded-md p-0.5">
       <button
-        className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-blue-600/80 text-blue-100 text-[11px] font-medium"
+        className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-orange-600/80 text-orange-100 text-[11px] font-medium"
         title="Editor Mode (current)"
       >
         <Pencil size={11} />
@@ -264,44 +266,94 @@ function TabBar() {
   const activePath = useStore($activeTabPath);
   const openTabs = useStore($openTabs);
   const tabEntries = Object.values(openTabs);
+  const [contextMenu, setContextMenu] = useState<{ x: number, y: number, path: string } | null>(null);
 
   if (tabEntries.length === 0) return null;
 
-  return (
-    <div className="flex items-center border-b border-zinc-800/80 bg-zinc-900/50 overflow-x-auto">
-      {tabEntries.map((tab) => {
-        const isActive = tab.path === activePath;
-        const label = tab.type === 'settings'
-          ? (tab.path === 'course.json' ? 'Course Settings' : 'Module Settings')
-          : (tab.path.split('/').pop() || tab.path);
+  const handleContextMenu = (e: React.MouseEvent, path: string) => {
+    e.preventDefault();
+    setContextMenu({ x: e.clientX, y: e.clientY, path });
+  };
 
-        return (
-          <div
-            key={tab.path}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs cursor-pointer border-r border-zinc-800/50 shrink-0 transition-colors ${isActive
-              ? 'bg-zinc-800/60 text-zinc-100'
-              : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30'
-              }`}
-            onClick={() => $activeTabPath.set(tab.path)}
-          >
-            <span className="flex items-center gap-1.5">
-              {tab.type === 'settings' && <Settings size={12} className="text-orange-500" />}
-              {label}
-              {tab.isDirty && <span className="text-amber-400 ml-1">●</span>}
-            </span>
-            <button
-              className="ml-1 p-0.5 rounded hover:bg-zinc-700/50 text-zinc-500 hover:text-zinc-300"
-              onClick={(e) => {
-                e.stopPropagation();
-                closeTab(tab.path);
-              }}
+  const closeOthers = (path: string) => {
+    Object.values(openTabs).forEach(t => {
+      if (t.path !== path) closeTab(t.path);
+    });
+    setContextMenu(null);
+  };
+
+  const closeAll = () => {
+    Object.values(openTabs).forEach(t => closeTab(t.path));
+    setContextMenu(null);
+  };
+
+  return (
+    <>
+      <div className="flex items-center border-b border-zinc-800/80 bg-zinc-900/50 overflow-x-auto no-scrollbar">
+        {tabEntries.map((tab) => {
+          const isActive = tab.path === activePath;
+          const label = tab.type === 'settings'
+            ? (tab.path === 'course.json' ? 'Course Settings' : 'Module Settings')
+            : (tab.path.split('/').pop() || tab.path);
+
+          return (
+            <div
+              key={tab.path}
+              className={`flex items-center gap-1.5 px-3 py-2 text-xs cursor-pointer border-r border-zinc-800/50 shrink-0 transition-colors ${isActive
+                ? 'bg-zinc-800/60 text-zinc-100 border-b-2 border-b-orange-500'
+                : 'text-zinc-500 hover:text-zinc-300 hover:bg-zinc-800/30 border-b-2 border-b-transparent'
+                }`}
+              onClick={() => $activeTabPath.set(tab.path)}
+              onContextMenu={(e) => handleContextMenu(e, tab.path)}
             >
-              <X size={12} />
+              <span className="flex items-center gap-1.5">
+                {tab.type === 'settings' && <Settings size={12} className="text-orange-500" />}
+                {label}
+                {tab.isDirty && <span className="text-amber-400 ml-1">●</span>}
+              </span>
+              <button
+                className="ml-1 p-0.5 rounded hover:bg-zinc-700/50 text-zinc-500 hover:text-zinc-300"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  closeTab(tab.path);
+                }}
+              >
+                <X size={12} />
+              </button>
+            </div>
+          );
+        })}
+      </div>
+
+      {contextMenu && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+          <div
+            className="fixed z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-[160px]"
+            style={{ left: contextMenu.x, top: contextMenu.y }}
+          >
+            <button
+              className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+              onClick={() => closeTab(contextMenu.path)}
+            >
+              Close
+            </button>
+            <button
+              className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+              onClick={() => closeOthers(contextMenu.path)}
+            >
+              Close Others
+            </button>
+            <button
+              className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center gap-2"
+              onClick={() => closeAll()}
+            >
+              Close All
             </button>
           </div>
-        );
-      })}
-    </div>
+        </>
+      )}
+    </>
   );
 }
 
@@ -378,6 +430,7 @@ export function EditorLayout() {
 
   return (
     <div className="h-screen w-screen flex flex-col bg-zinc-950 text-zinc-100 font-sans">
+      <CommandPalette />
       {/* Inject Tiptap styles */}
       <style dangerouslySetInnerHTML={{ __html: TIPTAP_STYLES }} />
 
@@ -390,8 +443,9 @@ export function EditorLayout() {
         >
           {sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
         </button>
-        <span className="font-bold text-sm tracking-tight mr-4">
-          <span className="text-blue-400">Progy</span>{' '}
+        <span className="font-bold text-sm tracking-tight mr-4 flex items-center gap-2">
+          <Terminal className="text-orange-500 w-4 h-4" />
+          <span className="text-orange-500">Progy</span>{' '}
           <span className="text-zinc-400">Studio</span>
         </span>
 
@@ -399,9 +453,18 @@ export function EditorLayout() {
 
         <div className="ml-auto flex items-center gap-2">
           <button
+            onClick={() => openModuleSettings('.', 'Course Settings')}
+            className="flex items-center gap-1.5 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded text-xs font-medium transition-colors"
+            title="Edit Course Settings"
+          >
+            <Settings size={12} className="text-orange-500" />
+            Settings
+          </button>
+
+          <button
             onClick={() => setShowGraph(!showGraph)}
             className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${showGraph
-              ? 'bg-blue-600 hover:bg-blue-500 text-white'
+              ? 'bg-orange-600 hover:bg-orange-500 text-white'
               : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/50'
               }`}
             title="Course Dependency Graph"
@@ -444,7 +507,7 @@ export function EditorLayout() {
                     <FileTree />
                   </div>
                 </ResizablePanel>
-                <ResizableHandle className="w-1 bg-transparent hover:bg-blue-500/30 active:bg-blue-500/50 transition-colors cursor-col-resize" />
+                <ResizableHandle className="w-1 bg-transparent hover:bg-orange-500/30 active:bg-orange-500/50 transition-colors cursor-col-resize" />
               </>
             )}
 
@@ -478,8 +541,12 @@ export function EditorLayout() {
                       />
                     )
                   ) : (
-                    <div className="flex items-center justify-center h-full text-zinc-600 text-sm">
-                      Select a file from the explorer to start editing
+                    <div className="flex flex-col items-center justify-center h-full text-zinc-600 gap-4">
+                      <div className="w-16 h-16 bg-zinc-900 rounded-2xl flex items-center justify-center border border-zinc-800 shadow-lg">
+                         <Terminal className="w-8 h-8 text-zinc-700" />
+                      </div>
+                      <p className="text-sm">Select a file from the explorer to start editing</p>
+                      <p className="text-xs text-zinc-700">or press <kbd className="bg-zinc-800 px-1.5 py-0.5 rounded text-zinc-500 font-mono">Cmd+K</kbd> to search</p>
                     </div>
                   )}
                 </div>

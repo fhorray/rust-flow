@@ -1,17 +1,40 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Folder, File, ChevronRight, ChevronDown, FolderPlus, BookPlus, Trash2, Search, Settings } from 'lucide-react';
-import { openFile, loadFileTree, type FileNode, $fileTree, openModuleSettings } from '../../stores/editor-store';
+import {
+  Folder, FolderOpen, File, ChevronRight, ChevronDown,
+  FolderPlus, BookPlus, Trash2, Search, Settings,
+  Edit, FileCode, FileJson, BookOpen, Terminal, Code2
+} from 'lucide-react';
+import { openFile, loadFileTree, type FileNode, $fileTree, openModuleSettings, $activeTabPath } from '../../stores/editor-store';
 import { useStore } from '@nanostores/react';
-import { NewModuleDialog, NewExerciseDialog, DeleteDialog } from './ScaffoldDialogs';
+import { NewModuleDialog, NewExerciseDialog, DeleteDialog, RenameDialog } from './ScaffoldDialogs';
+
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
+const getFileIcon = (name: string, isOpen: boolean = false) => {
+  if (name.endsWith('.rs')) return <Code2 size={14} className="text-orange-500" />;
+  if (name.endsWith('.py')) return <FileCode size={14} className="text-yellow-500" />;
+  if (name.endsWith('.js') || name.endsWith('.ts')) return <FileCode size={14} className="text-blue-400" />;
+  if (name.endsWith('.md')) return <BookOpen size={14} className="text-purple-400" />;
+  if (name.endsWith('.json') || name.endsWith('.toml')) return <Settings size={14} className="text-zinc-500" />;
+  if (name.endsWith('.sh') || name === 'Dockerfile') return <Terminal size={14} className="text-green-500" />;
+
+  // Default Dir/File
+  if (!name.includes('.')) { // Rough heuristic for dir if passed only name, but FileNode knows type
+     return isOpen ? <FolderOpen size={14} className="text-orange-400" /> : <Folder size={14} className="text-orange-400" />;
+  }
+
+  return <File size={14} className="text-zinc-500" />;
+};
 
 // ─── Context Menu ───────────────────────────────────────────────────────────
 
 type ContextMenuPos = { x: number; y: number; path: string; name: string } | null;
 
-function ContextMenu({ pos, onClose, onDelete }: {
+function ContextMenu({ pos, onClose, onDelete, onRename }: {
   pos: NonNullable<ContextMenuPos>;
   onClose: () => void;
   onDelete: (path: string) => void;
+  onRename: (path: string) => void;
 }) {
   useEffect(() => {
     const handler = () => onClose();
@@ -21,90 +44,152 @@ function ContextMenu({ pos, onClose, onDelete }: {
 
   return (
     <div
-      className="fixed z-50 bg-zinc-800 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-[140px]"
+      className="fixed z-50 bg-zinc-900 border border-zinc-700 rounded-lg shadow-xl py-1 min-w-[160px] animate-in fade-in zoom-in-95 duration-100"
       style={{ left: pos.x, top: pos.y }}
     >
+      <div className="px-3 py-1.5 text-[10px] font-bold text-zinc-600 uppercase tracking-wider border-b border-zinc-800/50 mb-1">
+        {pos.name}
+      </div>
       <button
-        className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2"
+        className="w-full px-3 py-1.5 text-left text-xs text-zinc-300 hover:bg-zinc-800 flex items-center gap-2 transition-colors"
+        onClick={(e) => {
+          e.stopPropagation();
+          onRename(pos.path);
+          onClose();
+        }}
+      >
+        <Edit size={13} className="text-zinc-500" /> Rename
+      </button>
+      <button
+        className="w-full px-3 py-1.5 text-left text-xs text-red-400 hover:bg-red-500/10 flex items-center gap-2 transition-colors"
         onClick={(e) => {
           e.stopPropagation();
           onDelete(pos.path);
           onClose();
         }}
       >
-        <Trash2 size={12} /> Delete {pos.name}
+        <Trash2 size={13} /> Delete
       </button>
     </div>
   );
 }
 
-// ─── FileTreeNode (recursive) ───────────────────────────────────────────────
+// ─── FileTreeNode ───────────────────────────────────────────────────────────
 
 function FileTreeNode({ node, level = 0, onContextMenu }: {
   node: FileNode;
   level?: number;
   onContextMenu: (e: React.MouseEvent, node: FileNode) => void;
 }) {
+  const activePath = useStore($activeTabPath);
   const [isOpen, setIsOpen] = useState(false);
   const [children, setChildren] = useState<FileNode[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleClick = async () => {
+  // Auto-expand if active file is inside this folder (simple heuristic: path starts with)
+  useEffect(() => {
+    if (activePath && activePath.startsWith(node.path + '/') && !isOpen) {
+      loadChildren(true);
+    }
+  }, [activePath]);
+
+  const loadChildren = async (expand = false) => {
+    if (children.length === 0) {
+      setIsLoading(true);
+      try {
+        const res = await fetch(`/instructor/fs?path=${encodeURIComponent(node.path)}&type=dir`);
+        const data = await res.json();
+        if (data.success) {
+          // Filter hidden files
+          const visible = data.data.filter((f: any) =>
+            f.name !== 'info.toml' &&
+            f.name !== 'course.json' &&
+            f.name !== '.DS_Store'
+          );
+          setChildren(visible);
+        }
+      } catch (e) {
+        console.error('[FileTree] Load error:', e);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+    if (expand) setIsOpen(true);
+  };
+
+  const handleClick = async (e: React.MouseEvent) => {
+    e.stopPropagation();
     if (node.type === 'dir') {
+      // Toggle logic
+      if (!isOpen) {
+        await loadChildren(true);
+      } else {
+        setIsOpen(false);
+      }
+
+      // If module folder, open settings
       if (/^\d{2}_/.test(node.name)) {
         openModuleSettings(node.path, node.name);
       }
-
-      if (!isOpen && children.length === 0) {
-        try {
-          const res = await fetch(
-            `/instructor/fs?path=${encodeURIComponent(node.path)}&type=dir`
-          );
-          const data = await res.json();
-          if (data.success) {
-            setChildren(data.data);
-          }
-        } catch (e) {
-          console.error('[FileTree] Load error:', e);
-        }
-      }
-      setIsOpen(!isOpen);
     } else {
       openFile(node);
     }
   };
 
+  const isModule = /^\d{2}_/.test(node.name) && node.type === 'dir';
+  const isActive = activePath === node.path || (isModule && activePath === `${node.path}/info.toml`);
+
   return (
     <div>
       <div
-        className="flex items-center py-1 hover:bg-white/5 cursor-pointer text-sm text-zinc-300 select-none transition-colors group"
-        style={{ paddingLeft: `${level * 14 + 10}px` }}
+        className={`flex items-center py-1 cursor-pointer text-sm select-none transition-all group relative
+          ${isActive ? 'bg-orange-500/10 text-orange-200' : 'text-zinc-400 hover:text-zinc-200 hover:bg-zinc-800/30'}
+        `}
+        style={{ paddingLeft: `${level * 12 + 10}px` }}
         onClick={handleClick}
         onContextMenu={(e) => onContextMenu(e, node)}
       >
-        <span className="mr-1 w-4 flex items-center justify-center shrink-0">
-          {node.type === 'dir' &&
-            (isOpen ? (
-              <ChevronDown size={13} className="text-zinc-500" />
-            ) : (
-              <ChevronRight size={13} className="text-zinc-500" />
-            ))}
+        {isActive && <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-orange-500" />}
+
+        <span className="mr-1 w-4 flex items-center justify-center shrink-0 opacity-70">
+          {node.type === 'dir' && (
+            isOpen ? <ChevronDown size={12} /> : <ChevronRight size={12} />
+          )}
         </span>
-        {node.type === 'dir' ? (
-          <Folder size={14} className="mr-2 text-blue-400 shrink-0" />
-        ) : (
-          <File size={14} className="mr-2 text-zinc-500 shrink-0" />
+
+        <span className="mr-2 shrink-0">
+          {node.type === 'dir'
+            ? getFileIcon(node.name, isOpen)
+            : getFileIcon(node.name)
+          }
+        </span>
+
+        <span className="truncate flex-1">{node.name}</span>
+
+        {/* Module Indicator */}
+        {isModule && (
+          <span className="mr-2 opacity-0 group-hover:opacity-100 transition-opacity">
+            <Settings size={12} className="text-zinc-600 hover:text-orange-400" />
+          </span>
         )}
-        <span className="truncate">{node.name}</span>
       </div>
-      {isOpen &&
-        children.map((child) => (
-          <FileTreeNode
-            key={child.path}
-            node={child}
-            level={level + 1}
-            onContextMenu={onContextMenu}
-          />
-        ))}
+
+      {isOpen && (
+        <div className="border-l border-zinc-800/50 ml-3">
+           {isLoading ? (
+             <div className="py-1 pl-6 text-xs text-zinc-600 italic">Loading...</div>
+           ) : (
+             children.map((child) => (
+               <FileTreeNode
+                 key={child.path}
+                 node={child}
+                 level={level + 1}
+                 onContextMenu={onContextMenu}
+               />
+             ))
+           )}
+        </div>
+      )}
     </div>
   );
 }
@@ -115,6 +200,7 @@ export function FileTree() {
   const rootFiles = useStore($fileTree);
   const [contextMenu, setContextMenu] = useState<ContextMenuPos>(null);
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
   const [showNewModule, setShowNewModule] = useState(false);
   const [showNewExercise, setShowNewExercise] = useState(false);
   const [treeVersion, setTreeVersion] = useState(0);
@@ -123,7 +209,8 @@ export function FileTree() {
   const filteredFiles = rootFiles
     .filter(f => {
       const name = f.name.toLowerCase();
-      if (name === 'course.json' || name === '.progy') return false;
+      // Hide root config files from tree to reduce clutter
+      if (name === 'course.json' || name === '.progy' || name === 'info.toml') return false;
       if (!searchFilter) return true;
       return name.includes(searchFilter.toLowerCase());
     });
@@ -134,35 +221,35 @@ export function FileTree() {
     setContextMenu({ x: e.clientX, y: e.clientY, path: node.path, name: node.name });
   }, []);
 
-  const handleCreated = useCallback(() => {
+  const handleUpdate = useCallback(() => {
     loadFileTree();
     setTreeVersion(v => v + 1);
   }, []);
 
   return (
-    <div className="h-full flex flex-col overflow-hidden">
+    <div className="h-full flex flex-col overflow-hidden bg-zinc-950">
       {/* Toolbar */}
-      <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-800/80">
+      <div className="flex items-center gap-1 px-3 py-2 border-b border-zinc-800/80 bg-zinc-900/20">
         <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest flex-1">
           Explorer
         </span>
         <button
           onClick={() => openModuleSettings('.', 'Course Settings')}
-          className="p-1 rounded hover:bg-zinc-700/50 text-zinc-500 hover:text-orange-400 transition-colors"
+          className="p-1.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-orange-400 transition-colors"
           title="Course Settings"
         >
           <Settings size={14} />
         </button>
         <button
           onClick={() => setShowNewModule(true)}
-          className="p-1 rounded hover:bg-zinc-700/50 text-zinc-500 hover:text-blue-400 transition-colors"
+          className="p-1.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-blue-400 transition-colors"
           title="New Module"
         >
           <FolderPlus size={14} />
         </button>
         <button
           onClick={() => setShowNewExercise(true)}
-          className="p-1 rounded hover:bg-zinc-700/50 text-zinc-500 hover:text-emerald-400 transition-colors"
+          className="p-1.5 rounded hover:bg-zinc-800 text-zinc-500 hover:text-emerald-400 transition-colors"
           title="New Exercise"
         >
           <BookPlus size={14} />
@@ -170,12 +257,12 @@ export function FileTree() {
       </div>
 
       {/* Search Filter */}
-      <div className="px-2 py-1.5 border-b border-zinc-800/60">
-        <div className="flex items-center gap-1.5 bg-zinc-800/60 rounded px-2 py-1">
-          <Search size={12} className="text-zinc-500 shrink-0" />
+      <div className="px-2 py-2 border-b border-zinc-800/60">
+        <div className="flex items-center gap-2 bg-zinc-900 border border-zinc-800 rounded-md px-2 py-1.5 focus-within:border-orange-500/30 focus-within:ring-1 focus-within:ring-orange-500/30 transition-all">
+          <Search size={12} className="text-zinc-600 shrink-0" />
           <input
             type="text"
-            placeholder="Search files..."
+            placeholder="Search..."
             value={searchFilter}
             onChange={e => setSearchFilter(e.target.value)}
             onKeyDown={e => { if (e.key === 'Escape') setSearchFilter(''); }}
@@ -184,7 +271,7 @@ export function FileTree() {
           {searchFilter && (
             <button
               onClick={() => setSearchFilter('')}
-              className="text-zinc-500 hover:text-zinc-300"
+              className="text-zinc-600 hover:text-zinc-400"
             >
               <span className="text-xs">✕</span>
             </button>
@@ -192,11 +279,14 @@ export function FileTree() {
         </div>
       </div>
 
-      {/* File List — key forces re-mount when treeVersion changes */}
-      <div className="flex-1 overflow-y-auto py-1" key={treeVersion}>
+      {/* File List */}
+      <div className="flex-1 overflow-y-auto py-2" key={treeVersion}>
         {filteredFiles.length === 0 ? (
-          <div className="px-4 py-4 text-xs text-zinc-600">
-            {rootFiles.length === 0 ? 'Loading...' : 'No matching files'}
+          <div className="px-4 py-8 text-center">
+             <div className="w-8 h-8 bg-zinc-900 rounded-full flex items-center justify-center mx-auto mb-2 border border-zinc-800">
+               <Search size={14} className="text-zinc-700" />
+             </div>
+             <p className="text-xs text-zinc-600">{rootFiles.length === 0 ? 'Loading...' : 'No files found'}</p>
           </div>
         ) : (
           filteredFiles.map((file) => (
@@ -211,34 +301,44 @@ export function FileTree() {
 
       {/* Context Menu */}
       {contextMenu && (
-        <ContextMenu
-          pos={contextMenu}
-          onClose={() => setContextMenu(null)}
-          onDelete={(path) => setDeleteTarget(path)}
-        />
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setContextMenu(null)} />
+          <ContextMenu
+            pos={contextMenu}
+            onClose={() => setContextMenu(null)}
+            onDelete={(path) => setDeleteTarget(path)}
+            onRename={(path) => setRenameTarget(path)}
+          />
+        </>
       )}
 
       {/* Dialogs */}
       {showNewModule && (
         <NewModuleDialog
           onClose={() => setShowNewModule(false)}
-          onCreated={handleCreated}
+          onCreated={handleUpdate}
         />
       )}
       {showNewExercise && (
         <NewExerciseDialog
           onClose={() => setShowNewExercise(false)}
-          onCreated={handleCreated}
+          onCreated={handleUpdate}
         />
       )}
       {deleteTarget && (
         <DeleteDialog
           path={deleteTarget}
           onClose={() => setDeleteTarget(null)}
-          onDeleted={handleCreated}
+          onDeleted={handleUpdate}
+        />
+      )}
+       {renameTarget && (
+        <RenameDialog
+          path={renameTarget}
+          onClose={() => setRenameTarget(null)}
+          onRenamed={handleUpdate}
         />
       )}
     </div>
   );
 }
-
