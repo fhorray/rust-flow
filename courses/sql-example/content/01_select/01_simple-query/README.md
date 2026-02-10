@@ -2,6 +2,8 @@
 
 This module covers the fundamentals of SQL. Explore the sub-exercises to practice your skills.
 
+<https://youtube.com/>
+
 ## 🌟 Features of this Course
 
 ### High-Fidelity Highlighting

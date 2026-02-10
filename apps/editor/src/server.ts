@@ -3,6 +3,8 @@ import { logger } from "@progy/core";
 import { instructorRoutes } from "./backend/endpoints/instructor";
 import { configRoutes } from "./backend/endpoints/config";
 import { setupRoutes } from "./backend/endpoints/setup";
+import { gitRoutes } from "./backend/endpoints/git";
+import { ideRoutes } from "./backend/endpoints/ide";
 import { PORTS } from "@consts";
 
 const PORT = parseInt(process.env.PORT || String(PORTS.EDITOR));
@@ -48,6 +50,8 @@ try {
       ...instructorRoutes,
       ...configRoutes,
       ...setupRoutes,
+      ...gitRoutes,
+      ...ideRoutes,
     },
 
     development: { hmr: true },

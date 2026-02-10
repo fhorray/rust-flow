@@ -8,6 +8,7 @@ import {
   saveAllFiles,
   type FileNode,
   openModuleSettings,
+  openIDESettings,
 } from '../../stores/editor-store';
 import {
   File,
@@ -120,6 +121,13 @@ export function CommandPalette() {
               >
                 <Settings size={14} className="text-orange-500" />
                 <span>Open Course Settings</span>
+              </Command.Item>
+              <Command.Item
+                onSelect={() => runCommand(openIDESettings)}
+                className="flex items-center gap-3 px-3 py-2 text-sm text-zinc-300 rounded-lg aria-selected:bg-zinc-800 aria-selected:text-white cursor-pointer transition-colors"
+              >
+                <Settings size={14} className="text-blue-500" />
+                <span>Open Studio Settings (IDE)</span>
               </Command.Item>
             </Command.Group>
 

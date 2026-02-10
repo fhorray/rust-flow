@@ -1,5 +1,6 @@
-import { join, dirname } from "node:path";
+import { existsSync } from "node:fs";
 import { readFile, writeFile, mkdir, rename, rm, readdir, stat } from "node:fs/promises";
+import { join, dirname } from "node:path";
 import type { ServerType } from "@progy/core";
 import { PROG_CWD, COURSE_CONFIG_PATH, ensureConfig, currentConfig } from "@progy/core";
 import { logger } from "@progy/core";
@@ -51,6 +52,16 @@ const fsGetHandler: ServerType<"/instructor/fs"> = async (req) => {
         });
       return Response.json({ success: true, data: tree });
     } else {
+      // For images/binary files, we might need to return a blob or base64
+      // But usually, we just serve them via static server if they are in assets
+      const ext = pathParam.split('.').pop()?.toLowerCase();
+      const isBinary = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
+
+      if (isBinary) {
+        const file = Bun.file(absPath);
+        return new Response(file);
+      }
+
       const content = await readFile(absPath, "utf-8");
       return Response.json({ success: true, content });
     }
@@ -284,6 +295,44 @@ const scaffoldHandler: ServerType<"/instructor/scaffold"> = async (req) => {
   }
 };
 
+// ─── Upload Handler ──────────────────────────────────────────────────────────
+
+const uploadHandler: ServerType<"/instructor/upload"> = async (req) => {
+  const blocked = guardEditor();
+  if (blocked) return blocked;
+
+  try {
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
+    if (!file) {
+      return Response.json({ success: false, error: "No file uploaded" }, { status: 400 });
+    }
+
+    // 2MB Limit
+    if (file.size > 2 * 1024 * 1024) {
+      return Response.json({ success: false, error: "File size exceeds 2MB limit" }, { status: 400 });
+    }
+
+    const assetsDir = join(PROG_CWD, "assets");
+    if (!existsSync(assetsDir)) {
+      await mkdir(assetsDir, { recursive: true });
+    }
+
+    const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const filePath = join(assetsDir, fileName);
+
+    await Bun.write(filePath, file);
+
+    return Response.json({
+      success: true,
+      url: `/instructor/fs?path=assets/${fileName}`,
+      path: `assets/${fileName}`
+    });
+  } catch (e: any) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+};
+
 // ─── Modules List Handler ───────────────────────────────────────────────────
 
 const modulesListHandler: ServerType<"/instructor/modules"> = async () => {
@@ -398,6 +447,36 @@ const reorderHandler: ServerType<"/instructor/reorder"> = async (req) => {
   }
 };
 
+// ─── Run Handler ───────────────────────────────────────────────────────────
+
+const runHandler: ServerType<"/instructor/run"> = async (req) => {
+  const blocked = guardEditor();
+  if (blocked) return blocked;
+
+  try {
+    const { command } = await req.json() as { command?: string };
+    const cmd = command || "npm test";
+
+    console.log(`[Instructor] Running command: ${cmd}`);
+
+    const proc = Bun.spawn(cmd.split(" "), {
+      cwd: PROG_CWD,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const output = await new Response(proc.stdout).text();
+    const errorArr = await new Response(proc.stderr).text();
+
+    return Response.json({
+      success: true,
+      output: output + (errorArr ? `\nErrors:\n${errorArr}` : ""),
+    });
+  } catch (e: any) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+};
+
 // ─── Export Routes ──────────────────────────────────────────────────────────
 
 export const instructorRoutes = {
@@ -426,5 +505,11 @@ export const instructorRoutes = {
   },
   "/instructor/reorder": {
     POST: reorderHandler,
+  },
+  "/instructor/upload": {
+    POST: uploadHandler,
+  },
+  "/instructor/run": {
+    POST: runHandler,
   },
 };

@@ -1,8 +1,32 @@
 import React, { useState, useEffect } from 'react';
 import {
-  Trash2, Plus, GripVertical, CheckCircle2,
-  HelpCircle, AlertCircle, BrainCircuit, Save, X
+  Trash2,
+  Plus,
+  GripVertical,
+  CheckCircle2,
+  HelpCircle,
+  AlertCircle,
+  BrainCircuit,
+  Save,
+  X,
 } from 'lucide-react';
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+  useSortable,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { updateTabContent } from '../../stores/editor-store';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -33,6 +57,184 @@ interface QuizEditorProps {
   path: string;
 }
 
+interface SortableQuestionProps {
+  q: QuizQuestion;
+  qIndex: number;
+  onRemove: (index: number) => void;
+  onQuestionChange: (index: number, val: string) => void;
+  onAddOption: (index: number) => void;
+  onRemoveOption: (qIndex: number, oIndex: number) => void;
+  onOptionChange: (
+    qIndex: number,
+    oIndex: number,
+    field: keyof QuizOption,
+    value: any,
+  ) => void;
+}
+
+function SortableQuestion({
+  q,
+  qIndex,
+  onRemove,
+  onQuestionChange,
+  onAddOption,
+  onRemoveOption,
+  onOptionChange,
+}: SortableQuestionProps) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: q.id });
+
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    zIndex: isDragging ? 10 : 1,
+    opacity: isDragging ? 0.5 : 1,
+  };
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-sm transition-all hover:border-zinc-700"
+    >
+      <div className="flex items-start">
+        <div
+          {...attributes}
+          {...listeners}
+          className="p-4 pt-5 text-zinc-600 cursor-grab active:cursor-grabbing hover:text-zinc-400 border-r border-zinc-800/50 bg-zinc-900/30"
+        >
+          <GripVertical size={16} />
+        </div>
+
+        <div className="flex-1 min-w-0">
+          {/* Question Header & Input */}
+          <div className="p-5 space-y-3">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                Question {qIndex + 1}
+              </label>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => onRemove(qIndex)}
+                className="text-zinc-600 hover:text-red-400 h-6 w-6 -mr-2"
+              >
+                <Trash2 size={14} />
+              </Button>
+            </div>
+            <Textarea
+              value={q.question}
+              onChange={(e) => onQuestionChange(qIndex, e.target.value)}
+              placeholder="Enter your question here..."
+              className="bg-zinc-950/50 border-zinc-800 text-base font-medium min-h-[60px] resize-none focus:border-orange-500/50 placeholder-zinc-700 text-zinc-200"
+            />
+          </div>
+
+          {/* Options */}
+          <div className="px-5 pb-6 space-y-4 border-t border-zinc-800/50 pt-4 bg-zinc-950/20">
+            <div className="flex items-center justify-between">
+              <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                Answer Options
+              </label>
+              <span className="text-[10px] text-zinc-600 italic">
+                Select correct answer
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              {q.options.map((option, oIndex) => (
+                <div
+                  key={option.id}
+                  className={`group flex items-start gap-3 p-3 rounded-lg border transition-all ${
+                    option.isCorrect
+                      ? 'bg-emerald-500/5 border-emerald-500/20'
+                      : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
+                  }`}
+                >
+                  <button
+                    onClick={() =>
+                      onOptionChange(qIndex, oIndex, 'isCorrect', true)
+                    }
+                    className={`mt-1.5 shrink-0 transition-colors ${
+                      option.isCorrect
+                        ? 'text-emerald-500'
+                        : 'text-zinc-700 hover:text-emerald-500/50'
+                    }`}
+                    title="Mark as correct answer"
+                  >
+                    <CheckCircle2
+                      size={18}
+                      className={option.isCorrect ? 'fill-emerald-500/20' : ''}
+                    />
+                  </button>
+
+                  <div className="flex-1 space-y-2">
+                    <Input
+                      value={option.text}
+                      onChange={(e) =>
+                        onOptionChange(qIndex, oIndex, 'text', e.target.value)
+                      }
+                      placeholder={`Option ${option.id.toUpperCase()}`}
+                      className="bg-transparent border-0 p-0 h-auto text-sm focus-visible:ring-0 placeholder-zinc-600 hover:placeholder-zinc-400"
+                    />
+
+                    {option.isCorrect && (
+                      <div className="flex items-start gap-2 animate-in fade-in slide-in-from-top-1 duration-200 pt-1 border-t border-emerald-500/10 mt-1">
+                        <HelpCircle
+                          size={12}
+                          className="text-emerald-500/50 mt-1 shrink-0"
+                        />
+                        <Textarea
+                          value={option.explanation || ''}
+                          onChange={(e) =>
+                            onOptionChange(
+                              qIndex,
+                              oIndex,
+                              'explanation',
+                              e.target.value,
+                            )
+                          }
+                          placeholder="Explanation (optional)..."
+                          className="text-xs bg-transparent border-0 p-0 h-auto min-h-[20px] resize-none focus-visible:ring-0 text-emerald-400/70 placeholder-emerald-500/30 leading-normal"
+                        />
+                      </div>
+                    )}
+                  </div>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => onRemoveOption(qIndex, oIndex)}
+                    className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-red-400"
+                    disabled={q.options.length <= 2}
+                  >
+                    <X size={14} />
+                  </Button>
+                </div>
+              ))}
+            </div>
+
+            <Button
+              onClick={() => onAddOption(qIndex)}
+              variant="ghost"
+              size="sm"
+              className="text-xs text-zinc-500 hover:text-zinc-300 pl-0 hover:bg-transparent"
+            >
+              <Plus size={12} className="mr-1.5" /> Add Option
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function QuizEditor({ initialContent, path }: QuizEditorProps) {
   const [data, setData] = useState<QuizData | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -49,7 +251,9 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
       setError(null);
     } catch (e) {
       console.error('[QuizEditor] Failed to parse quiz JSON:', e);
-      setError('Invalid JSON format. Please fix the file manually or reset it.');
+      setError(
+        'Invalid JSON format. Please fix the file manually or reset it.',
+      );
     }
   }, [initialContent]);
 
@@ -115,19 +319,46 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
     updateStore({ ...data, questions });
   };
 
-  const handleOptionChange = (qIndex: number, oIndex: number, field: keyof QuizOption, value: any) => {
+  const handleOptionChange = (
+    qIndex: number,
+    oIndex: number,
+    field: keyof QuizOption,
+    value: any,
+  ) => {
     if (!data) return;
     const questions = [...data.questions];
     const question = questions[qIndex];
     const options = [...question.options];
 
     if (field === 'isCorrect' && value === true) {
-      options.forEach(o => o.isCorrect = false);
+      options.forEach((o) => (o.isCorrect = false));
     }
 
     options[oIndex] = { ...options[oIndex], [field]: value };
     question.options = options;
     updateStore({ ...data, questions });
+  };
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    }),
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!data || !over || active.id === over.id) return;
+
+    const oldIndex = data.questions.findIndex((q) => q.id === active.id);
+    const newIndex = data.questions.findIndex((q) => q.id === over.id);
+
+    const newQuestions = arrayMove(data.questions, oldIndex, newIndex);
+    updateStore({ ...data, questions: newQuestions });
   };
 
   if (error) {
@@ -151,7 +382,6 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
   return (
     <div className="h-full overflow-y-auto bg-zinc-950/50">
       <div className="max-w-3xl mx-auto p-6 md:p-10 space-y-8 pb-32">
-
         {/* Header Section */}
         <div className="space-y-6 border-b border-zinc-800/50 pb-8">
           <div className="flex items-start gap-4">
@@ -160,7 +390,9 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
             </div>
             <div className="flex-1 space-y-4">
               <div>
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 block">Quiz Title</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 block">
+                  Quiz Title
+                </label>
                 <Input
                   value={data.title}
                   onChange={(e) => handleTitleChange(e.target.value)}
@@ -169,7 +401,9 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
                 />
               </div>
               <div>
-                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 block">Description</label>
+                <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 block">
+                  Description
+                </label>
                 <Textarea
                   value={data.description || ''}
                   onChange={(e) => handleDescriptionChange(e.target.value)}
@@ -188,126 +422,53 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
               <span className="w-2 h-2 rounded-full bg-orange-500"></span>
               {data.questions.length} Questions
             </h2>
-            <Button onClick={handleAddQuestion} size="sm" className="bg-orange-600 hover:bg-orange-500 text-white font-medium shadow-lg shadow-orange-900/20">
+            <Button
+              onClick={handleAddQuestion}
+              size="sm"
+              className="bg-orange-600 hover:bg-orange-500 text-white font-medium shadow-lg shadow-orange-900/20"
+            >
               <Plus size={14} className="mr-2" /> Add Question
             </Button>
           </div>
 
-          <div className="space-y-6">
-            {data.questions.map((q, qIndex) => (
-              <div
-                key={q.id}
-                className="bg-zinc-900/40 border border-zinc-800 rounded-xl overflow-hidden shadow-sm transition-all hover:border-zinc-700"
-              >
-                <div className="flex items-start">
-                  <div className="p-4 pt-5 text-zinc-600 cursor-grab active:cursor-grabbing hover:text-zinc-400 border-r border-zinc-800/50 bg-zinc-900/30">
-                    <GripVertical size={16} />
-                  </div>
-
-                  <div className="flex-1 min-w-0">
-                    {/* Question Header & Input */}
-                    <div className="p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                         <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Question {qIndex + 1}</label>
-                         <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleRemoveQuestion(qIndex)}
-                            className="text-zinc-600 hover:text-red-400 h-6 w-6 -mr-2"
-                          >
-                            <Trash2 size={14} />
-                          </Button>
-                      </div>
-                      <Textarea
-                        value={q.question}
-                        onChange={(e) => handleQuestionChange(qIndex, e.target.value)}
-                        placeholder="Enter your question here..."
-                        className="bg-zinc-950/50 border-zinc-800 text-base font-medium min-h-[60px] resize-none focus:border-orange-500/50 placeholder-zinc-700 text-zinc-200"
-                      />
-                    </div>
-
-                    {/* Options */}
-                    <div className="px-5 pb-6 space-y-4 border-t border-zinc-800/50 pt-4 bg-zinc-950/20">
-                      <div className="flex items-center justify-between">
-                         <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">Answer Options</label>
-                         <span className="text-[10px] text-zinc-600 italic">Select correct answer</span>
-                      </div>
-
-                      <div className="space-y-3">
-                        {q.options.map((option, oIndex) => (
-                          <div
-                            key={option.id}
-                            className={`group flex items-start gap-3 p-3 rounded-lg border transition-all ${
-                              option.isCorrect
-                                ? 'bg-emerald-500/5 border-emerald-500/20'
-                                : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
-                            }`}
-                          >
-                            <button
-                              onClick={() => handleOptionChange(qIndex, oIndex, 'isCorrect', true)}
-                              className={`mt-1.5 shrink-0 transition-colors ${
-                                option.isCorrect ? 'text-emerald-500' : 'text-zinc-700 hover:text-emerald-500/50'
-                              }`}
-                              title="Mark as correct answer"
-                            >
-                              <CheckCircle2 size={18} className={option.isCorrect ? "fill-emerald-500/20" : ""} />
-                            </button>
-
-                            <div className="flex-1 space-y-2">
-                              <Input
-                                value={option.text}
-                                onChange={(e) => handleOptionChange(qIndex, oIndex, 'text', e.target.value)}
-                                placeholder={`Option ${option.id.toUpperCase()}`}
-                                className="bg-transparent border-0 p-0 h-auto text-sm focus-visible:ring-0 placeholder-zinc-600"
-                              />
-
-                              {option.isCorrect && (
-                                <div className="flex items-start gap-2 animate-in fade-in slide-in-from-top-1 duration-200 pt-1 border-t border-emerald-500/10 mt-1">
-                                  <HelpCircle size={12} className="text-emerald-500/50 mt-1 shrink-0" />
-                                  <Textarea
-                                    value={option.explanation || ''}
-                                    onChange={(e) => handleOptionChange(qIndex, oIndex, 'explanation', e.target.value)}
-                                    placeholder="Explanation (optional)..."
-                                    className="text-xs bg-transparent border-0 p-0 h-auto min-h-[20px] resize-none focus-visible:ring-0 text-emerald-400/70 placeholder-emerald-500/30 leading-normal"
-                                  />
-                                </div>
-                              )}
-                            </div>
-
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleRemoveOption(qIndex, oIndex)}
-                              className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity text-zinc-600 hover:text-red-400"
-                              disabled={q.options.length <= 2}
-                            >
-                              <X size={14} />
-                            </Button>
-                          </div>
-                        ))}
-                      </div>
-
-                      <Button
-                        onClick={() => handleAddOption(qIndex)}
-                        variant="ghost"
-                        size="sm"
-                        className="text-xs text-zinc-500 hover:text-zinc-300 pl-0 hover:bg-transparent"
-                      >
-                        <Plus size={12} className="mr-1.5" /> Add Option
-                      </Button>
-                    </div>
-                  </div>
-                </div>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext
+              items={data.questions.map((q) => q.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <div className="space-y-6">
+                {data.questions.map((q, qIndex) => (
+                  <SortableQuestion
+                    key={q.id}
+                    q={q}
+                    qIndex={qIndex}
+                    onRemove={handleRemoveQuestion}
+                    onQuestionChange={handleQuestionChange}
+                    onAddOption={handleAddOption}
+                    onRemoveOption={handleRemoveOption}
+                    onOptionChange={handleOptionChange}
+                  />
+                ))}
               </div>
-            ))}
-          </div>
+            </SortableContext>
+          </DndContext>
 
           {data.questions.length === 0 && (
             <div className="text-center py-16 border-2 border-dashed border-zinc-800 rounded-xl bg-zinc-900/20">
               <BrainCircuit className="w-12 h-12 text-zinc-700 mx-auto mb-4" />
               <p className="text-zinc-500 font-medium">No questions yet</p>
-              <p className="text-sm text-zinc-600 mb-6">Create questions to test student knowledge</p>
-              <Button onClick={handleAddQuestion} variant="secondary" className="bg-zinc-800 text-zinc-300 hover:text-white">
+              <p className="text-sm text-zinc-600 mb-6">
+                Create questions to test student knowledge
+              </p>
+              <Button
+                onClick={handleAddQuestion}
+                variant="secondary"
+                className="bg-zinc-800 text-zinc-300 hover:text-white"
+              >
                 Create First Question
               </Button>
             </div>

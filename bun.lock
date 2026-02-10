@@ -130,6 +130,7 @@
         "progy-editor": "./src/cli.ts",
       },
       "dependencies": {
+        "@nanostores/persistent": "^1.3.3",
         "@progy/core": "workspace:*",
         "clsx": "^2.1.0",
         "commander": "^12.1.0",

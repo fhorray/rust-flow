@@ -1,4 +1,5 @@
 import { atom, map } from 'nanostores';
+import { persistentMap } from '@nanostores/persistent';
 
 // ─── Types ──────────────────────────────────────────────────────────────────
 
@@ -14,8 +15,14 @@ export type EditorTab = {
   path: string;
   content: string;
   isDirty: boolean;
-  type: 'markdown' | 'config' | 'code' | 'quiz' | 'settings';
+  type: 'markdown' | 'config' | 'code' | 'quiz' | 'settings' | 'ide-settings';
 };
+
+export interface IDESettings {
+  openAIKey: string;
+  grokKey: string;
+  ideCommand: string;
+}
 
 // ─── Atoms ──────────────────────────────────────────────────────────────────
 
@@ -24,6 +31,13 @@ export const $activeTabPath = atom<string | null>(null);
 export const $openTabs = map<Record<string, EditorTab>>({});
 export const $isEditorMode = atom<boolean>(false);
 export const $isSaving = atom<boolean>(false);
+export const $courseConfig = atom<any>(null);
+
+export const $ideSettings = persistentMap<Record<string, string>>('progy-ide-settings:', {
+  openAIKey: '',
+  grokKey: '',
+  ideCommand: 'code',
+});
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
@@ -37,6 +51,11 @@ function detectFileType(path: string): EditorTab['type'] {
 // ─── Actions ────────────────────────────────────────────────────────────────
 
 export async function loadFileTree(path: string = '.') {
+  // Load config once if not already loaded
+  if (!$courseConfig.get()) {
+    await loadCourseConfig();
+  }
+
   try {
     const res = await fetch(`/instructor/fs?path=${encodeURIComponent(path)}&type=dir`);
     const data = await res.json();
@@ -99,6 +118,16 @@ export async function openModuleSettings(path: string, name: string) {
   }
 }
 
+export async function openIDESettings() {
+  $openTabs.setKey('ide-settings', {
+    path: 'ide-settings',
+    content: '', // Not used for this virtual tab
+    isDirty: false,
+    type: 'ide-settings',
+  });
+  $activeTabPath.set('ide-settings');
+}
+
 export function updateTabContent(path: string, content: string) {
   const tabs = $openTabs.get();
   if (tabs[path]) {
@@ -150,5 +179,17 @@ export async function saveAllFiles() {
   const dirtyPaths = Object.keys(tabs).filter(p => tabs[p]?.isDirty);
   for (const path of dirtyPaths) {
     await saveFile(path);
+  }
+}
+
+export async function loadCourseConfig() {
+  try {
+    const res = await fetch('/instructor/config');
+    const data = await res.json();
+    if (data.success) {
+      $courseConfig.set(data.config);
+    }
+  } catch (e) {
+    console.error('[EditorStore] Failed to load course config:', e);
   }
 }

@@ -10,6 +10,8 @@ import {
   updateTabContent,
   loadFileTree,
   openModuleSettings,
+  $courseConfig,
+  openIDESettings,
 } from '../../stores/editor-store';
 import { FileTree } from './FileTree';
 import { MarkdownEditor } from './MarkdownEditor';
@@ -19,6 +21,7 @@ import { QuizEditor } from './QuizEditor';
 import { GraphView } from './GraphView';
 import { ModuleSettings } from './ModuleSettings';
 import { CourseSettings } from './CourseSettings';
+import { IDESettings } from './IDESettings';
 import {
   X,
   Save,
@@ -31,7 +34,9 @@ import {
   Network,
   Settings,
   Terminal,
+  PlayIcon,
 } from 'lucide-react';
+import { TerminalPanel } from './TerminalPanel';
 import {
   ResizablePanelGroup,
   ResizablePanel,
@@ -376,10 +381,12 @@ function TabBar() {
 export function EditorLayout() {
   const activePath = useStore($activeTabPath);
   const openTabs = useStore($openTabs);
+  const courseConfig = useStore($courseConfig);
   const isSaving = useStore($isSaving);
   const activeTab = activePath ? openTabs[activePath] : null;
   const [validating, setValidating] = useState(false);
   const [showGraph, setShowGraph] = useState(false);
+  const [showTerminal, setShowTerminal] = useState(false);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [validationResult, setValidationResult] = useState<{
     success: boolean;
@@ -474,12 +481,12 @@ export function EditorLayout() {
 
         <div className="ml-auto flex items-center gap-2">
           <button
-            onClick={() => openModuleSettings('.', 'Course Settings')}
+            onClick={openIDESettings}
             className="flex items-center gap-1.5 px-3 py-1 bg-zinc-800 hover:bg-zinc-700 border border-zinc-700/50 rounded text-xs font-medium transition-colors"
-            title="Edit Course Settings"
+            title="Edit IDE Settings (API Keys, etc)"
           >
-            <Settings size={12} className="text-orange-500" />
-            Settings
+            <Settings size={12} className="text-blue-500" />
+            Studio Settings
           </button>
 
           <button
@@ -493,6 +500,18 @@ export function EditorLayout() {
           >
             <Network size={12} />
             {showGraph ? 'Close Flow' : 'Flow'}
+          </button>
+
+          <button
+            onClick={() => setShowTerminal(!showTerminal)}
+            className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-medium transition-colors ${
+              showTerminal
+                ? 'bg-zinc-800 text-white border border-orange-500/50'
+                : 'bg-zinc-800 hover:bg-zinc-700 text-zinc-300 border border-zinc-700/50'
+            }`}
+          >
+            <Terminal size={12} />
+            Terminal
           </button>
 
           <button
@@ -557,6 +576,8 @@ export function EditorLayout() {
                       ) : (
                         <ModuleSettings key={activeTab.path} tab={activeTab} />
                       )
+                    ) : activeTab.type === 'ide-settings' ? (
+                      <IDESettings key="ide-settings" />
                     ) : (
                       <CodeEditor
                         key={activeTab.path}
@@ -582,6 +603,62 @@ export function EditorLayout() {
                     </div>
                   )}
                 </div>
+
+                {showTerminal && (
+                  <TerminalPanel
+                    onClose={() => setShowTerminal(false)}
+                    canRun={
+                      !!activePath &&
+                      !!activePath.match(
+                        /exercise\.(rs|ts|py|js|sql|go)$|main\.(rs|py|go)$|index\.(ts|js|js)$/i,
+                      )
+                    }
+                    runCommand={(() => {
+                      if (!courseConfig) return undefined;
+
+                      try {
+                        let cmd =
+                          courseConfig?.runner?.command ||
+                          courseConfig?.runner?.testCommand ||
+                          'npm test';
+
+                        // If it's an exercise file, handle placeholders
+                        if (
+                          activePath &&
+                          activePath.match(
+                            /exercise\.(rs|ts|py|js|sql|go)$|main\.(rs|py|go)$|index\.(ts|js|js)$/i,
+                          )
+                        ) {
+                          const parts = activePath.split('/');
+                          const exercisesDir =
+                            courseConfig?.content?.exercises || 'content';
+                          const exIdx = parts.indexOf(exercisesDir);
+
+                          if (exIdx !== -1 && parts.length > exIdx + 1) {
+                            // Full path from course root: content/01_mod/01_ex/file.rs
+                            const fullExPath = parts.slice(exIdx).join('/');
+                            // Just the exercise folder name
+                            const exerciseFolder =
+                              parts[exIdx + 2] || parts[exIdx + 1];
+
+                            if (fullExPath) {
+                              cmd = cmd.replace(
+                                /{{exercise}}|{{id}}/g,
+                                fullExPath,
+                              );
+                            }
+                            if (exerciseFolder) {
+                              cmd = cmd.replace(/{{name}}/g, exerciseFolder);
+                            }
+                          }
+                        }
+                        return cmd;
+                      } catch {
+                        return undefined;
+                      }
+                    })()}
+                  />
+                )}
               </div>
             </ResizablePanel>
           </ResizablePanelGroup>

@@ -104,7 +104,9 @@ export function ConfigForm() {
       <div className="max-w-2xl mx-auto p-8">
         <div className="flex items-center gap-2 mb-6">
           <Settings size={18} className="text-blue-400" />
-          <h2 className="text-lg font-bold text-zinc-100">Course Configuration</h2>
+          <h2 className="text-lg font-bold text-zinc-100">
+            Course Configuration
+          </h2>
         </div>
 
         {error && (
@@ -157,7 +159,9 @@ export function ConfigForm() {
               <select
                 className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-3 py-2 text-sm text-zinc-200 outline-none"
                 value={config.progression?.mode || 'sequential'}
-                onChange={(e) => updateField('progression.mode', e.target.value)}
+                onChange={(e) =>
+                  updateField('progression.mode', e.target.value)
+                }
               >
                 <option value="sequential">Sequential (Lock Next)</option>
                 <option value="open">Open Navigation</option>
@@ -171,10 +175,16 @@ export function ConfigForm() {
                 className="w-4 h-4 rounded text-blue-600 bg-zinc-800 border-zinc-600"
                 checked={config.progression?.strict_module_order ?? true}
                 onChange={(e) =>
-                  updateField('progression.strict_module_order', e.target.checked)
+                  updateField(
+                    'progression.strict_module_order',
+                    e.target.checked,
+                  )
                 }
               />
-              <label htmlFor="strict_module_order" className="text-xs text-zinc-300">
+              <label
+                htmlFor="strict_module_order"
+                className="text-xs text-zinc-300"
+              >
                 Enforce strict module order
               </label>
             </div>

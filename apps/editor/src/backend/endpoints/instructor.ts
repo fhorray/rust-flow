@@ -1,5 +1,6 @@
-import { join, dirname } from "node:path";
+import { existsSync } from "node:fs";
 import { readFile, writeFile, mkdir, rename, rm, readdir, stat } from "node:fs/promises";
+import { join, dirname } from "node:path";
 import type { ServerType } from "@progy/core";
 import { PROG_CWD, COURSE_CONFIG_PATH, ensureConfig, currentConfig } from "@progy/core";
 import { logger } from "@progy/core";
@@ -51,6 +52,16 @@ const fsGetHandler: ServerType<"/instructor/fs"> = async (req) => {
         });
       return Response.json({ success: true, data: tree });
     } else {
+      // For images/binary files, we might need to return a blob or base64
+      // But usually, we just serve them via static server if they are in assets
+      const ext = pathParam.split('.').pop()?.toLowerCase();
+      const isBinary = ['png', 'jpg', 'jpeg', 'gif', 'svg', 'webp'].includes(ext || '');
+
+      if (isBinary) {
+        const file = Bun.file(absPath);
+        return new Response(file);
+      }
+
       const content = await readFile(absPath, "utf-8");
       return Response.json({ success: true, content });
     }
@@ -184,10 +195,10 @@ const scaffoldHandler: ServerType<"/instructor/scaffold"> = async (req) => {
 
   try {
     const body = await req.json() as {
-      type: "module" | "exercise";
+      type: "module" | "lesson" | "exercise" | "quiz";
       title: string;
       message?: string;
-      // exercise-specific
+      // lesson/exercise/quiz-specific
       modulePath?: string;
       fileExtension?: string;
     };
@@ -212,7 +223,7 @@ const scaffoldHandler: ServerType<"/instructor/scaffold"> = async (req) => {
       });
     }
 
-    if (body.type === "exercise") {
+    if (body.type === "lesson" || body.type === "exercise" || body.type === "quiz") {
       if (!body.modulePath) {
         return Response.json({ success: false, error: "modulePath is required" }, { status: 400 });
       }
@@ -220,30 +231,49 @@ const scaffoldHandler: ServerType<"/instructor/scaffold"> = async (req) => {
       const absModuleDir = sanitizePath(body.modulePath);
       const num = await getNextNumber(absModuleDir);
       const slug = slugify(body.title);
-      const ext = body.fileExtension || "py";
       const dirName = `${num}_${slug}`;
       const absDir = join(absModuleDir, dirName);
 
       await mkdir(absDir, { recursive: true });
 
-      // Create README.md
-      const readme = `# ${body.title}\n\nWrite your lesson instructions here.\n`;
-      await writeFile(join(absDir, "README.md"), readme);
+      if (body.type === "quiz") {
+        const quizData = {
+          title: body.title,
+          description: "New quiz description",
+          questions: [
+            {
+              id: Math.random().toString(36).substring(2, 9),
+              type: "multiple-choice",
+              question: "Sample Question?",
+              options: [
+                { id: "a", text: "Option A", isCorrect: true },
+                { id: "b", text: "Option B", isCorrect: false }
+              ]
+            }
+          ]
+        };
+        await writeFile(join(absDir, "quiz.json"), JSON.stringify(quizData, null, 2));
+      } else {
+        const ext = body.fileExtension || "py";
+        // Create README.md
+        const readme = `# ${body.title}\n\nWrite your lesson instructions here.\n`;
+        await writeFile(join(absDir, "README.md"), readme);
 
-      // Create starter code file
-      const starterComments: Record<string, string> = {
-        py: `# ${body.title}\n# Write your solution below\n`,
-        rs: `// ${body.title}\n// Write your solution below\nfn main() {\n    \n}\n`,
-        js: `// ${body.title}\n// Write your solution below\n`,
-        ts: `// ${body.title}\n// Write your solution below\n`,
-        sql: `-- ${body.title}\n-- Write your query below\n`,
-        go: `package main\n\n// ${body.title}\nfunc main() {\n\t\n}\n`,
-      };
-      const starterContent = starterComments[ext] || `// ${body.title}\n`;
-      const mainFile = ext === "rs" ? "exercise" : "main";
-      await writeFile(join(absDir, `${mainFile}.${ext}`), starterContent);
+        // Create starter code file
+        const starterComments: Record<string, string> = {
+          py: `# ${body.title}\n# Write your solution below\n`,
+          rs: `// ${body.title}\n// Write your solution below\nfn main() {\n    \n}\n`,
+          js: `// ${body.title}\n// Write your solution below\n`,
+          ts: `// ${body.title}\n// Write your solution below\n`,
+          sql: `-- ${body.title}\n-- Write your query below\n`,
+          go: `package main\n\n// ${body.title}\nfunc main() {\n\t\n}\n`,
+        };
+        const starterContent = starterComments[ext] || `// ${body.title}\n`;
+        const mainFile = ext === "rs" ? "exercise" : "main";
+        await writeFile(join(absDir, `${mainFile}.${ext}`), starterContent);
+      }
 
-      // Update info.toml — append exercise entry
+      // Update info.toml — append entry
       const infoPath = join(absModuleDir, "info.toml");
       try {
         let tomlContent = await readFile(infoPath, "utf-8");
@@ -260,6 +290,44 @@ const scaffoldHandler: ServerType<"/instructor/scaffold"> = async (req) => {
     }
 
     return Response.json({ success: false, error: "Invalid type" }, { status: 400 });
+  } catch (e: any) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+};
+
+// ─── Upload Handler ──────────────────────────────────────────────────────────
+
+const uploadHandler: ServerType<"/instructor/upload"> = async (req) => {
+  const blocked = guardEditor();
+  if (blocked) return blocked;
+
+  try {
+    const formData = await req.formData();
+    const file = formData.get("file") as File;
+    if (!file) {
+      return Response.json({ success: false, error: "No file uploaded" }, { status: 400 });
+    }
+
+    // 2MB Limit
+    if (file.size > 2 * 1024 * 1024) {
+      return Response.json({ success: false, error: "File size exceeds 2MB limit" }, { status: 400 });
+    }
+
+    const assetsDir = join(PROG_CWD, "assets");
+    if (!existsSync(assetsDir)) {
+      await mkdir(assetsDir, { recursive: true });
+    }
+
+    const fileName = `${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.-]/g, "_")}`;
+    const filePath = join(assetsDir, fileName);
+
+    await Bun.write(filePath, file);
+
+    return Response.json({
+      success: true,
+      url: `/instructor/fs?path=assets/${fileName}`,
+      path: `assets/${fileName}`
+    });
   } catch (e: any) {
     return Response.json({ success: false, error: e.message }, { status: 500 });
   }
@@ -367,13 +435,66 @@ const reorderHandler: ServerType<"/instructor/reorder"> = async (req) => {
       const oldName = order[i];
       const newPrefix = (i + 1).toString().padStart(2, "0");
       // remove old prefix if exists (e.g. 03_hello -> hello)
-      const cleanName = oldName.replace(/^\d+_/, "");
+      const cleanName = oldName?.replace(/^\d+_/, "");
       const newName = `${newPrefix}_${cleanName}`;
 
       await rename(join(absParent, `__tmp_${oldName}`), join(absParent, newName));
     }
 
     return Response.json({ success: true });
+  } catch (e: any) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+};
+
+// ─── Run Handler ───────────────────────────────────────────────────────────
+
+const runHandler: ServerType<"/instructor/run"> = async (req) => {
+  const blocked = guardEditor();
+  if (blocked) return blocked;
+
+  try {
+    const { command } = (await req.json().catch(() => ({}))) as {
+      command?: string;
+    };
+    let cmd = command || "npm test";
+
+    // Load course config to check runner type
+    let finalCmd = cmd;
+    try {
+      const configStr = await readFile(COURSE_CONFIG_PATH, "utf-8");
+      const config = JSON.parse(configStr);
+      const runner = config.runner;
+
+      if (runner?.type === "docker-compose") {
+        const service = runner.service_to_run || "runner";
+        // Wrap: docker-compose run --rm <service> <command>
+        // We assume command is already replaced with exercise ID from frontend
+        finalCmd = `docker-compose run --rm ${service} ${cmd}`;
+      } else if (runner?.type === "docker-local") {
+        // Simple docker run support
+        const image = runner.image || config.id || "progy-runner";
+        finalCmd = `docker run --rm ${image} ${cmd}`;
+      }
+    } catch (e) {
+      console.warn("[Instructor] Failed to read runner config, falling back to local execution", e);
+    }
+
+    console.log(`[Instructor] Executing: ${finalCmd}`);
+
+    const proc = Bun.spawn(finalCmd.split(" "), {
+      cwd: PROG_CWD,
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+
+    const output = await new Response(proc.stdout).text();
+    const errorArr = await new Response(proc.stderr).text();
+
+    return Response.json({
+      success: true,
+      output: output + (errorArr ? `\nErrors:\n${errorArr}` : ""),
+    });
   } catch (e: any) {
     return Response.json({ success: false, error: e.message }, { status: 500 });
   }
@@ -407,5 +528,11 @@ export const instructorRoutes = {
   },
   "/instructor/reorder": {
     POST: reorderHandler,
+  },
+  "/instructor/upload": {
+    POST: uploadHandler,
+  },
+  "/instructor/run": {
+    POST: runHandler,
   },
 };

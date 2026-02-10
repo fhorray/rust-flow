@@ -5,7 +5,7 @@
   "runner": {
     "type": "docker-compose",
     "compose_file": "docker-compose.yml",
-    "service_to_run": "tester",
+    "service_to_run": "runner",
     "command": "python3 /app/runner.py {{exercise}}",
     "args": [],
     "cwd": "."

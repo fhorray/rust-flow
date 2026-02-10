@@ -1,5 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { Globe, Save, Info, Zap, Terminal, Database } from 'lucide-react';
+import {
+  Globe,
+  Save,
+  Info,
+  Zap,
+  Terminal,
+  Database,
+  Pencil,
+} from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { updateTabContent, type EditorTab } from '../../stores/editor-store';
@@ -48,8 +56,12 @@ export function CourseSettings({ tab }: CourseSettingsProps) {
             <Globe size={24} />
           </div>
           <div>
-            <h1 className="text-xl font-bold text-white leading-tight">Course Settings</h1>
-            <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mt-0.5">Global Metadata & Infrastructure</p>
+            <h1 className="text-xl font-bold text-white leading-tight">
+              Course Settings
+            </h1>
+            <p className="text-xs text-zinc-500 font-medium uppercase tracking-widest mt-0.5">
+              Global Metadata & Infrastructure
+            </p>
           </div>
           <div className="ml-auto">
             <Button
@@ -72,7 +84,7 @@ export function CourseSettings({ tab }: CourseSettingsProps) {
             </label>
             <Input
               value={config.name || ''}
-              onChange={e => handleChange('name', e.target.value)}
+              onChange={(e) => handleChange('name', e.target.value)}
               className="bg-zinc-900/50 border-zinc-800 text-sm h-11 focus:ring-blue-500/20"
             />
           </div>
@@ -83,7 +95,7 @@ export function CourseSettings({ tab }: CourseSettingsProps) {
             </label>
             <textarea
               value={config.description || ''}
-              onChange={e => handleChange('description', e.target.value)}
+              onChange={(e) => handleChange('description', e.target.value)}
               className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md p-3 text-sm min-h-[80px] outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-zinc-700 transition-all text-zinc-300"
             />
           </div>
@@ -101,7 +113,7 @@ export function CourseSettings({ tab }: CourseSettingsProps) {
                 </label>
                 <Input
                   value={config.runner?.type || ''}
-                  onChange={e => handleChange('runner.type', e.target.value)}
+                  onChange={(e) => handleChange('runner.type', e.target.value)}
                   className="bg-zinc-900/50 border-zinc-800 text-xs h-9"
                 />
               </div>
@@ -111,7 +123,7 @@ export function CourseSettings({ tab }: CourseSettingsProps) {
                 </label>
                 <Input
                   value={config.runner?.image || ''}
-                  onChange={e => handleChange('runner.image', e.target.value)}
+                  onChange={(e) => handleChange('runner.image', e.target.value)}
                   className="bg-zinc-900/50 border-zinc-800 text-xs h-9"
                 />
               </div>

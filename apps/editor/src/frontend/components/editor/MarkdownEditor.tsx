@@ -18,7 +18,11 @@ import {
   Minus,
   Undo,
   Redo,
+  Video,
+  Info,
 } from 'lucide-react';
+import { VideoNode } from './extensions/VideoNode';
+import { NoteNode } from './extensions/NoteNode';
 
 // ─── Toolbar Button ─────────────────────────────────────────────────────────
 
@@ -37,10 +41,11 @@ function ToolbarButton({
     <button
       onClick={onClick}
       title={title}
-      className={`p-1.5 rounded transition-colors ${isActive
-        ? 'bg-blue-600/60 text-blue-200'
-        : 'text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200'
-        }`}
+      className={`p-1.5 rounded transition-colors ${
+        isActive
+          ? 'bg-blue-600/60 text-blue-200'
+          : 'text-zinc-400 hover:bg-zinc-700/50 hover:text-zinc-200'
+      }`}
     >
       {children}
     </button>
@@ -130,6 +135,24 @@ function Toolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
       >
         <Code size={14} />
       </ToolbarButton>
+
+      <div className="w-px h-5 bg-zinc-700/50 mx-1" />
+
+      <ToolbarButton
+        onClick={() => editor.chain().focus().setVideo().run()}
+        title="Insert Video"
+      >
+        <Video size={14} />
+      </ToolbarButton>
+      <ToolbarButton
+        onClick={() => editor.chain().focus().setNote({ type: 'info' }).run()}
+        title="Insert Note"
+      >
+        <Info size={14} />
+      </ToolbarButton>
+
+      <div className="w-px h-5 bg-zinc-700/50 mx-1" />
+
       <ToolbarButton
         onClick={() => editor.chain().focus().setHorizontalRule().run()}
         title="Horizontal Rule"
@@ -188,9 +211,11 @@ export function MarkdownEditor({
         },
       }),
       Markdown.configure({
-        html: false,
+        html: true,
         transformPastedText: true,
       }),
+      VideoNode,
+      NoteNode,
     ],
     content: initialContent,
     editorProps: {

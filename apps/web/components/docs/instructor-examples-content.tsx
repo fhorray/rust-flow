@@ -105,7 +105,7 @@ def hello():
     "args": ["/app/runner.py", "{{exercise}}"],
     "cwd": "/app",
     "compose_file": "docker-compose.yml",
-    "service_to_run": "tester"
+    "service_to_run": "runner"
   },
   "content": {
     "root": ".",
@@ -138,8 +138,8 @@ def hello():
       timeout: 5s
       retries: 5
 
-  tester:
-    build: ./tester
+  runner:
+    build: ./runner
     volumes:
       - .:/workspace:ro
     depends_on:
@@ -152,7 +152,7 @@ def hello():
       DB_NAME: course_db`,
       },
       {
-        label: 'tester/runner.py',
+        label: 'runner/runner.py',
         language: 'python',
         code: `import sys, json, os
 import psycopg2
