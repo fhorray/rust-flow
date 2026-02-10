@@ -1,6 +1,6 @@
 {
   "name": "progy",
-  "version": "0.15.0",
+  "version": "0.15.3",
   "description": "The interactive CLI and learning platform for Progy courses.",
   "license": "MIT",
   "repository": {
@@ -56,7 +56,8 @@
     "react-dom": "19.2.4",
     "react-markdown": "^9.0.1",
     "rehype-highlight": "^7.0.0",
-    "tailwind-merge": "^2.3.0"
+    "tailwind-merge": "^2.3.0",
+    "@progy/core": "workspace:*"
   },
   "peerDependencies": {
     "typescript": "^5"
@@ -117,7 +118,6 @@
     "unist-util-visit": "^5.1.0",
     "use-sound": "^5.0.0",
     "use-stick-to-bottom": "^1.1.3",
-    "zod": "^4.3.6",
-    "@progy/core": "workspace:*"
+    "zod": "^4.3.6"
   }
 }

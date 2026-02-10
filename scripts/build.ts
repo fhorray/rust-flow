@@ -57,6 +57,8 @@ async function buildApp(appName: string, entryPoints: string[], hasFrontend: boo
     outdir: dist,
     target: "bun",
     minify: true,
+    packages: "bundle",
+    external: [],
   });
 
   if (!backendBuild.success) {
