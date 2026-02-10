@@ -1,0 +1,1 @@
+ALTER TABLE `registry_versions` ADD `manifest` text;

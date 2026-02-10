@@ -1,8 +1,15 @@
 import { resolve } from "node:path";
 import { CourseLoader, CourseContainer, loadToken, BACKEND_URL, logger, exists } from "@progy/core";
 
-export async function publish() {
+import { incrementVersion } from "./version";
+
+export async function publish(options: any) {
   const cwd = process.cwd();
+
+  // 0. Handle Version Increment
+  if (options.patch) await incrementVersion("patch");
+  if (options.minor) await incrementVersion("minor");
+  if (options.major) await incrementVersion("major");
 
   // 1. Validate Course
   let config;

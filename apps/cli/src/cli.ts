@@ -5,6 +5,7 @@ import { setConfig, listConfig } from "./commands/config";
 import { init, createCourse, validate, pack, dev, start, testExercise } from "./commands/course";
 import { publish } from "./commands/publish";
 import { save, sync, reset } from "./commands/sync";
+import { patch, minor, major } from "./commands/version";
 
 const program = new Command();
 
@@ -80,7 +81,26 @@ program
 program
   .command("publish")
   .description("Publish course to Progy registry")
+  .option("--patch", "Increment patch version before publishing")
+  .option("--minor", "Increment minor version before publishing")
+  .option("--major", "Increment major version before publishing")
   .action(publish);
+
+// --- Versioning ---
+program
+  .command("patch")
+  .description("Increment course version (patch)")
+  .action(patch);
+
+program
+  .command("minor")
+  .description("Increment course version (minor)")
+  .action(minor);
+
+program
+  .command("major")
+  .description("Increment course version (major)")
+  .action(major);
 
 // --- Scaffolding (Instructor) ---
 const add = program.command("add").description("Scaffold course content");
