@@ -136,6 +136,7 @@ export const registryVersions = sqliteTable(
     sizeBytes: integer('size_bytes').notNull(),
     checksum: text('checksum').notNull(),
     changelog: text('changelog'),
+    manifest: text('manifest'), // JSON index of course content
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .$defaultFn(() => new Date()),

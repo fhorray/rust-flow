@@ -155,6 +155,12 @@ export default function Home() {
             >
               Pricing
             </a>
+            <Link
+              href="/courses"
+              className="hover:text-foreground transition-colors"
+            >
+              Community
+            </Link>
             <a href="/docs" className="hover:text-foreground transition-colors">
               Docs
             </a>
@@ -234,6 +240,13 @@ export default function Home() {
               >
                 Pricing
               </a>
+              <Link
+                href="/courses"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+                onClick={() => setIsMenuOpen(false)}
+              >
+                Community
+              </Link>
               <a
                 href="/docs"
                 className="text-muted-foreground hover:text-foreground transition-colors"

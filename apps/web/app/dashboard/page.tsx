@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Copy,
   Terminal,
+  Globe,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
@@ -193,9 +194,9 @@ export default function Dashboard() {
     });
   };
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'settings'>(
-    'overview',
-  );
+  const [activeTab, setActiveTab] = useState<
+    'overview' | 'settings' | 'registry'
+  >('overview');
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
 
@@ -366,6 +367,11 @@ export default function Dashboard() {
             label="Profile Settings"
             active={activeTab === 'settings'}
             onClick={() => setActiveTab('settings')}
+          />
+          <SidebarItem
+            icon={<Globe className="w-4 h-4" />}
+            label="Community Registry"
+            onClick={() => router.push('/courses')}
           />
 
           <div className="px-3 mt-6 mb-2">

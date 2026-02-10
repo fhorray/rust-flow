@@ -51,6 +51,10 @@ export async function publish() {
 
   const packageName = config.id.startsWith(`@${username}/`) ? config.id : `@${username}/${config.id}`;
 
+  // 3.5 Extract Manifest for Web Preview
+  logger.info("Extracting course manifest for web preview...", "INDEX");
+  const manifest = await CourseLoader.getCourseFlow(cwd);
+
   const file = Bun.file(progyPath);
 
   const formData = new FormData();
@@ -62,6 +66,7 @@ export async function publish() {
       version: (config as any).version || "1.0.0",
       description: config.name,
       changelog: "Initial release via CLI",
+      manifest,
     }),
   );
 

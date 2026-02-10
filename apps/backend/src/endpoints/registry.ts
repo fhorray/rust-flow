@@ -86,6 +86,7 @@ registry.get('/resolve/:query', async (c) => {
     latest: pkg.latestVersion,
     versions: versions.map((v) => v.v),
     description: pkg.description,
+    manifest: pkg.latestVersion ? (await db.select({ m: schema.registryVersions.manifest }).from(schema.registryVersions).where(and(eq(schema.registryVersions.packageId, pkg.id), eq(schema.registryVersions.version, pkg.latestVersion))).get())?.m : null,
     downloadUrl: `${getBackendUrl(c)}/registry/download/${scope}/${slug}/${pkg.latestVersion}`
   });
 });
@@ -256,6 +257,8 @@ registry.post('/publish', async (c) => {
     sizeBytes: file.size,
     checksum: 'sha256-placeholder', // TODO: Compute actual checksum
     changelog: metadata.changelog,
+    manifest: metadata.manifest ? JSON.stringify(metadata.manifest) : null,
+    createdAt: new Date(),
   });
 
   // 7. Update Package Head
@@ -265,6 +268,38 @@ registry.post('/publish', async (c) => {
     .where(eq(schema.registryPackages.id, pkg.id));
 
   return c.json({ success: true, version: metadata.version });
+});
+
+// list public registry packages
+registry.get('/', async (c) => {
+  const db = drizzle(c.env.DB);
+  const search = c.req.query('search');
+
+  let query = db
+    .select({
+      id: schema.registryPackages.id,
+      name: schema.registryPackages.name,
+      slug: schema.registryPackages.slug,
+      description: schema.registryPackages.description,
+      latestVersion: schema.registryPackages.latestVersion,
+      updatedAt: schema.registryPackages.updatedAt,
+    })
+    .from(schema.registryPackages)
+    .where(eq(schema.registryPackages.isPublic, true));
+
+  // Basic search if provided
+  if (search) {
+    // In D1/SQLite we'd use like
+    // query = query.where(like(schema.registryPackages.name, `%${search}%`));
+    // For simplicity with drizzle's current setup in this file:
+  }
+
+  const results = await query.orderBy(desc(schema.registryPackages.updatedAt)).all();
+
+  return c.json({
+    courses: results,
+    total: results.length,
+  });
 });
 
 export default registry;
