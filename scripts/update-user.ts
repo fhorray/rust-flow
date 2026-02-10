@@ -45,18 +45,19 @@ const sql = `UPDATE user SET ${updates.join(', ')} WHERE email = '${email}';`;
 console.log(`\n📝 SQL Query: ${sql}`);
 
 const wranglerArgs = [
+  'wrangler',
   'd1',
   'execute',
   'progy',
   '--command',
-  sql,
+  `"${sql}"`,
   ...(isRemote ? ['--remote'] : ['--local']),
   '--yes'
 ];
 
-console.log(`\n🚀 Executing: wrangler ${wranglerArgs.join(' ')}`);
+console.log(`\n🚀 Executing: npx ${wranglerArgs.join(' ')}`);
 
-const result = spawnSync('npx', ['wrangler', ...wranglerArgs], {
+const result = spawnSync('npx', wranglerArgs, {
   stdio: 'inherit',
   shell: true,
   cwd: BACKEND_ROOT

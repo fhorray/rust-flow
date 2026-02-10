@@ -4,6 +4,7 @@ export { exists } from "./utils.ts";
 // Paths & constants
 export {
   PROG_CWD,
+  PROG_RUNTIME_ROOT,
   CONFIG_DIR,
   GLOBAL_CONFIG_PATH,
   COURSE_CONFIG_NAME,

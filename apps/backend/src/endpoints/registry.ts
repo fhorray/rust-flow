@@ -18,18 +18,52 @@ declare global {
   }
 }
 
-// resolve version and metadata
-registry.get('/resolve/:scope/:slug', async (c) => {
-  const scope = c.req.param('scope');
-  const slug = c.req.param('slug');
-  const name = `@${scope}/${slug}`;
+// resolve version and metadata (supports scoped and unscoped)
+registry.get('/resolve/:query', async (c) => {
+  const query = c.req.param('query');
+  const user = c.get('user');
   const db = drizzle(c.env.DB);
 
-  const pkg = await db
-    .select()
-    .from(schema.registryPackages)
-    .where(eq(schema.registryPackages.name, name))
-    .get();
+  let pkg;
+
+  if (query.startsWith('@') && query.includes('/')) {
+    // 1. Scoped search (@user/slug)
+    pkg = await db
+      .select()
+      .from(schema.registryPackages)
+      .where(eq(schema.registryPackages.name, query))
+      .get();
+  } else {
+    // 2. Unscoped search (slug)
+    // Try to find if the user owns this slug first
+    if (user) {
+      pkg = await db
+        .select()
+        .from(schema.registryPackages)
+        .where(
+          and(
+            eq(schema.registryPackages.slug, query),
+            eq(schema.registryPackages.userId, user.id)
+          )
+        )
+        .get();
+    }
+
+    // fallback to any public package with this slug
+    if (!pkg) {
+      pkg = await db
+        .select()
+        .from(schema.registryPackages)
+        .where(
+          and(
+            eq(schema.registryPackages.slug, query),
+            eq(schema.registryPackages.isPublic, true)
+          )
+        )
+        .orderBy(desc(schema.registryPackages.updatedAt))
+        .get();
+    }
+  }
 
   if (!pkg) return c.json({ error: 'Package not found' }, 404);
 
@@ -41,13 +75,24 @@ registry.get('/resolve/:scope/:slug', async (c) => {
     .orderBy(desc(schema.registryVersions.createdAt))
     .all();
 
+  const nameParts = pkg.name.substring(1).split('/');
+  const scope = nameParts[0];
+  const slug = nameParts[1];
+
   return c.json({
     name: pkg.name,
+    scope,
+    slug,
     latest: pkg.latestVersion,
     versions: versions.map((v) => v.v),
     description: pkg.description,
+    downloadUrl: `${getBackendUrl(c)}/registry/download/${scope}/${slug}/${pkg.latestVersion}`
   });
 });
+
+function getBackendUrl(c: any) {
+  return c.env.PROGY_API_URL || 'https://api.progy.dev';
+}
 
 // download artifact
 registry.get('/download/:scope/:slug/:version', async (c) => {

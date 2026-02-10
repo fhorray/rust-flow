@@ -122,10 +122,11 @@ program
 // --- Deprecated/Legacy (kept for backwards compatibility) ---
 program
   .command("init")
-  .description("[Deprecated] Use 'progy start' instead")
-  .option("-c, --course <id>", "Course ID")
+  .description("Initialize a new course from registry or Git")
+  .argument("[package]", "Registry package (e.g. sql-basics) or Git URL")
+  .option("-c, --course <id>", "Course ID (legacy)")
   .option("--offline", "Force offline mode")
-  .action(init);
+  .action((pkg, options) => init({ ...options, course: pkg || options.course }));
 
 program
   .command("save")

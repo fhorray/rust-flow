@@ -7,11 +7,25 @@ import {
   currentConfig,
   scanAndGenerateManifest,
   PROG_CWD,
+  PROG_RUNTIME_ROOT,
   getProgress,
   saveProgress,
   updateStreak,
-  parseRunnerOutput
+  parseRunnerOutput,
+  exists as progyExists
 } from "@progy/core";
+
+async function resolveFile(relativePath: string): Promise<string | null> {
+  const local = join(PROG_CWD, relativePath);
+  if (await progyExists(local)) return local;
+
+  if (PROG_RUNTIME_ROOT) {
+    const runtime = join(PROG_RUNTIME_ROOT, relativePath);
+    if (await progyExists(runtime)) return runtime;
+  }
+
+  return null;
+}
 import { DockerClient } from "../../docker/client";
 import { DockerComposeClient } from "../../docker/compose-client";
 import { ImageManager } from "../../docker/image-manager";
@@ -41,20 +55,13 @@ const quizHandler: ServerType<"/exercises/quiz"> = async (req) => {
   const filePath = url.searchParams.get('path');
   if (!filePath) return new Response('Missing path', { status: 400 });
 
-  let dirPath = filePath;
-  try {
-    const s = await Bun.file(filePath).stat();
-    if (!s.isDirectory()) {
-      dirPath = join(filePath, "..");
-    }
-  } catch (e) {
-    // Path might not exist or be invalid, fallback to previous behavior
-  }
-
+  const dirPath = (await progyExists(filePath)) && (await stat(filePath)).isDirectory() ? filePath : join(filePath, "..");
   const quizPath = join(dirPath, "quiz.json");
+  const actualPath = await resolveFile(quizPath);
+
   try {
-    if (await exists(quizPath)) {
-      const content = await readFile(quizPath, "utf-8");
+    if (actualPath && await progyExists(actualPath)) {
+      const content = await readFile(actualPath, "utf-8");
       return Response.json(JSON.parse(content));
     }
     return Response.json({ error: "Quiz not found" }, { status: 404 });
@@ -76,22 +83,33 @@ const codeHandler: ServerType<"/exercises/code"> = async (req) => {
 
   try {
     let code = "";
-    const s = await Bun.file(filePath).stat();
+
+    // Check if the path exists in either layer
+    const actualPath = await resolveFile(filePath);
+    if (!actualPath) return Response.json({ error: "File not found" }, { status: 404 });
+
+    const s = await stat(actualPath);
     if (s.isDirectory()) {
       const candidates = ["exercise.rs", "exercise.sql", "exercise.py", "exercise.ts", "exercise.js", "main.rs", "index.ts", "main.go", "index.js", "main.py"];
       for (const c of candidates) {
-        const p = join(filePath, c);
-        if (await exists(p)) {
-          code = await readFile(p, "utf-8");
+        const p = join(filePath, c); // Search relative path in layers
+        const solvedP = await resolveFile(p);
+        if (solvedP) {
+          code = await readFile(solvedP, "utf-8");
           break;
         }
       }
       if (!code) code = "// No entry file found";
     } else {
-      code = await readFile(filePath, "utf-8");
+      code = await readFile(actualPath, "utf-8");
     }
+
     let markdown: string | null = null;
-    if (markdownPath && await exists(markdownPath)) markdown = await readFile(markdownPath, "utf-8");
+    if (markdownPath) {
+      const actualMd = await resolveFile(markdownPath);
+      if (actualMd) markdown = await readFile(actualMd, "utf-8");
+    }
+
     return Response.json({ code, markdown });
   } catch (e) {
     return Response.json({ error: "File not found" }, { status: 404 });

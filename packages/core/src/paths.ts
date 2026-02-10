@@ -4,6 +4,9 @@ import { homedir } from "node:os";
 // The directory where the CLI is executed or where the course content is located
 export const PROG_CWD = process.env.PROG_CWD || process.cwd();
 
+// The directory where the course artifact is extracted (for layered serving)
+export const PROG_RUNTIME_ROOT = process.env.PROG_RUNTIME_ROOT || null;
+
 // Global configuration directory in the user's home folder
 export const CONFIG_DIR = join(homedir(), ".progy");
 export const GLOBAL_CONFIG_PATH = join(CONFIG_DIR, "config.json");

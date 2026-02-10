@@ -48,25 +48,22 @@ export class CourseLoader {
       return { url: resolvedLocal };
     }
 
-    // 3. Registry Packages (@scope/slug)
-    if (courseInput.startsWith("@") && courseInput.includes("/")) {
-      const [scope, slug] = courseInput.substring(1).split("/");
-      if (scope && slug) {
-        console.log(`[INFO] Resolving registry package '${courseInput}'...`);
-        try {
-          const url = `${getBackendUrl()}/registry/resolve/${scope}/${slug}`;
-          const response = await fetch(url);
-          if (response.ok) {
-            const data: any = await response.json();
-            // Registry packages point to download endpoint
-            return {
-              url: `${getBackendUrl()}/registry/download/${scope}/${slug}/${data.latest}`,
-              isRegistry: true
-            };
-          }
-        } catch (e) {
-          console.warn(`[WARN] Registry resolution failed for ${courseInput}:`, (e as Error).message);
+    // 3. Registry Packages (@scope/slug or simple slug)
+    if (courseInput.startsWith("@") || !courseInput.includes("/")) {
+      console.log(`[INFO] Resolving registry package '${courseInput}'...`);
+      try {
+        const url = `${getBackendUrl()}/registry/resolve/${encodeURIComponent(courseInput)}`;
+        const response = await fetch(url);
+        if (response.ok) {
+          const data: any = await response.json();
+          // Registry packages point to download endpoint
+          return {
+            url: data.downloadUrl || `${getBackendUrl()}/registry/download/${data.scope}/${data.slug}/${data.latest}`,
+            isRegistry: true
+          };
         }
+      } catch (e) {
+        console.warn(`[WARN] Registry resolution failed for ${courseInput}:`, (e as Error).message);
       }
     }
 
