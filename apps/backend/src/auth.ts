@@ -41,6 +41,9 @@ export const authServer = (env: CloudflareBindings) => {
         hasLifetime: {
           type: "boolean",
         },
+        username: {
+          type: "string",
+        },
       },
     },
     secret: env.BETTER_AUTH_SECRET,
@@ -196,6 +199,26 @@ export const authServer = (env: CloudflareBindings) => {
         },
       }),
     ],
+    databaseHooks: {
+      user: {
+        create: {
+          before: async (user) => {
+            const emailPrefix = user.email.split('@')[0].toLowerCase().replace(/[^a-z0-9.]/g, '');
+            const randomDigits = Math.floor(10000 + Math.random() * 90000);
+            const username = `${emailPrefix}${randomDigits}`;
+
+            console.log(`[AUTH-HOOK] Generating username for ${user.email}: ${username}`);
+
+            return {
+              data: {
+                ...user,
+                username,
+              },
+            };
+          },
+        },
+      },
+    },
   });
 };
 

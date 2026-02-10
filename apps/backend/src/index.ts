@@ -10,12 +10,15 @@ import { getModel, constructSystemPrompt, constructExplanationPrompt, constructG
 import billing from './endpoints/billing'
 import git from './endpoints/git'
 import progress from './endpoints/progress'
+import registry from './endpoints/registry'
+import user from './endpoints/user'
 
 const app = new Hono<{
   Bindings: CloudflareBindings;
   Variables: AuthVariables;
 }>()
 
+// ... cors and middleware ...
 app.use('*', cors({
   origin: ['http://localhost:3001', 'https://api.progy.dev', 'https://progy.dev'],
   allowHeaders: ['Content-Type', 'Authorization'],
@@ -51,13 +54,9 @@ app.use("/auth/*", async (c, next) => {
   await next();
 });
 
-app.get('/registry', (c) => {
-  return c.json({ courses: c.env.COURSES })
-})
-
-// verifySession moved to auth-utils.ts and converted to middleware
-
 app.route('/progress', progress)
+app.route('/registry', registry)
+app.route('/user', user)
 
 app.post('/ai/generate', async (c) => {
   try {
@@ -639,7 +638,140 @@ app.get('/device', async (c) => {
 })
 
 app.get('/', (c) => {
-  return c.text('Progy Backend is live!')
-})
+  const error = c.req.query('error');
+  const message = c.req.query('message');
+
+  const title = error ? 'Authentication Error' : 'System Status';
+  const subtitle = error ? 'Handshake Failed' : 'Operations Normal';
+  const displayMessage = error
+    ? (error === 'unable_to_create_user'
+      ? 'Failed to initialize your account profile. This often happens if the database is in maintenance or a unique constraint was violated.'
+      : `An error occurred during authentication: ${error}`)
+    : (message || 'Progy Backend is live and systems are operational.');
+
+  const icon = error
+    ? '<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>'
+    : '<svg class="w-8 h-8 text-white fill-white" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>';
+
+  const html = `
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <title>Progy - ${title}</title>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <script src="https://cdn.tailwindcss.com"></script>
+        <link rel="preconnect" href="https://fonts.googleapis.com">
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+        <script>
+          tailwind.config = {
+            theme: {
+              extend: {
+                colors: {
+                  rust: {
+                    light: '#dea584',
+                    DEFAULT: '#ce412b',
+                    dark: '#8a2b1d',
+                  },
+                },
+                fontFamily: {
+                  sans: ['Outfit', 'sans-serif'],
+                },
+              }
+            }
+          }
+        </script>
+        <style>
+          body { background-color: #050505; color: #fff; overflow: hidden; }
+          .glass-card {
+            background: rgba(12, 12, 15, 0.6);
+            backdrop-filter: blur(24px);
+            -webkit-backdrop-filter: blur(24px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+          }
+          .glow-orb {
+            filter: blur(120px);
+            opacity: 0.15;
+            z-index: 0;
+            pointer-events: none;
+          }
+          .animate-pulse-slow {
+            animation: pulse-slow 4s ease-in-out infinite;
+          }
+          @keyframes pulse-slow {
+            0%, 100% { opacity: 0.1; transform: scale(1); }
+            50% { opacity: 0.2; transform: scale(1.1); }
+          }
+          .btn-primary {
+            background: linear-gradient(135deg, #ce412b 0%, #f97316 100%);
+            box-shadow: 0 10px 20px -5px rgba(206, 65, 43, 0.3);
+            transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+          }
+          .btn-primary:hover {
+            transform: translateY(-2px);
+            filter: brightness(1.1);
+          }
+          .icon-container {
+             background: ${error ? 'linear-gradient(135deg, #ef4444 0%, #991b1b 100%)' : 'linear-gradient(135deg, #ce412b 0%, #8a2b1d 100%)'};
+             box-shadow: 0 8px 16px -4px ${error ? 'rgba(239, 68, 68, 0.4)' : 'rgba(206, 65, 43, 0.4)'};
+          }
+        </style>
+      </head>
+      <body class="flex items-center justify-center min-h-screen px-6">
+        <div class="fixed top-1/4 -left-20 w-[40vw] h-[40vw] bg-rust glow-orb rounded-full animate-pulse-slow"></div>
+        <div class="fixed bottom-1/4 -right-20 w-[40vw] h-[40vw] bg-orange-600 glow-orb rounded-full animate-pulse-slow" style="animation-delay: -2s"></div>
+
+        <div class="max-w-md w-full glass-card rounded-[2.5rem] relative z-10 overflow-hidden animate-in fade-in slide-in-from-bottom-8 duration-1000">
+          <div class="h-1.5 w-full bg-gradient-to-r from-rust via-orange-500 to-rust-dark"></div>
+          
+          <div class="p-10 text-center">
+            <div class="mb-10 flex justify-center">
+              <div class="relative group">
+                <div class="absolute inset-0 ${error ? 'bg-red-500' : 'bg-rust'} blur-2xl opacity-40 animate-pulse"></div>
+                <div class="relative icon-container w-16 h-16 rounded-[1.25rem] flex items-center justify-center transform rotate-6 transition-transform hover:rotate-0 duration-500">
+                  ${icon}
+                </div>
+              </div>
+            </div>
+
+            <header class="mb-8">
+              <h1 class="text-3xl font-black tracking-tight text-white mb-2">
+                Progy<span class="bg-gradient-to-r from-rust to-orange-400 bg-clip-text text-transparent">API</span>
+              </h1>
+              <h2 class="text-xs uppercase font-black tracking-[0.3em] ${error ? 'text-red-500' : 'text-zinc-500'} italic">${subtitle}</h2>
+            </header>
+
+            <div class="mb-10">
+              <p class="text-zinc-400 text-sm leading-relaxed font-medium italic">
+                "${displayMessage}"
+              </p>
+            </div>
+
+            ${error ? `
+              <div class="flex flex-col gap-3">
+                <a href="https://progy.dev/dashboard" class="btn-primary py-3 rounded-xl font-bold tracking-tight text-xs uppercase flex items-center justify-center gap-2">
+                   Return to Dashboard
+                </a>
+                <p class="text-[10px] text-zinc-600 font-bold uppercase tracking-widest">Error Code: ${error}</p>
+              </div>
+            ` : `
+              <div class="py-3 px-6 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 flex items-center justify-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-[10px] font-black uppercase tracking-widest text-emerald-500/80">All Systems Operational</span>
+              </div>
+            `}
+
+            <footer class="mt-12 pt-8 border-t border-zinc-900">
+               <span class="text-[9px] uppercase font-black tracking-widest text-zinc-700">Progy Backend Infrastructure v1.0</span>
+            </footer>
+          </div>
+        </div>
+      </body>
+    </html>
+  `;
+  return c.html(html);
+});
 
 export default app

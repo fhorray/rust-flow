@@ -10,6 +10,7 @@ const getBackendUrl = () => process.env.PROGY_API_URL || DEFAULT_BACKEND_URL;
 const CourseConfigSchema = z.object({
   id: z.string(),
   name: z.string(),
+  version: z.string().optional().default("1.0.0"), // Add versioning
   runner: z.object({
     command: z.string(),
     args: z.array(z.string()),
@@ -32,7 +33,8 @@ const CourseConfigSchema = z.object({
 export type LoaderCourseConfig = z.infer<typeof CourseConfigSchema>;
 
 export class CourseLoader {
-  static async resolveSource(courseInput: string): Promise<{ url: string; branch?: string; path?: string }> {
+  static async resolveSource(courseInput: string): Promise<{ url: string; branch?: string; path?: string; isRegistry?: boolean }> {
+    // 1. Direct URLs
     if (courseInput.startsWith("http://") || courseInput.startsWith("https://") || courseInput.startsWith("git@")) {
       const parts = courseInput.split("#");
       const url = parts[0] as string;
@@ -40,27 +42,51 @@ export class CourseLoader {
       return { url, branch };
     }
 
+    // 2. Local Paths
     const resolvedLocal = resolve(courseInput);
     if (await exists(resolvedLocal)) {
       return { url: resolvedLocal };
     }
 
+    // 3. Registry Packages (@scope/slug)
+    if (courseInput.startsWith("@") && courseInput.includes("/")) {
+      const [scope, slug] = courseInput.substring(1).split("/");
+      if (scope && slug) {
+        console.log(`[INFO] Resolving registry package '${courseInput}'...`);
+        try {
+          const url = `${getBackendUrl()}/registry/resolve/${scope}/${slug}`;
+          const response = await fetch(url);
+          if (response.ok) {
+            const data: any = await response.json();
+            // Registry packages point to download endpoint
+            return {
+              url: `${getBackendUrl()}/registry/download/${scope}/${slug}/${data.latest}`,
+              isRegistry: true
+            };
+          }
+        } catch (e) {
+          console.warn(`[WARN] Registry resolution failed for ${courseInput}:`, (e as Error).message);
+        }
+      }
+    }
+
+    // 4. Legacy/Alias Fallback (keeping for compatibility)
     console.log(`[INFO] Resolving alias '${courseInput}'...`);
     try {
       const url = `${getBackendUrl()}/registry`;
       const response = await fetch(url);
       if (response.ok) {
         const data: any = await response.json();
-        const course = data.courses[courseInput];
+        const course = data.courses?.[courseInput];
         if (course) {
           return { url: course.repo, branch: course.branch, path: course.path };
         }
       }
     } catch (e) {
-      // Registry failed, fallback to default organization
+      // Legacy alias lookup failed
     }
 
-    // Default to progy-dev organization for official courses
+    // 5. Default Organization Fallback
     return { url: `https://github.com/progy-dev/${courseInput}.git` };
   }
 

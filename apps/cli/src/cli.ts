@@ -1,8 +1,9 @@
 #!/usr/bin/env bun
 import { Command } from "commander";
-import { login, logout } from "./commands/auth";
+import { login, logout, whoami } from "./commands/auth";
 import { setConfig, listConfig } from "./commands/config";
-import { init, createCourse, validate, pack, dev, start, testExercise, publish } from "./commands/course";
+import { init, createCourse, validate, pack, dev, start, testExercise } from "./commands/course";
+import { publish } from "./commands/publish";
 import { save, sync, reset } from "./commands/sync";
 
 const program = new Command();
@@ -22,6 +23,11 @@ program
   .command("logout")
   .description("Log out of your Progy account")
   .action(logout);
+
+program
+  .command("whoami")
+  .description("Show the currently logged-in user")
+  .action(whoami);
 
 // --- Config ---
 const config = program.command("config").description("Manage Progy configuration");
@@ -73,7 +79,7 @@ program
 
 program
   .command("publish")
-  .description("Publish course to Progy registry (coming soon)")
+  .description("Publish course to Progy registry")
   .action(publish);
 
 // --- Scaffolding (Instructor) ---

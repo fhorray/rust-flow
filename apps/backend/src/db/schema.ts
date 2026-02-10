@@ -3,6 +3,7 @@ import { sqliteTable, text, integer, int } from 'drizzle-orm/sqlite-core';
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
   name: text('name').notNull(),
+  username: text('username').notNull().unique(),
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' }).notNull(),
   image: text('image'),
@@ -92,4 +93,68 @@ export const courseProgress = sqliteTable("course_progress", {
   courseId: text("course_id").notNull(), // e.g., 'rust-flow'
   data: text("data").notNull(), // JSON blob of the Progress object
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().$defaultFn(() => new Date()),
+});
+
+// ─── Registry Schema ─────────────────────────────────────────────────────────
+
+import { uniqueIndex, index } from 'drizzle-orm/sqlite-core';
+
+export const registryPackages = sqliteTable(
+  'registry_packages',
+  {
+    id: text('id').primaryKey(),
+    userId: text('user_id')
+      .notNull()
+      .references(() => user.id),
+    name: text('name').notNull(), // e.g. "@diego/rust-mastery"
+    slug: text('slug').notNull(), // e.g. "rust-mastery"
+    description: text('description'),
+    latestVersion: text('latest_version'),
+    isPublic: integer('is_public', { mode: 'boolean' }).default(true),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer('updated_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    uniqueName: uniqueIndex('registry_packages_name_idx').on(table.name),
+    userIdIdx: index('registry_packages_user_id_idx').on(table.userId),
+  }),
+);
+
+export const registryVersions = sqliteTable(
+  'registry_versions',
+  {
+    id: text('id').primaryKey(),
+    packageId: text('package_id')
+      .notNull()
+      .references(() => registryPackages.id),
+    version: text('version').notNull(), // SemVer e.g. "1.0.0"
+    storageKey: text('storage_key').notNull(), // R2 key
+    sizeBytes: integer('size_bytes').notNull(),
+    checksum: text('checksum').notNull(),
+    changelog: text('changelog'),
+    createdAt: integer('created_at', { mode: 'timestamp' })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => ({
+    uniqueVersion: uniqueIndex('registry_versions_pkg_ver_idx').on(
+      table.packageId,
+      table.version,
+    ),
+  }),
+);
+
+export const registryDownloads = sqliteTable('registry_downloads', {
+  id: text('id').primaryKey(),
+  packageId: text('package_id').notNull(),
+  versionId: text('version_id').notNull(),
+  userId: text('user_id'),
+  ipAddress: text('ip_address'),
+  downloadedAt: integer('downloaded_at', { mode: 'timestamp' })
+    .notNull()
+    .$defaultFn(() => new Date()),
 });

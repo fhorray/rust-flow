@@ -11,7 +11,6 @@ declare namespace Cloudflare {
         BETTER_AUTH_URL: string;
         PROGY_API_URL: string;
         STRIPE_PRICE_ID_PRO: string;
-        STRIPE_PRICE_ID_PRO_DISCOUNT: string;
         STRIPE_PRICE_ID_LIFETIME: string;
         COURSES: string;
         BETTER_AUTH_SECRET: string;

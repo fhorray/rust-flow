@@ -2,7 +2,7 @@ import { join, resolve, basename } from "node:path";
 import { mkdir, writeFile, readFile, readdir, stat, rm } from "node:fs/promises";
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
-import { GitUtils, SyncManager, CourseLoader, CourseContainer, loadToken, BACKEND_URL, COURSE_CONFIG_NAME, TEMPLATES, RUNNER_README, logger, exists } from "@progy/core";
+import { GitUtils, SyncManager, CourseLoader, CourseContainer, RegistryCache, loadToken, BACKEND_URL, COURSE_CONFIG_NAME, TEMPLATES, RUNNER_README, logger, exists } from "@progy/core";
 
 async function runServer(runtimeCwd: string, isOffline: boolean, containerFile: string | null, bypass: boolean = false, isEditor: boolean = false) {
   const isTs = import.meta.file.endsWith(".ts");
@@ -74,52 +74,90 @@ export async function init(options: { course?: string; offline?: boolean }) {
   }
 
   try {
-    const credRes = await fetch(`${BACKEND_URL}/git/credentials`, {
-      headers: { "Authorization": `Bearer ${token}` }
-    });
-    const gitCreds = await credRes.json() as any;
+    const source = await CourseLoader.resolveSource(courseId!);
 
-    const officialSource = await CourseLoader.resolveSource(courseId!);
+    if (source.isRegistry) {
+      // --- NEW REGISTRY FLOW (Portfolio Mode) ---
+      logger.info(`Resolved ${courseId} to registry artifact.`, "REGISTRY");
 
-    const ensureRes = await fetch(`${BACKEND_URL}/git/ensure-repo`, {
-      method: "POST",
-      headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ courseId })
-    });
-    const userRepoInfo = await ensureRes.json() as { repoUrl: string, isNew: boolean };
+      // 1. Download/Unpack to Cache
+      // We need the version. resolveSource already called /resolve, so we could have returned more data.
+      // For now, source.url IS the download URL.
+      // We'll extract version from URL or just use "latest" for cache key if not provided.
+      const cacheDir = await RegistryCache.ensurePackage(courseId!, "latest", source.url);
 
-    if (await exists(join(cwd, ".git"))) {
-      await GitUtils.pull(cwd);
-    } else {
-      const files = await readdir(cwd);
-      if (files.length > 0 && !existingConfig) {
+      // 2. Initialize Portfolio (Apply Layering)
+      await SyncManager.applyLayering(cwd, cacheDir, false);
+
+      // 3. Initialize Git Repo
+      if (!(await exists(join(cwd, ".git")))) {
+        logger.info("Initializing your Portfolio repository...", "GIT");
         await GitUtils.init(cwd);
-        await GitUtils.addRemote(cwd, gitCreds.token, userRepoInfo.repoUrl);
+        await GitUtils.add(cwd, ".");
+        await GitUtils.commit(cwd, "Initial commit from Progy Official Registry");
+        logger.success("Portfolio repository created!");
+      }
+
+      // 4. Save Config
+      if (!existingConfig) {
+        await SyncManager.saveConfig(cwd, {
+          course: {
+            id: courseId!,
+            repo: source.url, // Pointing to registry URL
+            branch: "registry",
+            path: "."
+          }
+        });
+        await SyncManager.generateGitIgnore(cwd, courseId!);
+      }
+    } else {
+      // --- LEGACY GIT FLOW ---
+      logger.info(`Resolved ${courseId} to Git repository.`, "GIT");
+      const credRes = await fetch(`${BACKEND_URL}/git/credentials`, {
+        headers: { "Authorization": `Bearer ${token}` }
+      });
+      const gitCreds = await credRes.json() as any;
+
+      const ensureRes = await fetch(`${BACKEND_URL}/git/ensure-repo`, {
+        method: "POST",
+        headers: { "Authorization": `Bearer ${token}`, "Content-Type": "application/json" },
+        body: JSON.stringify({ courseId })
+      });
+      const userRepoInfo = await ensureRes.json() as { repoUrl: string, isNew: boolean };
+
+      if (await exists(join(cwd, ".git"))) {
         await GitUtils.pull(cwd);
       } else {
-        await GitUtils.clone(userRepoInfo.repoUrl, cwd, gitCreds.token);
-      }
-    }
-
-    const cacheDir = await SyncManager.ensureOfficialCourse(
-      courseId!,
-      officialSource.url,
-      officialSource.branch,
-      officialSource.path
-    );
-
-    await SyncManager.applyLayering(cwd, cacheDir, false, officialSource.path);
-
-    if (!existingConfig) {
-      await SyncManager.saveConfig(cwd, {
-        course: {
-          id: courseId!,
-          repo: officialSource.url,
-          branch: officialSource.branch,
-          path: officialSource.path
+        const files = await readdir(cwd);
+        if (files.length > 0 && !existingConfig) {
+          await GitUtils.init(cwd);
+          await GitUtils.addRemote(cwd, gitCreds.token, userRepoInfo.repoUrl);
+          await GitUtils.pull(cwd);
+        } else {
+          await GitUtils.clone(userRepoInfo.repoUrl, cwd, gitCreds.token);
         }
-      });
-      await SyncManager.generateGitIgnore(cwd, courseId!);
+      }
+
+      const cacheDir = await SyncManager.ensureOfficialCourse(
+        courseId!,
+        source.url,
+        source.branch,
+        source.path
+      );
+
+      await SyncManager.applyLayering(cwd, cacheDir, false, source.path);
+
+      if (!existingConfig) {
+        await SyncManager.saveConfig(cwd, {
+          course: {
+            id: courseId!,
+            repo: source.url,
+            branch: source.branch,
+            path: source.path
+          }
+        });
+        await SyncManager.generateGitIgnore(cwd, courseId!);
+      }
     }
 
     logger.success("Course initialized!");
@@ -294,14 +332,4 @@ export async function testExercise(path: string) {
     logger.error(e.message);
     process.exit(1);
   }
-}
-
-export async function publish() {
-  logger.brand("🚧 This feature is coming soon!");
-  console.log("");
-  console.log("   Publishing will allow you to:");
-  console.log("   • Upload your course to the Progy registry");
-  console.log("   • Share with students via 'progy start <course-id>'");
-  console.log("");
-  console.log("   Follow updates at: https://progy.dev/roadmap");
 }

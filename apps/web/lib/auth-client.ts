@@ -14,6 +14,9 @@ export const authClient = createAuthClient({
         },
         hasLifetime: {
           type: "boolean"
+        },
+        username: {
+          type: "string"
         }
       }
     }),

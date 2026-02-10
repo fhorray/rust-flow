@@ -8,6 +8,8 @@
     "db:gen": "drizzle-kit generate",
     "db:up:local": "bun ../../scripts/migrate-d1.ts --local",
     "db:up:remote": "bun ../../scripts/migrate-d1.ts --remote",
+    "db:clean:local": "bun ../../scripts/clean-d1.ts",
+    "db:clean:remote": "bun ../../scripts/clean-d1.ts --remote",
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {

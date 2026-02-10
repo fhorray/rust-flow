@@ -43,6 +43,9 @@ export type { LoaderCourseConfig } from "./loader.ts";
 // Course container
 export { CourseContainer } from "./container.ts";
 
+// Registry cache
+export { RegistryCache } from "./cache.ts";
+
 // Sync
 export { SyncManager } from "./sync.ts";
 export type { ProgyConfig } from "./sync.ts";

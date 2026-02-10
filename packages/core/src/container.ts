@@ -44,21 +44,27 @@ export class CourseContainer {
     const courseId = basename(sourceFile, ".progy").replace(/[^a-zA-Z0-9-]/g, "_");
     const runtimeDir = join(RUNTIME_ROOT, `${courseId}-${hash}`);
 
-    if (await exists(runtimeDir)) {
-      await rm(runtimeDir, { recursive: true, force: true });
+    await this.unpackTo(sourceFile, runtimeDir);
+    return runtimeDir;
+  }
+
+  /**
+   * Unpacks a .progy archive to a specific directory
+   */
+  static async unpackTo(sourceFile: string, destDir: string) {
+    if (await exists(destDir)) {
+      await rm(destDir, { recursive: true, force: true });
     }
-    await mkdir(runtimeDir, { recursive: true });
+    await mkdir(destDir, { recursive: true });
 
     const zip = new AdmZip(sourceFile);
 
     await new Promise<void>((resolve, reject) => {
-      zip.extractAllToAsync(runtimeDir, true, false, (err?: Error) => {
+      zip.extractAllToAsync(destDir, true, false, (err?: Error) => {
         if (err) reject(err);
         else resolve();
       });
     });
-
-    return runtimeDir;
   }
 
   /**

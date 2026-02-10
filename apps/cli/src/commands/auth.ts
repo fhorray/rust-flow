@@ -1,4 +1,4 @@
-import { BACKEND_URL, FRONTEND_URL, saveToken, clearToken, logger } from "@progy/core";
+import { BACKEND_URL, FRONTEND_URL, saveToken, clearToken, logger, loadToken } from "@progy/core";
 import { spawn } from "node:child_process";
 
 function openBrowser(url: string) {
@@ -77,4 +77,38 @@ export async function login() {
 export async function logout() {
   await clearToken();
   logger.success("Logged out successfully. Your session has been ended.");
+}
+
+export async function whoami() {
+  const token = await loadToken();
+  if (!token) {
+    logger.error("Not logged in.", "Run 'progy login' first.");
+    process.exit(1);
+  }
+
+  try {
+    const res = await fetch(`${BACKEND_URL}/auth/get-session`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch session: ${res.statusText}`);
+    }
+
+    const session = await res.json();
+    if (!session || !session.user) {
+      logger.error("Invalid session.", "Run 'progy login' again.");
+      process.exit(1);
+    }
+
+    const user = session.user;
+    logger.info("Current user session:", "WHOAMI");
+    console.log(`  Name:     ${user.name}`);
+    console.log(`  Handle:   \x1b[36m@${user.username || 'no-username'}\x1b[0m`);
+    console.log(`  Email:    ${user.email}`);
+    console.log(`  Plan:     ${user.subscription.toUpperCase()}${user.hasLifetime ? ' (LIFETIME)' : ''}`);
+  } catch (e: any) {
+    logger.error("Failed to retrieve user information", e.message);
+    process.exit(1);
+  }
 }

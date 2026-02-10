@@ -18,9 +18,11 @@ export type EditorTab = {
   type: 'markdown' | 'config' | 'code' | 'quiz' | 'settings' | 'ide-settings';
 };
 
+export type ModelProvider = 'openai' | 'grok' | 'claude' | 'gemini';
+
 export interface IDESettings {
-  openAIKey: string;
-  grokKey: string;
+  secretKey: string;
+  modelProvider: ModelProvider;
   ideCommand: string;
 }
 
@@ -33,9 +35,10 @@ export const $isEditorMode = atom<boolean>(false);
 export const $isSaving = atom<boolean>(false);
 export const $courseConfig = atom<any>(null);
 
+
 export const $ideSettings = persistentMap<Record<string, string>>('progy-ide-settings:', {
-  openAIKey: '',
-  grokKey: '',
+  secretKey: '',
+  modelProvider: 'openai' as ModelProvider,
   ideCommand: 'code',
 });
 
