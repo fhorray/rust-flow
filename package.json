@@ -15,7 +15,7 @@
     "pkg:minor": "bun pm --cwd apps/cli version minor --force",
     "pkg:patch": "bun pm --cwd apps/cli version patch --force",
     "pkg:publish": "bun publish --cwd apps/cli",
-    "db:clean": "wrangler d1 execute cli --remote --file=scripts/clean-db.sql",
+    "db:clean": "wrangler d1 execute progy --file=scripts/clean-db.sql",
     "db:gen": "bun run --cwd apps/backend db:gen",
     "db:up": "bun run --cwd apps/backend db:up:local",
     "db:deploy": "bun run --cwd apps/backend db:up:remote",

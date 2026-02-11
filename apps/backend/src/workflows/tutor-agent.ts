@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 import { eq, and } from 'drizzle-orm';
 import { generateText } from 'ai';
-import { getModel, createTutorTools, type AIContext } from '../ai/service';
+import { getModel, createTutorTools, type AIContext } from '../lib/ai';
 
 type TutorParams = {
   userId: string;

@@ -89,7 +89,7 @@ export const registryPackages = sqliteTable(
     // The owner of the package (must match the @scope)
     userId: text('user_id')
       .notNull()
-      .references(() => user.id),
+      .references(() => users.id),
 
     // The full package name, e.g., "@diego/rust-mastery"
     name: text('name').notNull(),

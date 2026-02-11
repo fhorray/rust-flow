@@ -1,346 +1,90 @@
 import { Hono } from 'hono'
-import { authServer } from './auth'
+import { authServer } from './lib/auth'
 import { cors } from 'hono/cors'
 import { drizzle } from 'drizzle-orm/d1'
-import * as schema from './db/schema'
-import { eq, and } from 'drizzle-orm'
-import { authMiddleware, verifySession, type AuthVariables } from './auth-utils'
-import { streamText, generateText } from "ai";
 import { rateLimiter } from "hono-rate-limiter";
-import { getModel, constructSystemPrompt, constructExplanationPrompt, constructGeneratePrompt, type AIConfig, type AIContext } from "./ai/service";
-import billing from './endpoints/billing'
-import git from './endpoints/git'
-import progress from './endpoints/progress'
-import registry from './endpoints/registry'
-import user from './endpoints/user'
+import billing from './modules/billing'
+import git from './modules/git'
+import progressRouter from './modules/progress'
+import registryRouter from './modules/registry'
+import userRouter from './modules/user'
+import aiRouter from './modules/ai'
+
+// Middlewares
+import corsMiddleware from './middlewares/cors'
+import { authMiddleware, verifySession, type AuthVariables } from './middlewares/auth'
+
 
 const app = new Hono<{
   Bindings: CloudflareBindings;
   Variables: AuthVariables;
 }>()
 
-// ... cors and middleware ...
-app.use('*', cors({
-  origin: ['http://localhost:3001', 'https://api.progy.dev', 'https://progy.dev'],
-  allowHeaders: ['Content-Type', 'Authorization'],
-  allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  credentials: true,
-}))
+  // Middlewares
+  .use('*', corsMiddleware)
+  .use('*', authMiddleware)
 
-app.use('*', authMiddleware);
-
-app.route('/billing', billing)
-app.route('/git', git)
-
-app.get('/auth/get-session', async (c) => {
-  const session = await verifySession(c)
-  if (session) {
-    console.log(`[SESSION-CHECK] Success: ${session.user.email}`)
-    return c.json(session)
-  }
-  return c.json(null)
-})
-
-// Debugging Middleware for Stripe/Auth
-app.use("/auth/*", async (c, next) => {
-  if (c.req.path.includes("/stripe/upgrade") || c.req.path.includes("/subscription/upgrade")) {
-    console.log(`[DEBUG] Stripe/Subscription Upgrade Request: ${c.req.method} ${c.req.url}`);
-    console.log(`[DEBUG] Cookies: ${c.req.header("Cookie")}`);
-    const user = c.get('user');
-    console.log(`[DEBUG] Session identified: ${user ? "YES" : "NO"}`);
-    if (user) {
-      console.log(`[DEBUG] User ID: ${user.id}`);
+  // Routes
+  .route('/billing', billing)
+  .route('/git', git)
+  .get('/auth/get-session', async (c) => {
+    const session = await verifySession(c)
+    if (session) {
+      console.log(`[SESSION-CHECK] Success: ${session.user.email}`)
+      return c.json(session)
     }
-  }
-  await next();
-});
-
-app.route('/progress', progress)
-app.route('/registry', registry)
-app.route('/packages', registry)
-app.route('/user', user)
-
-// --- Security & Rate Limiting ---
-const apiLimiter = rateLimiter({
-  windowMs: 60 * 1000, // 1 minute
-  limit: 10, // Limit each user to 10 requests per window
-  keyGenerator: (c) => {
-    // @ts-ignore - Variables type inference in rateLimiter config is generic
-    const user = c.get("user");
-    // @ts-ignore
-    return user ? user.id : c.req.header("cf-connecting-ip") || ""; // Use User ID or IP
-  },
-});
-
-
-app.post('/ai/generate', apiLimiter, async (c) => {
-  try {
-    const { prompt, difficulty, config: clientConfig } = await c.req.json() as { prompt: string; difficulty: string; config: AIConfig };
-
-    // 1. Verify Session
-    const user = c.get('user')
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const db = drizzle(c.env.DB);
-    let finalConfig: AIConfig = {
-      provider: clientConfig?.provider || 'openai',
-      model: clientConfig?.model
-    };
-
-    // Check for Pro/Lifetime Plan
-    const subscription = await db.select().from(schema.subscription)
-      .where(and(
-        eq(schema.subscription.referenceId, user.id),
-        eq(schema.subscription.status, 'active')
-      )).all();
-
-    const isPro = subscription.some(s => s.plan === 'pro') || (user as any).subscription === 'pro';
-    const isLifetime = subscription.some(s => s.plan === 'lifetime') || (user as any).subscription === 'lifetime';
-
-    if (isPro) {
-      // Pro users ALWAYS use backend key, ignore client-provided key for security
-      finalConfig.apiKey = c.env.OPENAI_API_KEY;
-      finalConfig.provider = 'openai';
-    } else if (isLifetime) {
-      // Lifetime users must provide their own key
-      if (!clientConfig?.apiKey) return c.json({ error: 'Lifetime plan requires your own API Key. Configure it in Settings.' }, 403);
-      finalConfig.apiKey = clientConfig.apiKey;
-      finalConfig.provider = clientConfig.provider || 'openai';
-    } else {
-      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
-    }
-
-    if (!finalConfig.apiKey) {
-      return c.json({ error: 'Missing AI configuration' }, 400);
-    }
-
-    const model = getModel(finalConfig);
-    const system = constructGeneratePrompt(prompt, difficulty);
-
-    const { text } = await generateText({
-      model,
-      system,
-      prompt: "Generate the coding challenge JSON now.",
-    });
-
+    return c.json(null)
+  })
+  .route('/progress', progressRouter)
+  .route('/registry', registryRouter)
+  .route('/packages', registryRouter)
+  .route('/user', userRouter)
+  .route('/ai', aiRouter)
+  .all('/auth/:path{.*}', async (c) => {
     try {
-      return c.json(JSON.parse(text));
-    } catch (parseErr) {
-      console.error("[AI-GENERATE-PARSE-ERROR]", text);
-      return c.json({ error: "Failed to parse AI response into JSON" }, 500);
+      const auth = authServer(c.env)
+      console.log(`[AUTH-DEBUG] Handling request for: ${c.req.path}`);
+      const res = await auth.handler(c.req.raw)
+      console.log(`[AUTH-DEBUG] Better-Auth response: ${res.status}`);
+      return res
+    } catch (err: any) {
+      console.error(`[AUTH-FATAL] ${err.message}`, err.stack)
+      return c.json({ error: 'Internal Auth Error', message: err.message }, 500)
     }
-  } catch (e: any) {
-    console.error("[AI-GENERATE-ERROR]", e);
-    return c.json({ error: e.message }, 500);
-  }
-});
+  })
 
+  // Global Error Handler
+  .onError((err, c) => {
+    console.error(`[CRASH] ${err.message}`, err.stack)
+    return c.text(`Internal Server Error: ${err.message}`, 500)
+  })
 
-app.post('/ai/hint', apiLimiter, async (c) => {
-  try {
-    const { context, config: clientConfig } = await c.req.json() as { context: AIContext; config: AIConfig };
+  // 404 Debugging
+  .notFound((c) => {
+    console.log(`[404] Not Found: ${c.req.method} ${c.req.url}`)
+    return c.text(`Route not found: ${c.req.method} ${c.req.path}`, 404)
+  })
 
-    // 1. Verify Session
-    const user = c.get('user')
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const db = drizzle(c.env.DB);
-    let finalConfig: AIConfig = {
-      provider: clientConfig?.provider || 'openai',
-      model: clientConfig?.model
-    };
-
-    const subscription = await db.select().from(schema.subscription)
-      .where(and(
-        eq(schema.subscription.referenceId, user.id),
-        eq(schema.subscription.status, 'active')
-      )).all();
-
-    const isPro = subscription.some(s => s.plan === 'pro') || (user as any).subscription === 'pro';
-    const isLifetime = subscription.some(s => s.plan === 'lifetime') || (user as any).subscription === 'lifetime';
-
-    if (isPro) {
-      finalConfig.apiKey = c.env.OPENAI_API_KEY;
-      finalConfig.provider = 'openai';
-    } else if (isLifetime) {
-      if (!clientConfig?.apiKey) return c.json({ error: 'Lifetime plan requires your own API Key. Configure it in Settings.' }, 403);
-      finalConfig.apiKey = clientConfig.apiKey;
-      finalConfig.provider = clientConfig.provider || 'openai';
-    } else {
-      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
+  // Better Auth Handler
+  .all('/auth/:path{.*}', async (c) => {
+    try {
+      const auth = authServer(c.env)
+      console.log(`[AUTH-DEBUG] Handling request for: ${c.req.path}`);
+      const res = await auth.handler(c.req.raw)
+      console.log(`[AUTH-DEBUG] Better-Auth response: ${res.status}`);
+      return res
+    } catch (err: any) {
+      console.error(`[AUTH-FATAL] ${err.message}`, err.stack)
+      return c.json({ error: 'Internal Auth Error', message: err.message }, 500)
     }
+  })
 
-    if (!finalConfig.apiKey) {
-      return c.json({ error: 'Missing AI configuration' }, 400);
-    }
+  // Device Verification UI
+  .get('/device', async (c) => {
 
-    const model = getModel(finalConfig);
-    const system = constructSystemPrompt(context);
+    const userCode = c.req.query('user_code') || ''
 
-    const { text } = await generateText({
-      model,
-      system,
-      prompt: "Based on the failure above, give me a single helpful hint to fix the code. Do not give the full solution.",
-    });
-
-    return c.json({ hint: text });
-  } catch (e: any) {
-    console.error("[AI-HINT-ERROR]", e);
-    return c.json({ error: e.message }, 500);
-  }
-});
-
-app.post('/ai/explain', apiLimiter, async (c) => {
-  try {
-    const { context, config: clientConfig } = await c.req.json() as { context: AIContext; config: AIConfig };
-
-    // 1. Verify Session
-    const user = c.get('user')
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const db = drizzle(c.env.DB);
-    let finalConfig: AIConfig = {
-      provider: clientConfig?.provider || 'openai',
-      model: clientConfig?.model
-    };
-
-    const subscription = await db.select().from(schema.subscription)
-      .where(and(
-        eq(schema.subscription.referenceId, user.id),
-        eq(schema.subscription.status, 'active')
-      )).all();
-
-    const isPro = subscription.some(s => s.plan === 'pro') || (user as any).subscription === 'pro';
-    const isLifetime = subscription.some(s => s.plan === 'lifetime') || (user as any).subscription === 'lifetime';
-
-    if (isPro) {
-      finalConfig.apiKey = c.env.OPENAI_API_KEY;
-      finalConfig.provider = 'openai';
-    } else if (isLifetime) {
-      if (!clientConfig?.apiKey) return c.json({ error: 'Lifetime plan requires your own API Key. Configure it in Settings.' }, 403);
-      finalConfig.apiKey = clientConfig.apiKey;
-      finalConfig.provider = clientConfig.provider || 'openai';
-    } else {
-      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
-    }
-
-    if (!finalConfig.apiKey) {
-      return c.json({ error: 'Missing AI configuration' }, 400);
-    }
-
-    const model = getModel(finalConfig);
-    const system = constructExplanationPrompt(context);
-
-    const { text } = await generateText({
-      model,
-      system,
-      prompt: "Explain the concepts involved in this exercise comprehensively but concisely.",
-    });
-
-    return c.json({ explanation: text });
-  } catch (e: any) {
-    console.error("[AI-EXPLAIN-ERROR]", e);
-    return c.json({ error: e.message }, 500);
-  }
-});
-
-app.post('/ai/chat', async (c) => {
-  try {
-    const { messages, context, config: clientConfig } = await c.req.json() as { messages: any[]; context: AIContext; config: AIConfig };
-
-    // 1. Verify Session & Subscription
-    const user = c.get('user')
-    if (!user) return c.json({ error: 'Unauthorized' }, 401);
-
-    const db = drizzle(c.env.DB);
-    let finalConfig = { ...clientConfig };
-
-    const activePro = await db.select().from(schema.subscription)
-      .where(and(
-        eq(schema.subscription.referenceId, user.id),
-        eq(schema.subscription.status, 'active'),
-        eq(schema.subscription.plan, 'pro')
-      )).get();
-
-    const activeLifetime = await db.select().from(schema.subscription)
-      .where(and(
-        eq(schema.subscription.referenceId, user.id),
-        eq(schema.subscription.status, 'active'),
-        eq(schema.subscription.plan, 'lifetime')
-      )).get();
-
-    // @ts-ignore
-    const isPro = !!activePro || user.subscription === 'pro';
-    // @ts-ignore
-    const isLifetime = !!activeLifetime || user.subscription === 'lifetime';
-
-    if (isPro) {
-      finalConfig.apiKey = c.env.OPENAI_API_KEY;
-      finalConfig.provider = 'openai';
-    } else if (isLifetime) {
-      if (!finalConfig.apiKey) return c.json({ error: 'Lifetime plan requires your own API Key. Configure it in Settings.' }, 403);
-    } else {
-      return c.json({ error: 'AI features require a Lifetime or Pro subscription' }, 403);
-    }
-
-    if (!finalConfig.apiKey || !finalConfig.provider) {
-      return c.json({ error: 'Missing AI configuration' }, 400);
-    }
-
-    const model = getModel(finalConfig);
-    const system = constructSystemPrompt(context);
-
-    // Filter out messages with empty content to avoid API errors
-    const validMessages = messages.filter(m =>
-      (typeof m.content === 'string' && m.content.trim().length > 0) ||
-      (Array.isArray(m.parts) && m.parts.length > 0)
-    );
-
-    const result = streamText({
-      model,
-      system,
-      messages: validMessages,
-    });
-
-    return result.toTextStreamResponse();
-  } catch (e: any) {
-    console.error("[AI-CHAT-ERROR]", e);
-    return c.json({ error: e.message }, 500);
-  }
-});
-
-// Global Error Handler
-app.onError((err, c) => {
-  console.error(`[CRASH] ${err.message}`, err.stack)
-  return c.text(`Internal Server Error: ${err.message}`, 500)
-})
-
-// 404 Debugging
-app.notFound((c) => {
-  console.log(`[404] Not Found: ${c.req.method} ${c.req.url}`)
-  return c.text(`Route not found: ${c.req.method} ${c.req.path}`, 404)
-})
-
-// Better Auth Handler
-app.all('/auth/:path{.*}', async (c) => {
-  try {
-    const auth = authServer(c.env)
-    console.log(`[AUTH-DEBUG] Handling request for: ${c.req.path}`);
-    const res = await auth.handler(c.req.raw)
-    console.log(`[AUTH-DEBUG] Better-Auth response: ${res.status}`);
-    return res
-  } catch (err: any) {
-    console.error(`[AUTH-FATAL] ${err.message}`, err.stack)
-    return c.json({ error: 'Internal Auth Error', message: err.message }, 500)
-  }
-});
-
-// Device Verification UI
-app.get('/device', async (c) => {
-
-  const userCode = c.req.query('user_code') || ''
-
-  const html = `
+    const html = `
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -631,26 +375,26 @@ app.get('/device', async (c) => {
       </body>
     </html>
   `;
-  return c.html(html)
-})
+    return c.html(html)
+  })
 
-app.get('/', (c) => {
-  const error = c.req.query('error');
-  const message = c.req.query('message');
+  .get('/', (c) => {
+    const error = c.req.query('error');
+    const message = c.req.query('message');
 
-  const title = error ? 'Authentication Error' : 'System Status';
-  const subtitle = error ? 'Handshake Failed' : 'Operations Normal';
-  const displayMessage = error
-    ? (error === 'unable_to_create_user'
-      ? 'Failed to initialize your account profile. This often happens if the database is in maintenance or a unique constraint was violated.'
-      : `An error occurred during authentication: ${error}`)
-    : (message || 'Progy Backend is live and systems are operational.');
+    const title = error ? 'Authentication Error' : 'System Status';
+    const subtitle = error ? 'Handshake Failed' : 'Operations Normal';
+    const displayMessage = error
+      ? (error === 'unable_to_create_user'
+        ? 'Failed to initialize your account profile. This often happens if the database is in maintenance or a unique constraint was violated.'
+        : `An error occurred during authentication: ${error}`)
+      : (message || 'Progy Backend is live and systems are operational.');
 
-  const icon = error
-    ? '<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>'
-    : '<svg class="w-8 h-8 text-white fill-white" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>';
+    const icon = error
+      ? '<svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z" /></svg>'
+      : '<svg class="w-8 h-8 text-white fill-white" viewBox="0 0 24 24"><path d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>';
 
-  const html = `
+    const html = `
     <!DOCTYPE html>
     <html lang="en">
       <head>
@@ -768,13 +512,15 @@ app.get('/', (c) => {
       </body>
     </html>
   `;
-  return c.html(html);
-});
+    return c.html(html);
+  })
 
 // Workflow Exports
 export { CourseGuardWorkflow } from './workflows/course-guard';
 export { TutorAgentWorkflow } from './workflows/tutor-agent';
 export { AggregationWorkflow } from './workflows/aggregation';
 
+
+export type AppType = typeof app;
 export default app
 

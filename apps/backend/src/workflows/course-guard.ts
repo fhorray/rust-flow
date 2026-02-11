@@ -4,7 +4,7 @@ import { drizzle } from 'drizzle-orm/d1';
 import * as schema from '../db/schema';
 import { eq } from 'drizzle-orm';
 import { generateText } from 'ai';
-import { getModel } from '../ai/service';
+import { getModel } from '../lib/ai';
 
 type CourseGuardParams = {
   versionId: string;

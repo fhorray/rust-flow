@@ -5,7 +5,7 @@ import { spawnSync } from 'child_process';
 const args = process.argv.slice(2);
 const isRemote = args.includes('--remote');
 const BACKEND_ROOT = join(import.meta.dir, '../apps/backend');
-const migrationDir = join(BACKEND_ROOT, 'drizzle');
+const migrationDir = join(BACKEND_ROOT, 'src/db/migrations');
 
 // Find all .sql files in the drizzle directory
 const migrations = readdirSync(migrationDir)
