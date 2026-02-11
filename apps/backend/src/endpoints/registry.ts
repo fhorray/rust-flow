@@ -144,15 +144,15 @@ registry.get('/download/:scope/:slug/:version', async (c) => {
 });
 
 // proxy asset from R2
-registry.get('/asset/:scope/:slug/:version/*', async (c) => {
+registry.get('/@:scope/:slug/:version/*', async (c) => {
   const scope = c.req.param('scope');
   const slug = c.req.param('slug');
   const version = c.req.param('version');
 
-  // Extract the remaining part of the path
-  const fullPath = c.req.path;
-  const prefix = `/asset/${scope}/${slug}/${version}/`;
-  const assetPath = fullPath.substring(fullPath.indexOf(prefix) + prefix.length);
+  // Extract asset path from the rest of the URL
+  const url = new URL(c.req.url);
+  const prefix = `/@${scope}/${slug}/${version}/`;
+  const assetPath = url.pathname.substring(url.pathname.indexOf(prefix) + prefix.length);
 
   if (!assetPath) {
     return c.json({ error: 'Asset path missing' }, 400);
@@ -168,7 +168,6 @@ registry.get('/asset/:scope/:slug/:version/*', async (c) => {
   const headers = new Headers();
   object.writeHttpMetadata(headers);
   headers.set('etag', object.httpEtag);
-  // Cache assets for a long time (immutable)
   headers.set('Cache-Control', 'public, max-age=31536000, immutable');
 
   return new Response(object.body, {
