@@ -56,7 +56,10 @@ app.use("/auth/*", async (c, next) => {
 
 app.route('/progress', progress)
 app.route('/registry', registry)
+app.route('/packages', registry)
 app.route('/user', user)
+
+
 
 app.post('/ai/generate', async (c) => {
   try {
