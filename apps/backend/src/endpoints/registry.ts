@@ -143,6 +143,39 @@ registry.get('/download/:scope/:slug/:version', async (c) => {
   });
 });
 
+// proxy asset from R2
+registry.get('/asset/:scope/:slug/:version/*', async (c) => {
+  const scope = c.req.param('scope');
+  const slug = c.req.param('slug');
+  const version = c.req.param('version');
+
+  // Extract the remaining part of the path
+  const fullPath = c.req.path;
+  const prefix = `/asset/${scope}/${slug}/${version}/`;
+  const assetPath = fullPath.substring(fullPath.indexOf(prefix) + prefix.length);
+
+  if (!assetPath) {
+    return c.json({ error: 'Asset path missing' }, 400);
+  }
+
+  const key = `packages/@${scope}/${slug}/${version}/${assetPath}`;
+  const object = await c.env.R2.get(key);
+
+  if (!object) {
+    return c.json({ error: 'Asset not found' }, 404);
+  }
+
+  const headers = new Headers();
+  object.writeHttpMetadata(headers);
+  headers.set('etag', object.httpEtag);
+  // Cache assets for a long time (immutable)
+  headers.set('Cache-Control', 'public, max-age=31536000, immutable');
+
+  return new Response(object.body, {
+    headers,
+  });
+});
+
 // publish new version
 registry.post('/publish', async (c) => {
   const user = c.get('user');
@@ -252,8 +285,12 @@ registry.post('/publish', async (c) => {
   });
 
   // 5.2 Upload Assets
+  const ONE_MB = 1 * 1024 * 1024;
   for (const [k, v] of Object.entries(body)) {
     if (k.startsWith('assets/') && v instanceof File) {
+      if (v.size > ONE_MB) {
+        return c.json({ error: `Asset ${k} exceeds 1MB limit.` }, 400);
+      }
       const assetKey = `${prefix}${k}`;
       await c.env.R2.put(assetKey, await v.arrayBuffer(), {
         httpMetadata: { contentType: v.type || 'application/octet-stream' },

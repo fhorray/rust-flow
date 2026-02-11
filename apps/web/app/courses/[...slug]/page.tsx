@@ -52,9 +52,19 @@ export default function CourseDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  const parsedManifest: Module[] = course?.manifest
-    ? JSON.parse(course.manifest)
-    : [];
+  const fullManifest = course?.manifest ? JSON.parse(course.manifest) : null;
+  const branding = fullManifest?.branding;
+  const parsedManifest: Module[] = fullManifest?.modules || [];
+
+  const getAssetUrl = (path: string) => {
+    if (!path) return null;
+    if (path.startsWith('http')) return path;
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'https://api.progy.dev';
+    // Path might be e.g. "assets/cover.jpg"
+    return `${apiUrl}/registry/asset/${course?.scope}/${course?.slug}/${course?.latest}/${path}`;
+  };
+
+  const coverImageUrl = getAssetUrl(branding?.coverImage);
 
   useEffect(() => {
     fetchCourseDetails();
@@ -166,38 +176,68 @@ export default function CourseDetailPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-12">
             {/* Left: Main Content */}
             <div className="lg:col-span-2 space-y-12">
-              <section className="reveal">
+              <section className="reveal relative">
+                {coverImageUrl && (
+                  <div className="absolute -inset-x-6 -inset-y-12 h-[300px] -z-10 opacity-40 overflow-hidden rounded-3xl">
+                    <img
+                      src={coverImageUrl}
+                      alt=""
+                      className="w-full h-full object-cover blur-3xl scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-b from-background/0 via-background/60 to-background" />
+                  </div>
+                )}
+
                 <div className="flex flex-wrap items-center gap-3 mb-6">
                   <Badge
                     variant="outline"
                     className="border-primary/20 text-primary py-0.5 px-3 bg-primary/5 text-[9px] font-black tracking-widest uppercase"
+                    style={branding?.primaryColor ? { borderColor: `${branding.primaryColor}33`, color: branding.primaryColor, backgroundColor: `${branding.primaryColor}0D` } : {}}
                   >
                     COURSE v{course.latest}
                   </Badge>
                   {course.name.startsWith('@progy/') && (
-                    <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] font-black tracking-widest uppercase">
+                    <Badge className="bg-primary/20 text-primary border-primary/20 text-[9px] font-black tracking-widest uppercase"
+                      style={branding?.primaryColor ? { backgroundColor: `${branding.primaryColor}33`, color: branding.primaryColor, borderColor: `${branding.primaryColor}33` } : {}}>
                       OFFICIAL
                     </Badge>
                   )}
                 </div>
 
-                <h1 className="text-4xl md:text-6xl font-black tracking-tighter italic uppercase mb-6 leading-none">
-                  {course.name.split('/')[1]}
-                </h1>
+                <div className="flex flex-col md:flex-row gap-8 items-start mb-8">
+                  {coverImageUrl && (
+                    <div className="w-full md:w-48 h-64 shrink-0 rounded-2xl overflow-hidden shadow-2xl border border-white/10 group relative">
+                      <img
+                        src={coverImageUrl}
+                        alt={course.name}
+                        className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                    </div>
+                  )}
 
-                <div className="flex items-center gap-3 text-muted-foreground mb-8">
-                  <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black uppercase text-primary">
-                    {course.scope.charAt(0)}
+                  <div className="flex-1 min-w-0">
+                    <h1 className="text-4xl md:text-6xl font-black tracking-tighter italic uppercase mb-6 leading-none"
+                      style={branding?.primaryColor ? { color: branding.primaryColor } : {}}>
+                      {course.slug}
+                    </h1>
+
+                    <div className="flex items-center gap-3 text-muted-foreground mb-8">
+                      <div className="w-6 h-6 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-[10px] font-black uppercase text-primary"
+                        style={branding?.primaryColor ? { color: branding.primaryColor, borderColor: `${branding.primaryColor}33` } : {}}>
+                        {course.scope.charAt(0)}
+                      </div>
+                      <span className="text-[11px] font-black tracking-widest uppercase italic bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent">
+                        Built by @{course.scope}
+                      </span>
+                    </div>
+
+                    <p className="text-lg text-muted-foreground leading-relaxed italic max-w-2xl">
+                      {course.description ||
+                        'Learn everything you need about this topic through high-intensity, local-first exercises.'}
+                    </p>
                   </div>
-                  <span className="text-[11px] font-black tracking-widest uppercase italic bg-gradient-to-r from-foreground to-foreground/50 bg-clip-text text-transparent">
-                    Built by @{course.scope}
-                  </span>
                 </div>
-
-                <p className="text-lg text-muted-foreground leading-relaxed italic max-w-2xl">
-                  {course.description ||
-                    'Learn everything you need about this topic through high-intensity, local-first exercises.'}
-                </p>
               </section>
 
               {/* Curriculum */}
@@ -317,6 +357,7 @@ export default function CourseDetailPage() {
                     onClick={handleCopy}
                     size="lg"
                     className="w-full h-12 bg-primary text-primary-foreground font-black text-[10px] tracking-[0.2em] uppercase rounded-xl hover:shadow-primary/20 hover:shadow-[0_0_30px_-5px] transition-all"
+                    style={branding?.primaryColor ? { backgroundColor: branding.primaryColor, boxShadow: `0 0 30px -5px ${branding.primaryColor}33` } : {}}
                   >
                     <Rocket className="w-4 h-4 mr-2" />{' '}
                     {copied ? 'COPIED!' : 'GET STARTED'}
