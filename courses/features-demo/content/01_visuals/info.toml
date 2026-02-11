@@ -1,0 +1,18 @@
+[module]
+title = "Visual Excellence"
+icon = "Palette"
+completion_message = "Amazing work, {{user.name}}! You've mastered the visual side of Progy."
+
+[[exercises]]
+name = "01_icons"
+title = "Dynamic Icons"
+tags = ["branding", "ui"]
+difficulty = "easy"
+xp = 50
+
+[[exercises]]
+name = "02_badges"
+title = "Power of Badges"
+tags = ["labels", "visuals"]
+difficulty = "medium"
+xp = 100

@@ -1,0 +1,41 @@
+{
+  "id": "features-demo",
+  "name": "Platform Features Demo",
+  "version": "1.1.1",
+  "runner": {
+    "command": "echo",
+    "args": [
+      "Learning the features..."
+    ],
+    "cwd": "."
+  },
+  "content": {
+    "root": ".",
+    "exercises": "content"
+  },
+  "setup": {
+    "checks": [],
+    "guide": "README.md"
+  },
+  "branding": {
+    "coverImage": "courses/features-demo/assets/cover.jpg",
+    "primaryColor": "#ff4400",
+    "layout": "grid"
+  },
+  "achievements": [
+    {
+      "id": "first_steps",
+      "icon": "Footprints",
+      "name": "First Steps",
+      "description": "Completed the Visuals module!",
+      "trigger": "module:01_visuals"
+    },
+    {
+      "id": "master_xp",
+      "icon": "Zap",
+      "name": "XP Master",
+      "description": "Earned your first custom XP!",
+      "trigger": "exercise:02_progression/01_xp_boost"
+    }
+  ]
+}

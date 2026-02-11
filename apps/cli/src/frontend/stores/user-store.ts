@@ -32,6 +32,8 @@ interface ConfigResponse {
   remoteApiUrl?: string;
   isOffline?: boolean;
   isOfficial?: boolean;
+  env?: "student" | "instructor";
+  isInstructor?: boolean;
 }
 
 interface TokenResponse {
@@ -55,6 +57,8 @@ export const $remoteApiUrl = computed($configQuery, (config) => {
 
 export const $isOffline = computed($configQuery, (config) => !!config.data?.isOffline);
 export const $isOfficial = computed($configQuery, (config) => config.data?.isOfficial !== false);
+export const $env = computed($configQuery, (config) => config.data?.env || "student");
+export const $isInstructor = computed($configQuery, (config) => !!config.data?.isInstructor);
 
 // Authenticated Session Query
 export const $sessionQuery = createFetcherStore([
@@ -75,7 +79,24 @@ export const $sessionQuery = createFetcherStore([
 });
 
 // Main Session Atom/Computed
-export const $session = computed($sessionQuery, (q) => q.data as Session | null);
+export const $session = computed([$sessionQuery, $isInstructor], (q, isInstructor) => {
+  if (isInstructor) {
+    // Force a Pro instructor guest session, regardless of logged in state
+    // This prevents instructors from accidentally saving test data to their real account
+    return {
+      user: {
+        id: "guest-instructor",
+        name: "Instructor Mode",
+        email: "guest@progy.local",
+        image: undefined, // Explicitly no image to show purely Guest UI
+        subscription: "pro", // All features unlocked
+        hasLifetime: true
+      },
+      session: { token: "guest" }
+    } as Session;
+  }
+  return q.data as Session | null;
+});
 export const $user = computed($session, (s) => s?.user || null);
 
 export const $localSettings = computed($localSettingsQuery, (q) => q.data || {});

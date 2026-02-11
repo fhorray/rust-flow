@@ -5,6 +5,7 @@ import type { ServerType } from "@progy/core";
 import { PROG_CWD, COURSE_CONFIG_PATH, ensureConfig, currentConfig } from "@progy/core";
 import { logger } from "@progy/core";
 import { CourseLoader } from "@progy/core";
+import { stringify } from "smol-toml";
 
 const IS_EDITOR = () => process.env.PROGY_EDITOR_MODE === "true";
 
@@ -23,6 +24,19 @@ const guardEditor = (): Response | null => {
   return null;
 };
 
+async function getModuleMetadata(dir: string) {
+  try {
+    const tomlPath = join(dir, "info.toml");
+    const file = Bun.file(tomlPath);
+    if (!(await file.exists())) return {};
+    const content = await file.text();
+    const fixed = content.replace(/^(\s*)(\d+[\w-]*)\s*=/gm, '$1"$2" =');
+    return Bun.TOML.parse(fixed);
+  } catch (e) {
+    return {};
+  }
+}
+
 // ─── File System Handler ────────────────────────────────────────────────────
 
 const fsGetHandler: ServerType<"/instructor/fs"> = async (req) => {
@@ -38,18 +52,56 @@ const fsGetHandler: ServerType<"/instructor/fs"> = async (req) => {
 
     if (typeParam === "dir") {
       const entries = await readdir(absPath, { withFileTypes: true });
-      const tree = entries
+
+      const meta: any = await getModuleMetadata(absPath);
+      let exercisesMeta: any = {};
+      if (meta && meta.exercises) {
+        if (Array.isArray(meta.exercises)) {
+          meta.exercises.forEach((ex: any) => { if (ex.name) exercisesMeta[ex.name] = ex; });
+        } else {
+          exercisesMeta = meta.exercises;
+        }
+      }
+
+      const tree = await Promise.all(entries
         .filter(e => !e.name.startsWith(".") && e.name !== "node_modules")
-        .map(e => ({
-          name: e.name,
-          type: e.isDirectory() ? "dir" as const : "file" as const,
-          path: join(pathParam, e.name).replace(/\\/g, "/"),
-        }))
-        .sort((a, b) => {
-          // Dirs first, then alphabetical
-          if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
-          return a.name.localeCompare(b.name);
-        });
+        .map(async (e) => {
+          const item: any = {
+            name: e.name,
+            type: e.isDirectory() ? "dir" : "file",
+            path: join(pathParam, e.name).replace(/\\/g, "/"),
+          };
+
+          if (item.type === 'dir') {
+            // 1. Peek for module icon (if this dir is a module)
+            const subMeta: any = await getModuleMetadata(join(absPath, e.name));
+            if (subMeta?.module?.icon) {
+              item.moduleIcon = subMeta.module.icon;
+            }
+          }
+
+          // 2. Attach exercise metadata from current dir's info.toml
+          if (item.type === 'dir' && /^\d{2}_/.test(e.name)) {
+            const m = exercisesMeta[e.name];
+            if (m) {
+              if (typeof m === 'string') item.title = m;
+              else {
+                item.title = m.title;
+                item.tags = m.tags;
+                item.difficulty = m.difficulty;
+                item.xp = m.xp;
+              }
+            }
+          }
+          return item;
+        }));
+
+      tree.sort((a: any, b: any) => {
+        // Dirs first, then alphabetical
+        if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
+        return a.name.localeCompare(b.name);
+      });
+
       return Response.json({ success: true, data: tree });
     } else {
       // For images/binary files, we might need to return a blob or base64
@@ -308,9 +360,9 @@ const uploadHandler: ServerType<"/instructor/upload"> = async (req) => {
       return Response.json({ success: false, error: "No file uploaded" }, { status: 400 });
     }
 
-    // 2MB Limit
-    if (file.size > 2 * 1024 * 1024) {
-      return Response.json({ success: false, error: "File size exceeds 2MB limit" }, { status: 400 });
+    // 1MB Limit
+    if (file.size > 1 * 1024 * 1024) {
+      return Response.json({ success: false, error: "File size exceeds 1MB limit" }, { status: 400 });
     }
 
     const assetsDir = join(PROG_CWD, "assets");
@@ -447,6 +499,60 @@ const reorderHandler: ServerType<"/instructor/reorder"> = async (req) => {
   }
 };
 
+// ─── Exercise Metadata Handler ──────────────────────────────────────────────
+
+const exerciseMetaHandler: ServerType<"/instructor/exercise-meta"> = async (req) => {
+  const blocked = guardEditor();
+  if (blocked) return blocked;
+
+  try {
+    const body = await req.json() as { modulePath: string; exerciseName: string; metadata: any };
+    const { modulePath, exerciseName, metadata } = body;
+    const absPath = sanitizePath(modulePath);
+    const infoPath = join(absPath, "info.toml");
+
+    let content = "";
+    const file = Bun.file(infoPath);
+    if (await file.exists()) {
+      content = await file.text();
+    } else {
+      content = `[module]\ntitle = "New Module"\n\n[exercises]\n`;
+    }
+
+    const fixedInput = content.replace(/^(\s*)(\d+[\w-]*)\s*=/gm, '$1"$2" =');
+    let data: any;
+    try {
+      data = Bun.TOML.parse(fixedInput);
+    } catch {
+      data = { module: {}, exercises: {} };
+    }
+
+    if (!data.exercises) data.exercises = {};
+
+    if (Array.isArray(data.exercises)) {
+      const obj: any = {};
+      data.exercises.forEach((ex: any) => { if (ex.name) obj[ex.name] = ex; });
+      data.exercises = obj;
+    }
+
+    const existing = data.exercises[exerciseName] || {};
+    const existingObj = typeof existing === 'string' ? { title: existing } : existing;
+
+    const updated = { ...existingObj, ...metadata };
+
+    Object.keys(updated).forEach(key => updated[key] === undefined && delete updated[key]);
+
+    data.exercises[exerciseName] = updated;
+
+    const newContent = stringify(data);
+    await writeFile(infoPath, newContent);
+
+    return Response.json({ success: true });
+  } catch (e: any) {
+    return Response.json({ success: false, error: e.message }, { status: 500 });
+  }
+};
+
 // ─── Run Handler ───────────────────────────────────────────────────────────
 
 const runHandler: ServerType<"/instructor/run"> = async (req) => {
@@ -508,6 +614,9 @@ export const instructorRoutes = {
   },
   "/instructor/upload": {
     POST: uploadHandler,
+  },
+  "/instructor/exercise-meta": {
+    POST: exerciseMetaHandler,
   },
   "/instructor/run": {
     POST: runHandler,

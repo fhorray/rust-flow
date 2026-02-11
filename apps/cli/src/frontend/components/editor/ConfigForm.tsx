@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Settings, Save } from 'lucide-react';
+import { Settings, Save, Upload, Layout, Award, Plus, Trash, Image as ImageIcon } from 'lucide-react';
 
 // ─── ConfigForm ─────────────────────────────────────────────────────────────
 // Form-based editor for course.json configuration.
@@ -177,6 +177,145 @@ export function ConfigForm() {
               <label htmlFor="strict_module_order" className="text-xs text-zinc-300">
                 Enforce strict module order
               </label>
+            </div>
+          </div>
+
+          {/* Branding Section */}
+          <div className="p-4 border border-zinc-700/40 rounded-lg bg-zinc-800/20">
+            <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider mb-4 flex items-center gap-2">
+              <Layout size={12} /> Branding & Layout
+            </h3>
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                Layout
+              </label>
+              <select
+                className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-3 py-2 text-sm text-zinc-200 outline-none"
+                value={config.branding?.layout || 'vertical'}
+                onChange={(e) => updateField('branding.layout', e.target.value)}
+              >
+                <option value="vertical">Vertical Path (Default)</option>
+                <option value="grid">Grid</option>
+                <option value="constellation">Constellation</option>
+              </select>
+            </div>
+
+            <div className="mb-4">
+              <label className="block text-xs font-medium text-zinc-400 mb-1.5">
+                Cover Image
+              </label>
+              <div className="flex gap-2 items-center">
+                 {config.branding?.coverImage && (
+                    <div className="w-10 h-10 rounded overflow-hidden bg-zinc-900 border border-zinc-700 shrink-0">
+                       <img src={`/${config.branding.coverImage}`} className="w-full h-full object-cover" />
+                    </div>
+                 )}
+                 <div className="relative flex-1">
+                    <input
+                      type="text"
+                      placeholder="Path to cover image..."
+                      className="w-full bg-zinc-800/60 border border-zinc-700/50 rounded px-3 py-2 text-sm text-zinc-200 outline-none"
+                      value={config.branding?.coverImage || ''}
+                      onChange={(e) => updateField('branding.coverImage', e.target.value)}
+                    />
+                 </div>
+                 <label className="cursor-pointer bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 rounded px-3 py-2 text-zinc-300 transition-colors">
+                    <Upload size={14} />
+                    <input type="file" className="hidden" accept="image/*" onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        const fd = new FormData();
+                        fd.append('file', file);
+                        try {
+                           const res = await fetch('/instructor/upload', { method: 'POST', body: fd });
+                           const data = await res.json();
+                           if (data.success) updateField('branding.coverImage', data.path);
+                           else alert(data.error);
+                        } catch(err: any) { alert(err.message); }
+                    }} />
+                 </label>
+              </div>
+            </div>
+          </div>
+
+          {/* Achievements Section */}
+          <div className="p-4 border border-zinc-700/40 rounded-lg bg-zinc-800/20">
+            <div className="flex items-center justify-between mb-4">
+               <h3 className="text-xs font-bold text-zinc-400 uppercase tracking-wider flex items-center gap-2">
+                  <Award size={12} /> Achievements
+               </h3>
+               <button
+                  onClick={() => {
+                     const current = config.achievements || [];
+                     updateField('achievements', [...current, { id: Date.now().toString(), name: 'New Badge', icon: 'Star', description: '', trigger: '' }]);
+                  }}
+                  className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-1"
+               >
+                  <Plus size={12} /> Add
+               </button>
+            </div>
+
+            <div className="space-y-3">
+               {(config.achievements || []).map((ach: any, idx: number) => (
+                  <div key={idx} className="bg-zinc-900/40 p-3 rounded border border-zinc-800/50 flex flex-col gap-2">
+                     <div className="flex gap-2">
+                        <input
+                           className="flex-1 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 focus:border-blue-500/50 outline-none"
+                           placeholder="Name"
+                           value={ach.name}
+                           onChange={e => {
+                              const list = [...(config.achievements || [])];
+                              list[idx].name = e.target.value;
+                              updateField('achievements', list);
+                           }}
+                        />
+                        <input
+                           className="w-24 bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 focus:border-blue-500/50 outline-none"
+                           placeholder="Icon (Lucide)"
+                           value={ach.icon}
+                           onChange={e => {
+                              const list = [...(config.achievements || [])];
+                              list[idx].icon = e.target.value;
+                              updateField('achievements', list);
+                           }}
+                        />
+                        <button
+                           className="text-zinc-600 hover:text-red-400 p-1 transition-colors"
+                           onClick={() => {
+                              const list = [...(config.achievements || [])];
+                              list.splice(idx, 1);
+                              updateField('achievements', list);
+                           }}
+                        >
+                           <Trash size={12} />
+                        </button>
+                     </div>
+                     <input
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 focus:border-blue-500/50 outline-none"
+                        placeholder="Description..."
+                        value={ach.description}
+                        onChange={e => {
+                           const list = [...(config.achievements || [])];
+                           list[idx].description = e.target.value;
+                           updateField('achievements', list);
+                        }}
+                     />
+                     <input
+                        className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-200 font-mono text-[10px] focus:border-blue-500/50 outline-none"
+                        placeholder="Trigger (e.g. complete_module_01)"
+                        value={ach.trigger}
+                        onChange={e => {
+                           const list = [...(config.achievements || [])];
+                           list[idx].trigger = e.target.value;
+                           updateField('achievements', list);
+                        }}
+                     />
+                  </div>
+               ))}
+               {(config.achievements || []).length === 0 && (
+                  <div className="text-center py-4 text-xs text-zinc-600 italic">No achievements defined.</div>
+               )}
             </div>
           </div>
 

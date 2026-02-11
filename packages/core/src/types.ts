@@ -34,6 +34,20 @@ export interface ProgressionConfig {
   bypass_code?: string;
 }
 
+export interface BrandingConfig {
+  coverImage?: string;
+  primaryColor?: string;
+  layout?: 'vertical' | 'grid' | 'constellation';
+}
+
+export interface Achievement {
+  id: string;
+  icon: string;
+  name: string;
+  description: string;
+  trigger: string; // e.g. "complete_module_01"
+}
+
 export interface CourseConfig {
   id: string;
   name: string;
@@ -44,6 +58,8 @@ export interface CourseConfig {
   repo?: string;
   isOfficial?: boolean;
   progression?: ProgressionConfig;
+  branding?: BrandingConfig;
+  achievements?: Achievement[];
 }
 
 export interface ProgressStats {
@@ -79,6 +95,7 @@ export interface ManifestEntry {
   id: string;
   module: string;
   moduleTitle: string;
+  moduleIcon?: string; // New: Icon for the module
   name: string;
   exerciseName: string;
   friendlyName: string;
@@ -89,6 +106,10 @@ export interface ManifestEntry {
   type: "file" | "directory";
   isLocked: boolean;
   lockReason?: string;
+  tags?: string[]; // New: Tags like ["easy", "sql"]
+  difficulty?: 'easy' | 'medium' | 'hard'; // New: Difficulty level
+  xp?: number; // New: XP override
+  completionMessage?: string; // New: Custom message when module is completed
 }
 
 export interface SRPDiagnostic {

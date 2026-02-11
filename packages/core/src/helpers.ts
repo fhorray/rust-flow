@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile, mkdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { spawn } from "node:child_process";
 import type { Progress, CourseConfig, SRPOutput, ProgressStats, SetupConfig, ManifestEntry } from "./types.ts";
 import {
@@ -213,7 +213,7 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
 
   const bypassMode = process.env.PROGY_BYPASS_MODE === "true";
   const exercisesRelPath = config.content.exercises;
-  const absExercisesPath = join(process.env.PROG_CWD || process.cwd(), exercisesRelPath);
+  const absExercisesPath = join(PROG_CWD, exercisesRelPath);
   if (process.env.NODE_ENV === 'test') console.log(`[DEBUG] absExercisesPath: ${absExercisesPath}`);
 
   if (!(await exists(absExercisesPath))) {
@@ -240,6 +240,8 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
     if (await exists(modPath) && (await stat(modPath)).isDirectory()) {
       manifest[mod] = [];
       let moduleTitle = beautify(mod);
+      let moduleIcon: string | undefined = undefined;
+      let completionMessage: string | undefined = undefined;
       let exercisesFromToml: any = {};
       let modulePrerequisites: string[] = [];
 
@@ -251,6 +253,8 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
           const parsed = Bun.TOML.parse(fixedContent) as any;
           if (parsed.module?.title) moduleTitle = parsed.module.title;
           else if (parsed.module?.message) moduleTitle = parsed.module.message;
+          if (parsed.module?.icon) moduleIcon = parsed.module.icon;
+          if (parsed.module?.completion_message) completionMessage = parsed.module.completion_message;
           if (parsed.module?.prerequisites) modulePrerequisites = parsed.module.prerequisites;
           if (Array.isArray(parsed.exercises)) {
             for (const ex of parsed.exercises) { if (ex.name) exercisesFromToml[ex.name] = ex; }
@@ -335,20 +339,27 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
         }
 
         const id = `${mod}/${entry.name}`;
+        const exMeta = exercisesFromToml[exerciseKey];
+
         manifest[mod]?.push({
           id,
           module: mod,
           moduleTitle,
+          moduleIcon,
+          completionMessage,
           name: entry.name,
           exerciseName: exerciseKey,
           friendlyName,
-          path: join(modPath, entry.name),
+          path: relative(PROG_CWD, join(modPath, entry.name)),
           entryPoint: entry.isDirectory() ? entryPath.split(/[\\/]/).pop() : undefined,
-          markdownPath: (entry.isDirectory() ? join(modPath, entry.name, "README.md") : (await exists(join(modPath, `${exerciseKey}.md`)) ? join(modPath, `${exerciseKey}.md`) : null)),
+          markdownPath: (entry.isDirectory() ? relative(PROG_CWD, join(modPath, entry.name, "README.md")) : (await exists(join(modPath, `${exerciseKey}.md`)) ? relative(PROG_CWD, join(modPath, `${exerciseKey}.md`)) : null)),
           hasQuiz: (entry.isDirectory() ? await exists(join(modPath, entry.name, "quiz.json")) : false),
           type: entry.isDirectory() ? "directory" : "file",
           isLocked,
-          lockReason
+          lockReason,
+          tags: exMeta?.tags,
+          difficulty: exMeta?.difficulty,
+          xp: exMeta?.xp
         });
 
         const isPassed = !!(progress.exercises[id]?.status === 'pass' || progress.quizzes[id]?.passed);

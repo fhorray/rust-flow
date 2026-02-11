@@ -4,13 +4,21 @@ import {
   FolderPlus, BookPlus, Trash2, Search, Settings,
   Edit, FileCode, FileJson, BookOpen, Terminal, Code2
 } from 'lucide-react';
+import * as LucideIcons from 'lucide-react';
 import { openFile, loadFileTree, type FileNode, $fileTree, openModuleSettings, $activeTabPath } from '../../stores/editor-store';
 import { useStore } from '@nanostores/react';
 import { NewModuleDialog, NewExerciseDialog, DeleteDialog, RenameDialog } from './ScaffoldDialogs';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
-const getFileIcon = (name: string, isOpen: boolean = false) => {
+const getFileIcon = (node: FileNode, isOpen: boolean = false) => {
+  const { name } = node;
+
+  if (node.moduleIcon) {
+      const Icon = (LucideIcons as any)[node.moduleIcon];
+      if (Icon) return <Icon size={14} className="text-orange-400" />;
+  }
+
   if (name.endsWith('.rs')) return <Code2 size={14} className="text-orange-500" />;
   if (name.endsWith('.py')) return <FileCode size={14} className="text-yellow-500" />;
   if (name.endsWith('.js') || name.endsWith('.ts')) return <FileCode size={14} className="text-blue-400" />;
@@ -19,7 +27,7 @@ const getFileIcon = (name: string, isOpen: boolean = false) => {
   if (name.endsWith('.sh') || name === 'Dockerfile') return <Terminal size={14} className="text-green-500" />;
 
   // Default Dir/File
-  if (!name.includes('.')) { // Rough heuristic for dir if passed only name, but FileNode knows type
+  if (node.type === 'dir') {
      return isOpen ? <FolderOpen size={14} className="text-orange-400" /> : <Folder size={14} className="text-orange-400" />;
   }
 
@@ -158,10 +166,7 @@ function FileTreeNode({ node, level = 0, onContextMenu }: {
         </span>
 
         <span className="mr-2 shrink-0">
-          {node.type === 'dir'
-            ? getFileIcon(node.name, isOpen)
-            : getFileIcon(node.name)
-          }
+          {getFileIcon(node, isOpen)}
         </span>
 
         <span className="truncate flex-1">{node.name}</span>

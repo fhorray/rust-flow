@@ -15,6 +15,7 @@ import {
   $user,
   $isUserLoading,
   $isOffline,
+  $isInstructor,
   logout,
 } from '../stores/user-store';
 import { SettingsDialog } from './modals/settings-dialog';
@@ -27,6 +28,8 @@ export function UserNav() {
   const isOffline = useStore($isOffline);
   const [showSettings, setShowSettings] = useState(false);
   const [showMyCourses, setShowMyCourses] = useState(false);
+
+  const isInstructor = useStore($isInstructor);
 
   useEffect(() => {
     // Session is now fetched automatically via nanoquery
@@ -44,11 +47,14 @@ export function UserNav() {
     );
   }
 
-  if (!user) {
+  // Simplified Guest UI for Instructors (no dropdown, no settings)
+  if (isInstructor || !user) {
     return (
-      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/50 border border-zinc-700/50 text-zinc-400 text-xs">
-        <User className="w-3.5 h-3.5" />
-        <span>Guest</span>
+      <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-800/50 border border-zinc-700/50 text-orange-500/80 text-[10px] font-black uppercase tracking-widest shadow-inner shadow-black/50 overflow-hidden group">
+        <div className="relative flex items-center gap-2">
+          <div className="w-1.5 h-1.5 rounded-full bg-orange-500 animate-pulse shadow-[0_0_8px_rgba(249,115,22,0.5)]" />
+          <span>Guest</span>
+        </div>
       </div>
     );
   }

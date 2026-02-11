@@ -97,7 +97,7 @@ export default function CourseDetailPage() {
     }
   };
 
-  const initCommand = `npx progy@latest init ${course?.name}`;
+  const initCommand = `npx progy init ${course?.name}`;
 
   const handleCopy = () => {
     navigator.clipboard.writeText(initCommand);

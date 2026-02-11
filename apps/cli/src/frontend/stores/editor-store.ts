@@ -8,6 +8,11 @@ export type FileNode = {
   type: 'file' | 'dir';
   children?: FileNode[];
   isExpanded?: boolean;
+  title?: string;
+  moduleIcon?: string;
+  tags?: string[];
+  difficulty?: string;
+  xp?: number;
 };
 
 export type EditorTab = {

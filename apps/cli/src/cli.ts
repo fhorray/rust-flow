@@ -160,6 +160,15 @@ program
   .action(sync);
 
 program
+  .command("kill-port")
+  .description("Kill a process running on a specific port")
+  .argument("<port>", "Port number (e.g., 3001)")
+  .action(async (port) => {
+    const { killPort } = await import("./commands/utils");
+    await killPort(port);
+  });
+
+program
   .command("reset")
   .description("Reset a specific file to its original state")
   .argument("<path>", "Path to the file")

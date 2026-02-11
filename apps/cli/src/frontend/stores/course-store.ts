@@ -6,6 +6,7 @@ import { createFetcherStore, mutateCache } from './query-client';
 
 export const $exerciseGroupsQuery = createFetcherStore<GroupedExercises>(['/exercises']);
 export const $progressQuery = createFetcherStore<Progress>(['/progress']);
+export const $configQuery = createFetcherStore<any>(['/config']);
 
 // Persist selected exercise to localStorage so it survives refreshes
 export const $selectedExercise = persistentAtom<Exercise | null>('progy:selectedExercise', null, {
@@ -330,6 +331,11 @@ export const $description = computed($descriptionQuery, (q) => q.data?.markdown 
  * @returns {any | null} The quiz data.
  */
 export const $quizData = computed($quizQuery, (q) => q.data || null);
+/**
+ * Computed property that returns the course config.
+ * @returns {any} The course config.
+ */
+export const $courseConfig = computed($configQuery, (q) => q.data || {});
 
 /**
  * Computed property that returns the total number of exercises.
