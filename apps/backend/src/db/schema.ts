@@ -109,6 +109,7 @@ export const registryPackages = sqliteTable(
     name: text('name').notNull(), // e.g. "@diego/rust-mastery"
     slug: text('slug').notNull(), // e.g. "rust-mastery"
     description: text('description'),
+    status: text('status', { enum: ['draft', 'published', 'archived', 'deleted', 'in_review', 'rejected', 'banned', 'in_development'] }).notNull().default('draft'),
     latestVersion: text('latest_version'),
     isPublic: integer('is_public', { mode: 'boolean' }).default(true),
     createdAt: integer('created_at', { mode: 'timestamp' })
@@ -136,6 +137,7 @@ export const registryVersions = sqliteTable(
     sizeBytes: integer('size_bytes').notNull(),
     checksum: text('checksum').notNull(),
     changelog: text('changelog'),
+    engineVersion: text('engine_version'), // Added for compatibility tracking
     manifest: text('manifest'), // JSON index of course content
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()

@@ -57,7 +57,6 @@ program
   .command("dev")
   .description("Test course locally as GUEST (no progress saved)")
   .option("--bypass", "Unlock all lessons for testing")
-  .option("--ui", "Launch the Visual Course Editor (Progy Studio)")
   .action(dev);
 
 program

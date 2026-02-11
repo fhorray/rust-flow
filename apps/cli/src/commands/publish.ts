@@ -4,6 +4,36 @@ import { CourseLoader, CourseContainer, loadToken, BACKEND_URL, logger, exists }
 
 import { incrementVersion } from "./version";
 
+async function findUsedAssets(cwd: string): Promise<Set<string>> {
+  const used = new Set<string>();
+  const contentDir = resolve(cwd, "content");
+  if (!(await exists(contentDir))) return used;
+
+  const scanFile = async (path: string) => {
+    try {
+      const content = await Bun.file(path).text();
+      // Simple regex to find assets/* references
+      const matches = content.matchAll(/assets\/([a-zA-Z0-9._-]+)/g);
+      for (const match of matches) {
+        if (match[1]) used.add(match[1]);
+      }
+    } catch (e) {
+      // Ignore read errors
+    }
+  };
+
+  const files = await readdir(contentDir, { recursive: true });
+  for (const file of files) {
+    const fullPath = resolve(contentDir, file);
+    const s = await stat(fullPath);
+    if (s.isFile()) {
+      await scanFile(fullPath);
+    }
+  }
+
+  return used;
+}
+
 export async function publish(options: any) {
   const cwd = process.cwd();
 
@@ -13,7 +43,7 @@ export async function publish(options: any) {
   if (options.major) await incrementVersion("major");
 
   // 1. Validate Course
-  let config;
+  let config: any;
   try {
     config = await CourseLoader.validateCourse(cwd);
   } catch (e: any) {
@@ -59,7 +89,29 @@ export async function publish(options: any) {
 
   const packageName = config.id.startsWith(`@${username}/`) ? config.id : `@${username}/${config.id}`;
 
-  // 3.5 Extract Manifest for Web Preview
+  // 3.5 Prepare Assets and Rename Cover
+  logger.info("Scanning for used assets...", "ASSETS");
+  const usedAssetNames = await findUsedAssets(cwd);
+
+  const version = (config.version || "1.0.0") as string;
+  const versionCode = version.replace(/\./g, ""); // "1.0.0" -> "100"
+
+  let coverAssetPath = config.branding?.coverImage || "";
+  let renamedCoverName = "";
+
+  if (coverAssetPath && coverAssetPath.startsWith("assets/")) {
+    const originalName = coverAssetPath.replace("assets/", "");
+    const ext = originalName.split(".").pop();
+    renamedCoverName = `cover-${versionCode}.${ext}`;
+    logger.info(`Renaming cover: ${originalName} -> ${renamedCoverName}`, "ASSETS");
+
+    // Update config/manifest for the registry
+    if (config.branding) {
+      config.branding.coverImage = `assets/${renamedCoverName}`;
+    }
+  }
+
+  // 3.6 Extract Manifest for Web Preview
   logger.info("Extracting course manifest for web preview...", "INDEX");
   const manifest = await CourseLoader.getCourseFlow(cwd);
 
@@ -68,30 +120,40 @@ export async function publish(options: any) {
   const formData = new FormData();
   formData.append('file', file as any);
 
-  // 3.6 Include Individual Assets
+  // 3.7 Include Individual Assets (Filtered)
   const assetsDir = resolve(cwd, "assets");
   if (await exists(assetsDir)) {
-    logger.info("Including individual assets in upload...", "ASSETS");
     const assetFiles = await readdir(assetsDir, { recursive: true });
     for (const assetFile of assetFiles) {
       const fullPath = resolve(assetsDir, assetFile);
       const s = await stat(fullPath);
       if (s.isFile()) {
-        const f = Bun.file(fullPath);
-        // Use a specific key format to help registry identify them
-        formData.append(`assets/${assetFile}`, f as any);
-        logger.info(`  + assets/${assetFile}`, "ASSETS");
+        const isCover = coverAssetPath === `assets/${assetFile}`;
+        const isUsed = usedAssetNames.has(assetFile);
+
+        if (isCover || isUsed) {
+          const f = Bun.file(fullPath);
+          const uploadName = isCover ? renamedCoverName : assetFile;
+          formData.append(`assets/${uploadName}`, f as any);
+          logger.info(`  + assets/${uploadName}${isCover ? " (COVER)" : ""}`, "ASSETS");
+        }
       }
     }
   }
+
+  // 3.8 Get CLI Version (Engine Version)
+  const cliDir = resolve(import.meta.dir, "..", "..");
+  const cliPackageJson = await Bun.file(resolve(cliDir, "package.json")).json();
+  const engineVersion = cliPackageJson.version || "0.0.0";
 
   formData.append(
     'metadata',
     JSON.stringify({
       name: packageName,
-      version: (config as any).version || "1.0.0",
+      version,
+      engineVersion,
       description: config.name,
-      changelog: "Initial release via CLI",
+      changelog: "Updated via CLI",
       manifest,
       branding: config.branding,
       progression: config.progression,
@@ -100,7 +162,7 @@ export async function publish(options: any) {
   );
 
   // 4. Send to Registry
-  logger.info(`Publishing ${packageName} v${(config as any).version || "1.0.0"} to registry...`, "REGISTRY");
+  logger.info(`Publishing ${packageName} v${version} to registry...`, "REGISTRY");
   try {
     const res = await fetch(`${BACKEND_URL}/registry/publish`, {
       method: 'POST',

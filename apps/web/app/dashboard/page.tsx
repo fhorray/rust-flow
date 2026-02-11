@@ -44,6 +44,8 @@ import {
   DialogTitle,
   DialogTrigger,
 } from 'components/ui/dialog';
+import { PackagesTab } from './components/PackagesTab';
+import { Package } from 'lucide-react';
 
 function PaymentStatusHandler() {
   const router = useRouter();
@@ -132,7 +134,7 @@ export default function Dashboard() {
   const [loadingProgress, setLoadingProgress] = useState(true);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'settings' | 'registry'
+    'overview' | 'settings' | 'packages'
   >('overview');
   const [newUsername, setNewUsername] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
@@ -372,8 +374,14 @@ export default function Dashboard() {
                 onClick={() => setActiveTab('settings')}
               />
               <SidebarItem
+                icon={<Package className="w-4 h-4" />}
+                label="My Packages"
+                active={activeTab === 'packages'}
+                onClick={() => setActiveTab('packages')}
+              />
+              <SidebarItem
                 icon={<Globe className="w-4 h-4" />}
-                label="Community Registry"
+                label="Explore Courses"
                 onClick={() => router.push('/courses')}
               />
 
@@ -623,6 +631,8 @@ export default function Dashboard() {
                     )}
                   </div>
                 </div>
+              ) : activeTab === 'packages' ? (
+                <PackagesTab session={session} />
               ) : (
                 <div className="space-y-10">
                   <header>

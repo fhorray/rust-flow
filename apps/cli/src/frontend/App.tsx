@@ -6,7 +6,6 @@ import { Loader2 } from 'lucide-react';
 import { MapView } from './views/map-view';
 import { EditorView } from './views/editor-view';
 import { GitView } from './views/git-view';
-import { EditorLayout } from './components/editor/EditorLayout';
 
 // Stores & Actions
 import {
@@ -33,31 +32,13 @@ export function App() {
   const error = useStore($error);
   const router = useStore($router);
 
-  // Router-based rendering
-  console.log('[App] Current Route:', router?.route);
-  if (router?.route === 'editor') {
-    console.log('[App] Params:', router.params);
-  }
-
-  // Studio mode: render as standalone fullscreen, bypassing the main shell
-  if (router?.route === 'studio') {
-    return <EditorLayout />;
-  }
+  // Studio mode: removed (moved to apps/editor)
 
   let content;
   if (!router) {
     return <span>404 - Not found!</span>;
-  } else if (router.route === 'home' || router.route === 'editor') {
+  } else if (router.route === 'home' || router.route === 'editor' || router.route === 'editorModule' || router.route === 'editorExercise') {
     content = <EditorView />;
-  } else if (router.route === 'editorModule') {
-    content = <EditorView moduleId={router.params.moduleId} />;
-  } else if (router.route === 'editorExercise') {
-    content = (
-      <EditorView
-        exerciseId={router.params.exerciseId}
-        moduleId={router.params.moduleId}
-      />
-    );
   } else if (router.route === 'git') {
     content = <GitView />;
   } else if (router.route === 'map') {

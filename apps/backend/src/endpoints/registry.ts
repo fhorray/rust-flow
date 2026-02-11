@@ -314,6 +314,7 @@ registry.post('/publish', async (c) => {
     sizeBytes: file.size,
     checksum: 'sha256-placeholder',
     changelog: metadata.changelog,
+    engineVersion: metadata.engineVersion, // New field from CLI
     manifest: JSON.stringify(manifestData),
     createdAt: new Date(),
   });
@@ -357,6 +358,74 @@ registry.get('/', async (c) => {
     courses: results,
     total: results.length,
   });
+});
+
+// list user's own packages (for dashboard)
+registry.get('/my-packages', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const db = drizzle(c.env.DB);
+  const myPackages = await db
+    .select()
+    .from(schema.registryPackages)
+    .where(eq(schema.registryPackages.userId, user.id))
+    .orderBy(desc(schema.registryPackages.updatedAt))
+    .all();
+
+  return c.json({ packages: myPackages });
+});
+
+// update package metadata
+registry.patch('/packages/:id', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const body = await c.req.json();
+  const db = drizzle(c.env.DB);
+
+  // Check ownership
+  const pkg = await db
+    .select()
+    .from(schema.registryPackages)
+    .where(and(eq(schema.registryPackages.id, id), eq(schema.registryPackages.userId, user.id)))
+    .get();
+
+  if (!pkg) return c.json({ error: 'Package not found or access denied' }, 404);
+
+  const updates: any = { updatedAt: new Date() };
+  if (body.status) updates.status = body.status;
+  if (body.description !== undefined) updates.description = body.description;
+  if (body.isPublic !== undefined) updates.isPublic = body.isPublic;
+
+  await db.update(schema.registryPackages).set(updates).where(eq(schema.registryPackages.id, id));
+
+  return c.json({ success: true });
+});
+
+// delete package
+registry.delete('/packages/:id', async (c) => {
+  const user = c.get('user');
+  if (!user) return c.json({ error: 'Unauthorized' }, 401);
+
+  const id = c.req.param('id');
+  const db = drizzle(c.env.DB);
+
+  // Check ownership
+  const pkg = await db
+    .select()
+    .from(schema.registryPackages)
+    .where(and(eq(schema.registryPackages.id, id), eq(schema.registryPackages.userId, user.id)))
+    .get();
+
+  if (!pkg) return c.json({ error: 'Package not found or access denied' }, 404);
+
+  // Delete versions first (referential integrity)
+  await db.delete(schema.registryVersions).where(eq(schema.registryVersions.packageId, id));
+  await db.delete(schema.registryPackages).where(eq(schema.registryPackages.id, id));
+
+  return c.json({ success: true });
 });
 
 export default registry;

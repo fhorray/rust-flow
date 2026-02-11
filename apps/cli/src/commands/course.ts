@@ -188,7 +188,7 @@ export async function detectEnvironment(cwd: string): Promise<"student" | "instr
   return "student";
 }
 
-export async function dev(options: { offline?: boolean; bypass?: boolean; ui?: boolean }) {
+export async function dev(options: { offline?: boolean; bypass?: boolean }) {
   const cwd = process.cwd();
   const env = await detectEnvironment(cwd);
   if (env === "student") {
@@ -199,13 +199,9 @@ export async function dev(options: { offline?: boolean; bypass?: boolean; ui?: b
   try {
     await CourseLoader.validateCourse(cwd);
     logger.banner("0.15.0", "instructor", "offline");
-    if (options.ui) {
-      logger.brand("🎨 Progy Studio: Visual Course Editor active.");
-    } else {
-      logger.brand("✨ Development Mode: Running as GUEST (progress will not be persistent).");
-    }
+    logger.brand("✨ Development Mode: Running as GUEST (progress will not be persistent).");
     if (options.bypass) logger.info("🔓 Progression Bypass Mode active.");
-    await runServer(cwd, true, null, !!options.bypass, !!options.ui);
+    await runServer(cwd, true, null, !!options.bypass, false);
   } catch (e: any) {
     logger.error(`Not a valid course`, e.message);
     process.exit(1);

@@ -197,7 +197,7 @@ export default function CoursesPage() {
                     href={`/courses/${course.name.substring(1)}`}
                     className="w-full"
                   >
-                    <Button className="w-full bg-white/5 hover:bg-primary hover:text-primary-foreground border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-xl h-12 group/btn transition-all shadow-lg hover:shadow-primary/30">
+                    <Button className="w-full bg-white/5 hover:bg-primary hover:text-primary-foreground border-white/10 font-black text-[10px] tracking-[0.2em] uppercase rounded-xl h-12 group/btn transition-all shadow-lg hover:shadow-primary/30 text-white">
                       INITIALIZE ENGINE
                       <ChevronRight className="w-4 h-4 ml-2 group-hover/btn:translate-x-1 transition-transform" />
                     </Button>
