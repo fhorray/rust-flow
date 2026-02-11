@@ -12,10 +12,16 @@ async function findUsedAssets(cwd: string): Promise<Set<string>> {
   const scanFile = async (path: string) => {
     try {
       const content = await Bun.file(path).text();
-      // Simple regex to find assets/* references
-      const matches = content.matchAll(/assets\/([a-zA-Z0-9._-]+)/g);
+      // Improved regex to find assets/* references including subdirectories
+      // It matches assets/ followed by alphanumeric, dot, underscore, hyphen or forward slash
+      const matches = content.matchAll(/assets\/([a-zA-Z0-9\._\-\/]+)/g);
       for (const match of matches) {
-        if (match[1]) used.add(match[1]);
+        if (match[1]) {
+          // Normalize potential backslashes if any (though regex expects /) 
+          // and remove trailing dots or typical markdown punctuation that might be caught
+          const assetPath = match[1].split(/[ \)\x60\>\n]/)[0]?.replace(/\\/g, "/") as string;
+          used.add(assetPath);
+        }
       }
     } catch (e) {
       // Ignore read errors
@@ -124,8 +130,10 @@ export async function publish(options: any) {
   const assetsDir = resolve(cwd, "assets");
   if (await exists(assetsDir)) {
     const assetFiles = await readdir(assetsDir, { recursive: true });
-    for (const assetFile of assetFiles) {
-      const fullPath = resolve(assetsDir, assetFile);
+    logger.info(`Found ${assetFiles.length} files in assets. filtering...`, "ASSETS");
+    for (const assetFileRaw of assetFiles) {
+      const assetFile = assetFileRaw.replace(/\\/g, "/"); // Normalize for comparison
+      const fullPath = resolve(assetsDir, assetFileRaw);
       const s = await stat(fullPath);
       if (s.isFile()) {
         const isCover = coverAssetPath === `assets/${assetFile}`;
@@ -142,9 +150,22 @@ export async function publish(options: any) {
   }
 
   // 3.8 Get CLI Version (Engine Version)
-  const cliDir = resolve(import.meta.dir, "..", "..");
-  const cliPackageJson = await Bun.file(resolve(cliDir, "package.json")).json();
-  const engineVersion = cliPackageJson.version || "0.0.0";
+  logger.info("Detecting engine version...", "CLI");
+  let engineVersion = "0.0.0";
+  try {
+    // Correctly resolve package.json whether we are in src/ or dist/
+    const cliDir = resolve(import.meta.dir).includes("dist")
+      ? resolve(import.meta.dir, "..")
+      : resolve(import.meta.dir, "..", "..");
+
+    const pkgJsonPath = resolve(cliDir, "package.json");
+    if (await exists(pkgJsonPath)) {
+      const cliPackageJson = await Bun.file(pkgJsonPath).json();
+      engineVersion = cliPackageJson.version || "0.15.0";
+    }
+  } catch (e) {
+    // Silent fallback
+  }
 
   formData.append(
     'metadata',
