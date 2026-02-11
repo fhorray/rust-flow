@@ -326,6 +326,71 @@ registry.post('/publish', async (c) => {
     .set({ latestVersion: metadata.version, updatedAt: new Date() })
     .where(eq(schema.registryPackages.id, pkg.id));
 
+  // 8. Version Rotation (Keep only latest 3)
+  try {
+    const versions = await db
+      .select()
+      .from(schema.registryVersions)
+      .where(eq(schema.registryVersions.packageId, pkg.id))
+      .orderBy(desc(schema.registryVersions.createdAt))
+      .all();
+
+    if (versions.length > 3) {
+      const keepVersions = new Set(versions.slice(0, 3).map(v => v.version));
+      const packagePrefix = `packages/${metadata.name}/`;
+
+      // List all objects under the package prefix to find ALL versions in R2
+      let truncated = true;
+      let cursor: string | undefined;
+      const r2Versions = new Set<string>();
+
+      while (truncated) {
+        const list = await c.env.R2.list({ prefix: packagePrefix, cursor, delimiter: '/' });
+        console.log(`[Rotation] Found ${list.delimitedPrefixes.length} prefixes in R2`);
+
+        // delimited list returns 'delimitedPrefixes' for folders
+        for (const cp of list.delimitedPrefixes) {
+          // cp is e.g. "packages/@progy/features-demo/1.1.1/"
+          const parts = cp.split('/');
+          const ver = parts[parts.length - 2];
+          if (ver) {
+            r2Versions.add(ver);
+            console.log(`[Rotation] Identified version in R2: ${ver}`);
+          }
+        }
+        truncated = list.truncated;
+        cursor = list.truncated ? list.cursor : undefined;
+      }
+
+      // Delete what shouldn't be there
+      for (const ver of r2Versions) {
+        if (!keepVersions.has(ver)) {
+          const versionPrefix = `${packagePrefix}${ver}/`;
+          let vTruncated = true;
+          let vCursor: string | undefined;
+
+          while (vTruncated) {
+            const vList = await c.env.R2.list({ prefix: versionPrefix, cursor: vCursor });
+            const keys = vList.objects.map((obj) => obj.key);
+            if (keys.length > 0) {
+              await c.env.R2.delete(keys);
+            }
+            vTruncated = vList.truncated;
+            vCursor = vList.truncated ? vList.cursor : undefined;
+          }
+        }
+      }
+
+      // Finally, ensure D1 is also clean (only keep latest 3)
+      const toDeleteFromDb = versions.slice(3);
+      for (const oldVer of toDeleteFromDb) {
+        await db.delete(schema.registryVersions).where(eq(schema.registryVersions.id, oldVer.id));
+      }
+    }
+  } catch (e) {
+    console.error(`[Registry] Version rotation failed for ${metadata.name}:`, e);
+  }
+
   return c.json({ success: true, version: metadata.version });
 });
 
@@ -421,6 +486,25 @@ registry.delete('/packages/:id', async (c) => {
     .get();
 
   if (!pkg) return c.json({ error: 'Package not found or access denied' }, 404);
+
+  // cleanup R2 assets
+  try {
+    const prefix = `packages/${pkg.name}/`;
+    let truncated = true;
+    let cursor: string | undefined;
+
+    while (truncated) {
+      const list = await c.env.R2.list({ prefix, cursor });
+      const keys = list.objects.map((obj) => obj.key);
+      if (keys.length > 0) {
+        await c.env.R2.delete(keys);
+      }
+      truncated = list.truncated;
+      cursor = list.truncated ? list.cursor : undefined;
+    }
+  } catch (e) {
+    console.error(`[Registry] Failed to cleanup R2 assets for ${pkg.name}:`, e);
+  }
 
   // Delete versions first (referential integrity)
   await db.delete(schema.registryVersions).where(eq(schema.registryVersions.packageId, id));

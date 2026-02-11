@@ -90,15 +90,7 @@ export const registryDownloads = sqliteTable('registry_downloads', {
 ### 3.2 Asset Delivery
 
 **Feature: Image Optimization Pipeline**
-Currently, images in courses are likely served as-is (PNG/JPEG).
-- **Proposal:** Implement a "Build Pipeline" for the Registry.
-    1.  User publishes `my-course.progy`.
-    2.  Cloudflare Workflow triggers.
-    3.  Unpacks the archive.
-    4.  Finds all images in `assets/`.
-    5.  Converts them to **WebP** and **AVIF** (using `@cloudflare/workers-types` or a Rust WASM module).
-    6.  Updates the `README.md` and content Markdown to point to the optimized versions (or uses a responsive image component in the frontend).
-    7.  Repacks and uploads to R2.
+I Think here would be good to add sharp inside the CLI tool, and call it to optimize the images when the user runs `progy pack` or `progy publish`, also call the admin-zip to compress even more the .progy file if possible
 
 ---
 

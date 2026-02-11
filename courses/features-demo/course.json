@@ -1,7 +1,7 @@
 {
   "id": "features-demo",
   "name": "Platforms Features Demo",
-  "version": "1.7.0",
+  "version": "1.13.0",
   "runner": {
     "command": "echo",
     "args": [
