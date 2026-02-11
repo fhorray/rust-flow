@@ -123,6 +123,7 @@ mock.module("@progy/core", () => ({
   saveGlobalConfig: mock(async () => { }),
   getCourseCachePath: mock((id: string) => join(tmpdir(), "progy-cache-" + id)),
   get PROG_CWD() { return process.env.PROG_CWD || process.cwd(); },
+  COURSE_CONFIG_NAME: "course.json",
   RUNNER_README: "mock-runner",
   MODULE_INFO_TOML: "mock",
   EXERCISE_README: "mock",
@@ -271,7 +272,6 @@ describe("CLI Commands Exports", () => {
     expect(typeof courseModule.dev).toBe("function");
     expect(typeof courseModule.start).toBe("function");
     expect(typeof courseModule.testExercise).toBe("function");
-    expect(typeof courseModule.publish).toBe("function");
   });
 
   test("all expected functions are exported from auth.ts", async () => {
@@ -293,20 +293,9 @@ describe("CLI Commands Exports", () => {
 });
 
 describe("Publish Command", () => {
-  test("publish function exists and can be called", async () => {
-    const { publish } = await import("../src/commands/course");
-
-    const logs: string[] = [];
-    const originalLog = console.log;
-    console.log = (...args) => logs.push(args.join(" "));
-
-    try {
-      await publish();
-
-      expect(logs.some(l => l.includes("coming soon"))).toBe(true);
-    } finally {
-      console.log = originalLog;
-    }
+  test("publish function exists and is exported", async () => {
+    const { publish } = await import("../src/commands/publish");
+    expect(typeof publish).toBe("function");
   });
 });
 

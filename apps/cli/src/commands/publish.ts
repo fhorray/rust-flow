@@ -1,4 +1,4 @@
-import { resolve } from "node:path";
+import { resolve, relative } from "node:path";
 import { readdir, stat } from "node:fs/promises";
 import { CourseLoader, CourseContainer, loadToken, BACKEND_URL, logger, exists } from "@progy/core";
 
@@ -14,13 +14,17 @@ async function findUsedAssets(cwd: string): Promise<Set<string>> {
       const content = await Bun.file(path).text();
       // Improved regex to find assets/* references including subdirectories
       // It matches assets/ followed by alphanumeric, dot, underscore, hyphen or forward slash
-      const matches = content.matchAll(/assets\/([a-zA-Z0-9\._\-\/]+)/g);
+      const matches = content.matchAll(/assets\/([a-zA-Z0-9\._\-\/ %]+)/g);
       for (const match of matches) {
         if (match[1]) {
           // Normalize potential backslashes if any (though regex expects /) 
           // and remove trailing dots or typical markdown punctuation that might be caught
-          const assetPath = match[1].split(/[ \)\x60\>\n]/)[0]?.replace(/\\/g, "/") as string;
-          used.add(assetPath);
+          // Also trim() and decodeURIComponent() to handle spaces and encoded characters
+          const rawPath = match[1].split(/[\)\x60\>\n]/)[0]?.trim();
+          if (rawPath) {
+            const assetPath = decodeURIComponent(rawPath.replace(/\\/g, "/"));
+            used.add(assetPath);
+          }
         }
       }
     } catch (e) {
@@ -102,7 +106,7 @@ export async function publish(options: any) {
   const version = (config.version || "1.0.0") as string;
   const versionCode = version.replace(/\./g, ""); // "1.0.0" -> "100"
 
-  let coverAssetPath = config.branding?.coverImage || "";
+  let coverAssetPath = (config.branding?.coverImage || "").replace(/\\/g, "/");
   let renamedCoverName = "";
 
   if (coverAssetPath && coverAssetPath.startsWith("assets/")) {
@@ -132,11 +136,16 @@ export async function publish(options: any) {
     const assetFiles = await readdir(assetsDir, { recursive: true });
     logger.info(`Found ${assetFiles.length} files in assets. filtering...`, "ASSETS");
     for (const assetFileRaw of assetFiles) {
-      const assetFile = assetFileRaw.replace(/\\/g, "/"); // Normalize for comparison
       const fullPath = resolve(assetsDir, assetFileRaw);
+      // Ensure we work with relative path from assets/ dir
+      const assetFile = relative(assetsDir, fullPath).replace(/\\/g, "/");
+
       const s = await stat(fullPath);
       if (s.isFile()) {
-        const isCover = coverAssetPath === `assets/${assetFile}`;
+        // Case insensitive fallback for cover (since we rename it anyway)
+        const isCover = coverAssetPath === `assets/${assetFile}` ||
+          (coverAssetPath.toLowerCase() === `assets/${assetFile.toLowerCase()}`);
+
         const isUsed = usedAssetNames.has(assetFile);
 
         if (isCover || isUsed) {
