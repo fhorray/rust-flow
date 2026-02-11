@@ -19,7 +19,9 @@
     "db:gen": "bun run --cwd apps/backend db:gen",
     "db:up": "bun run --cwd apps/backend db:up:local",
     "db:deploy": "bun run --cwd apps/backend db:up:remote",
-    "db:studio": "bun run --cwd apps/backend db:studio"
+    "db:studio": "bun run --cwd apps/backend db:studio",
+    "link:cli": "--cwd apps/cli bun link",
+    "link:editor": " --cwd apps/editor bun link"
   },
   "workspaces": [
     "apps/*",

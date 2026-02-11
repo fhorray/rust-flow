@@ -1,5 +1,5 @@
 import { readdir, readFile, writeFile, mkdir, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import { spawn } from "node:child_process";
 import type { Progress, CourseConfig, SRPOutput, ProgressStats, SetupConfig, ManifestEntry } from "./types.ts";
 import {
@@ -213,7 +213,7 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
 
   const bypassMode = process.env.PROGY_BYPASS_MODE === "true";
   const exercisesRelPath = config.content.exercises;
-  const absExercisesPath = join(process.env.PROG_CWD || process.cwd(), exercisesRelPath);
+  const absExercisesPath = join(PROG_CWD, exercisesRelPath);
   if (process.env.NODE_ENV === 'test') console.log(`[DEBUG] absExercisesPath: ${absExercisesPath}`);
 
   if (!(await exists(absExercisesPath))) {
@@ -350,9 +350,9 @@ export async function scanAndGenerateManifest(config: CourseConfig) {
           name: entry.name,
           exerciseName: exerciseKey,
           friendlyName,
-          path: join(modPath, entry.name),
+          path: relative(PROG_CWD, join(modPath, entry.name)),
           entryPoint: entry.isDirectory() ? entryPath.split(/[\\/]/).pop() : undefined,
-          markdownPath: (entry.isDirectory() ? join(modPath, entry.name, "README.md") : (await exists(join(modPath, `${exerciseKey}.md`)) ? join(modPath, `${exerciseKey}.md`) : null)),
+          markdownPath: (entry.isDirectory() ? relative(PROG_CWD, join(modPath, entry.name, "README.md")) : (await exists(join(modPath, `${exerciseKey}.md`)) ? relative(PROG_CWD, join(modPath, `${exerciseKey}.md`)) : null)),
           hasQuiz: (entry.isDirectory() ? await exists(join(modPath, entry.name, "quiz.json")) : false),
           type: entry.isDirectory() ? "directory" : "file",
           isLocked,

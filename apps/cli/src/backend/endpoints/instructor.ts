@@ -56,11 +56,11 @@ const fsGetHandler: ServerType<"/instructor/fs"> = async (req) => {
       const meta: any = await getModuleMetadata(absPath);
       let exercisesMeta: any = {};
       if (meta && meta.exercises) {
-         if (Array.isArray(meta.exercises)) {
-             meta.exercises.forEach((ex: any) => { if(ex.name) exercisesMeta[ex.name] = ex; });
-         } else {
-            exercisesMeta = meta.exercises;
-         }
+        if (Array.isArray(meta.exercises)) {
+          meta.exercises.forEach((ex: any) => { if (ex.name) exercisesMeta[ex.name] = ex; });
+        } else {
+          exercisesMeta = meta.exercises;
+        }
       }
 
       const tree = await Promise.all(entries
@@ -73,33 +73,33 @@ const fsGetHandler: ServerType<"/instructor/fs"> = async (req) => {
           };
 
           if (item.type === 'dir') {
-              // 1. Peek for module icon (if this dir is a module)
-              const subMeta: any = await getModuleMetadata(join(absPath, e.name));
-              if (subMeta?.module?.icon) {
-                  item.moduleIcon = subMeta.module.icon;
-              }
+            // 1. Peek for module icon (if this dir is a module)
+            const subMeta: any = await getModuleMetadata(join(absPath, e.name));
+            if (subMeta?.module?.icon) {
+              item.moduleIcon = subMeta.module.icon;
+            }
           }
 
           // 2. Attach exercise metadata from current dir's info.toml
           if (item.type === 'dir' && /^\d{2}_/.test(e.name)) {
-             const m = exercisesMeta[e.name];
-             if (m) {
-                 if (typeof m === 'string') item.title = m;
-                 else {
-                     item.title = m.title;
-                     item.tags = m.tags;
-                     item.difficulty = m.difficulty;
-                     item.xp = m.xp;
-                 }
-             }
+            const m = exercisesMeta[e.name];
+            if (m) {
+              if (typeof m === 'string') item.title = m;
+              else {
+                item.title = m.title;
+                item.tags = m.tags;
+                item.difficulty = m.difficulty;
+                item.xp = m.xp;
+              }
+            }
           }
           return item;
         }));
 
       tree.sort((a: any, b: any) => {
-          // Dirs first, then alphabetical
-          if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
-          return a.name.localeCompare(b.name);
+        // Dirs first, then alphabetical
+        if (a.type !== b.type) return a.type === "dir" ? -1 : 1;
+        return a.name.localeCompare(b.name);
       });
 
       return Response.json({ success: true, data: tree });
@@ -360,9 +360,9 @@ const uploadHandler: ServerType<"/instructor/upload"> = async (req) => {
       return Response.json({ success: false, error: "No file uploaded" }, { status: 400 });
     }
 
-    // 2MB Limit
-    if (file.size > 2 * 1024 * 1024) {
-      return Response.json({ success: false, error: "File size exceeds 2MB limit" }, { status: 400 });
+    // 1MB Limit
+    if (file.size > 1 * 1024 * 1024) {
+      return Response.json({ success: false, error: "File size exceeds 1MB limit" }, { status: 400 });
     }
 
     const assetsDir = join(PROG_CWD, "assets");
@@ -514,25 +514,25 @@ const exerciseMetaHandler: ServerType<"/instructor/exercise-meta"> = async (req)
     let content = "";
     const file = Bun.file(infoPath);
     if (await file.exists()) {
-        content = await file.text();
+      content = await file.text();
     } else {
-        content = `[module]\ntitle = "New Module"\n\n[exercises]\n`;
+      content = `[module]\ntitle = "New Module"\n\n[exercises]\n`;
     }
 
     const fixedInput = content.replace(/^(\s*)(\d+[\w-]*)\s*=/gm, '$1"$2" =');
     let data: any;
     try {
-        data = Bun.TOML.parse(fixedInput);
+      data = Bun.TOML.parse(fixedInput);
     } catch {
-        data = { module: {}, exercises: {} };
+      data = { module: {}, exercises: {} };
     }
 
     if (!data.exercises) data.exercises = {};
 
     if (Array.isArray(data.exercises)) {
-        const obj: any = {};
-        data.exercises.forEach((ex: any) => { if(ex.name) obj[ex.name] = ex; });
-        data.exercises = obj;
+      const obj: any = {};
+      data.exercises.forEach((ex: any) => { if (ex.name) obj[ex.name] = ex; });
+      data.exercises = obj;
     }
 
     const existing = data.exercises[exerciseName] || {};

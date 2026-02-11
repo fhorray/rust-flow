@@ -1,0 +1,18 @@
+[module]
+title = "The Hall of Fame"
+icon = "Trophy"
+completion_message = "Victory! {{user.name}}, you have unlocked the full potential of Progy. Go forth and create amazing courses!"
+
+[[exercises]]
+name = "01_achievement_get"
+title = "Unlocking Destiny"
+tags = ["ending", "final"]
+difficulty = "hard"
+xp = 1000
+
+[[exercises]]
+name = "02_final_words"
+title = "The Last Lesson"
+tags = ["outro"]
+difficulty = "medium"
+xp = 200

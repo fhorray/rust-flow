@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Globe,
   Save,
@@ -7,6 +7,8 @@ import {
   Terminal,
   Database,
   Pencil,
+  Image,
+  Loader2,
 } from 'lucide-react';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -44,6 +46,42 @@ export function CourseSettings({ tab }: CourseSettingsProps) {
   const handleSave = () => {
     updateTabContent(tab.path, JSON.stringify(config, null, 2));
     setIsDirty(false);
+  };
+
+  const [isUploading, setIsUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 1MB Limit
+    if (file.size > 1 * 1024 * 1024) {
+      alert('File is too large (max 1MB)');
+      return;
+    }
+
+    setIsUploading(true);
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const res = await fetch('/instructor/upload', {
+        method: 'POST',
+        body: formData,
+      });
+      const data = await res.json();
+      if (data.success) {
+        handleChange('branding.coverImage', data.path);
+      } else {
+        alert(data.error || 'Upload failed');
+      }
+    } catch (err) {
+      console.error('Upload error:', err);
+      alert('Failed to upload image');
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   if (!config) return null;
@@ -126,6 +164,76 @@ export function CourseSettings({ tab }: CourseSettingsProps) {
                   onChange={(e) => handleChange('runner.image', e.target.value)}
                   className="bg-zinc-900/50 border-zinc-800 text-xs h-9"
                 />
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-4 space-y-4 border-t border-zinc-900">
+            <h3 className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-2">
+              <Globe size={12} />
+              Branding & Progression
+            </h3>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-600 uppercase flex items-center gap-1.5">
+                  <Image size="10" /> Cover Image Path
+                </label>
+                <div className="flex gap-2">
+                  <Input
+                    value={config.branding?.coverImage || ''}
+                    onChange={(e) => handleChange('branding.coverImage', e.target.value)}
+                    className="bg-zinc-900/50 border-zinc-800 text-xs h-9"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-9 px-3 border-zinc-800 hover:bg-zinc-800 gap-2 whitespace-nowrap"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                    type="button"
+                  >
+                    {isUploading ? <Loader2 size={14} className="animate-spin" /> : <Pencil size={12} />}
+                    {isUploading ? 'Uploading...' : 'Select'}
+                  </Button>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleFileUpload}
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-600 uppercase">Primary Color</label>
+                <Input
+                  value={config.branding?.primaryColor || ''}
+                  onChange={(e) => handleChange('branding.primaryColor', e.target.value)}
+                  className="bg-zinc-900/50 border-zinc-800 text-xs h-9"
+                />
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-600 uppercase">Layout</label>
+                <select
+                  value={config.branding?.layout || 'grid'}
+                  onChange={(e) => handleChange('branding.layout', e.target.value)}
+                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-3 text-xs h-9 text-zinc-300"
+                >
+                  <option value="grid">Grid</option>
+                  <option value="list">List</option>
+                </select>
+              </div>
+              <div className="space-y-2">
+                <label className="text-[10px] font-bold text-zinc-600 uppercase">Progression Mode</label>
+                <select
+                  value={config.progression?.mode || 'open'}
+                  onChange={(e) => handleChange('progression.mode', e.target.value)}
+                  className="w-full bg-zinc-900/50 border border-zinc-800 rounded-md px-3 text-xs h-9 text-zinc-300"
+                >
+                  <option value="open">Open</option>
+                  <option value="sequential">Sequential</option>
+                </select>
               </div>
             </div>
           </div>

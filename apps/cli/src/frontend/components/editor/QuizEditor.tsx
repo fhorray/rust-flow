@@ -102,7 +102,7 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
   const handleQuestionChange = (index: number, question: string) => {
     if (!data) return;
     const questions = [...data.questions];
-    questions[index] = { ...questions[index], question };
+    questions[index] = { ...questions[index], question } as QuizQuestion;
     updateStore({ ...data, questions });
   };
 
@@ -110,6 +110,10 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
     if (!data) return;
     const questions = [...data.questions];
     const question = questions[qIndex];
+    if (!question) {
+      console.error('Question not found');
+      return;
+    };
     const nextId = String.fromCharCode(97 + question.options.length); // a, b, c...
     const newOption: QuizOption = { id: nextId, text: '', isCorrect: false };
     question.options = [...question.options, newOption];
@@ -120,6 +124,10 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
     if (!data) return;
     const questions = [...data.questions];
     const question = questions[qIndex];
+    if (!question) {
+      console.error('Question not found');
+      return;
+    };
     question.options.splice(oIndex, 1);
     updateStore({ ...data, questions });
   };
@@ -133,11 +141,24 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
     if (!data) return;
     const questions = [...data.questions];
     const question = questions[qIndex];
+    if (!question) {
+      console.error('Question not found');
+      return;
+    };
     const options = [...question.options];
+    if (!options) {
+      console.error('Options not found');
+      return;
+    };
 
     if (field === 'isCorrect' && value === true) {
       options.forEach((o) => (o.isCorrect = false));
     }
+
+    if (!options[oIndex]) {
+      console.error('Option not found');
+      return;
+    };
 
     options[oIndex] = { ...options[oIndex], [field]: value };
     question.options = options;
@@ -266,11 +287,10 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
                         {q.options.map((option, oIndex) => (
                           <div
                             key={option.id}
-                            className={`group flex items-start gap-3 p-3 rounded-lg border transition-all ${
-                              option.isCorrect
-                                ? 'bg-emerald-500/5 border-emerald-500/20'
-                                : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
-                            }`}
+                            className={`group flex items-start gap-3 p-3 rounded-lg border transition-all ${option.isCorrect
+                              ? 'bg-emerald-500/5 border-emerald-500/20'
+                              : 'bg-zinc-900 border-zinc-800 hover:border-zinc-700'
+                              }`}
                           >
                             <button
                               onClick={() =>
@@ -281,11 +301,10 @@ export function QuizEditor({ initialContent, path }: QuizEditorProps) {
                                   true,
                                 )
                               }
-                              className={`mt-1.5 shrink-0 transition-colors ${
-                                option.isCorrect
-                                  ? 'text-emerald-500'
-                                  : 'text-zinc-700 hover:text-emerald-500/50'
-                              }`}
+                              className={`mt-1.5 shrink-0 transition-colors ${option.isCorrect
+                                ? 'text-emerald-500'
+                                : 'text-zinc-700 hover:text-emerald-500/50'
+                                }`}
                               title="Mark as correct answer"
                             >
                               <CheckCircle2

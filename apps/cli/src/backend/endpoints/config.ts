@@ -20,11 +20,16 @@ const checkOfficial = () => {
 
 const configHandler: ServerType<"/config"> = async () => {
   await ensureConfig();
+  const { detectEnvironment } = await import("../../commands/course");
+  const env = await detectEnvironment(PROG_CWD);
+
   return Response.json({
     ...(currentConfig || {}),
     remoteApiUrl: process.env.PROGY_API_URL || "https://api.progy.dev",
     isOffline: process.env.PROGY_OFFLINE === "true",
-    isOfficial: checkOfficial()
+    isOfficial: checkOfficial(),
+    env,
+    isInstructor: env === "instructor"
   });
 };
 

@@ -253,15 +253,30 @@ export function EditorView() {
                                     <span className="truncate flex-1">
                                       {ex.friendlyName || ex.exerciseName}
                                     </span>
-                                    {locked && (
-                                      <span className="text-[9px] text-zinc-600 truncate max-w-[80px]">{ex.lockReason}</span>
-                                    )}
-                                    {!locked && status === 'pass' && (
-                                      <CheckCircle2Icon className="w-3.5 h-3.5 text-emerald-400" />
-                                    )}
-                                    {!locked && status === 'fail' && (
-                                      <XCircleIcon className="w-3.5 h-3.5 text-red-400" />
-                                    )}
+                                    <div className="flex items-center gap-1.5 ml-auto">
+                                      {ex.difficulty && (
+                                        <div
+                                          className={`w-1.5 h-1.5 rounded-full ${ex.difficulty === 'easy'
+                                            ? 'bg-emerald-500'
+                                            : ex.difficulty === 'medium'
+                                              ? 'bg-amber-500'
+                                              : 'bg-red-500'
+                                            }`}
+                                          title={ex.difficulty}
+                                        />
+                                      )}
+                                      {ex.tags?.[0] && (
+                                        <Badge variant="outline" className="text-[8px] h-3.5 px-1 py-0 border-zinc-700/50 text-zinc-500">
+                                          {ex.tags[0]}
+                                        </Badge>
+                                      )}
+                                      {!locked && status === 'pass' && (
+                                        <CheckCircle2Icon className="w-3.5 h-3.5 text-emerald-400" />
+                                      )}
+                                      {!locked && status === 'fail' && (
+                                        <XCircleIcon className="w-3.5 h-3.5 text-red-400" />
+                                      )}
+                                    </div>
                                   </button>
                                 );
                               })}

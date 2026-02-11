@@ -183,9 +183,8 @@ export async function pack(options: { out?: string }) {
 
 export async function detectEnvironment(cwd: string): Promise<"student" | "instructor"> {
   const hasCourseJson = await exists(join(cwd, "course.json"));
-  const hasContentDir = await exists(join(cwd, "content"));
 
-  if (hasCourseJson && hasContentDir) return "instructor";
+  if (hasCourseJson) return "instructor";
   return "student";
 }
 

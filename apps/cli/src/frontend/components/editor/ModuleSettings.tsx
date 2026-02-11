@@ -6,7 +6,7 @@ import {
   PointerSensor,
   useSensor,
   useSensors,
-  DragEndEvent
+  type DragEndEvent
 } from '@dnd-kit/core';
 import {
   arrayMove,
@@ -78,12 +78,12 @@ function SortableItem({ item, onRename, onUpdateMeta }: {
   };
 
   const handleMetaSave = () => {
-      onUpdateMeta({
-          tags: tags.split(',').map(t => t.trim()).filter(Boolean),
-          difficulty: diff,
-          xp: xp ? parseInt(xp) : undefined
-      });
-      setIsExpanded(false);
+    onUpdateMeta({
+      tags: tags.split(',').map(t => t.trim()).filter(Boolean),
+      difficulty: diff,
+      xp: xp ? parseInt(xp) : undefined
+    });
+    setIsExpanded(false);
   };
 
   return (
@@ -94,80 +94,80 @@ function SortableItem({ item, onRename, onUpdateMeta }: {
     >
       <div className="flex items-center gap-3 p-3">
         <div {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-zinc-600 hover:text-zinc-400">
-            <GripVertical size={16} />
+          <GripVertical size={16} />
         </div>
 
         <span className="text-[10px] font-mono text-zinc-700 select-none">
-            {name.split('_')[0]}
+          {name.split('_')[0]}
         </span>
 
         {isEditingName ? (
-            <div className="flex items-center gap-2 flex-1">
+          <div className="flex items-center gap-2 flex-1">
             <input
-                value={editName}
-                onChange={e => setEditName(e.target.value)}
-                className="flex-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 outline-none focus:border-orange-500"
-                autoFocus
-                onKeyDown={e => {
+              value={editName}
+              onChange={e => setEditName(e.target.value)}
+              className="flex-1 bg-zinc-950 border border-zinc-700 rounded px-2 py-1 text-xs text-zinc-200 outline-none focus:border-orange-500"
+              autoFocus
+              onKeyDown={e => {
                 if (e.key === 'Enter') handleNameSave();
                 if (e.key === 'Escape') setIsEditingName(false);
-                }}
+              }}
             />
             <button onClick={handleNameSave} className="p-1 hover:bg-zinc-700 rounded text-emerald-500"><Check size={14} /></button>
             <button onClick={() => setIsEditingName(false)} className="p-1 hover:bg-zinc-700 rounded text-red-500"><X size={14} /></button>
-            </div>
+          </div>
         ) : (
-            <>
+          <>
             <div className="flex-1 flex flex-col">
-                 <span className="text-xs text-zinc-400 group-hover:text-white transition-colors font-medium">
-                    {displayName}
-                 </span>
-                 {(item.tags?.length || item.difficulty || item.xp) && (
-                     <div className="flex gap-2 mt-1">
-                         {item.tags?.map(t => <span key={t} className="text-[9px] px-1 bg-zinc-800 rounded text-zinc-500">{t}</span>)}
-                         {item.difficulty && <span className="text-[9px] px-1 bg-zinc-800 rounded text-blue-500">{item.difficulty}</span>}
-                     </div>
-                 )}
+              <span className="text-xs text-zinc-400 group-hover:text-white transition-colors font-medium">
+                {displayName}
+              </span>
+              {(item.tags?.length || item.difficulty || item.xp) && (
+                <div className="flex gap-2 mt-1">
+                  {item.tags?.map(t => <span key={t} className="text-[9px] px-1 bg-zinc-800 rounded text-zinc-500">{t}</span>)}
+                  {item.difficulty && <span className="text-[9px] px-1 bg-zinc-800 rounded text-blue-500">{item.difficulty}</span>}
+                </div>
+              )}
             </div>
 
             <button
-                onClick={() => { setEditName(displayName); setIsEditingName(true); }}
-                className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700 text-zinc-500 hover:text-zinc-300 transition-all"
+              onClick={() => { setEditName(displayName); setIsEditingName(true); }}
+              className="p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700 text-zinc-500 hover:text-zinc-300 transition-all"
             >
-                <Pencil size={12} />
+              <Pencil size={12} />
             </button>
             <button
-                onClick={() => setIsExpanded(!isExpanded)}
-                className={`p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700 transition-all ${isExpanded ? 'text-orange-400' : 'text-zinc-500 hover:text-zinc-300'}`}
+              onClick={() => setIsExpanded(!isExpanded)}
+              className={`p-1.5 rounded opacity-0 group-hover:opacity-100 hover:bg-zinc-700 transition-all ${isExpanded ? 'text-orange-400' : 'text-zinc-500 hover:text-zinc-300'}`}
             >
-                <Settings size={12} />
+              <Settings size={12} />
             </button>
-            </>
+          </>
         )}
       </div>
 
       {isExpanded && (
-          <div className="px-3 pb-3 pt-0 grid grid-cols-3 gap-3">
-              <div className="space-y-1">
-                  <label className="text-[9px] text-zinc-500 uppercase font-bold">Tags</label>
-                  <input value={tags} onChange={e => setTags(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300" placeholder="sql, easy" />
-              </div>
-              <div className="space-y-1">
-                  <label className="text-[9px] text-zinc-500 uppercase font-bold">Difficulty</label>
-                  <select value={diff} onChange={e => setDiff(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300">
-                      <option value="easy">Easy</option>
-                      <option value="medium">Medium</option>
-                      <option value="hard">Hard</option>
-                  </select>
-              </div>
-              <div className="space-y-1">
-                  <label className="text-[9px] text-zinc-500 uppercase font-bold">XP Override</label>
-                  <div className="flex gap-2">
-                     <input value={xp} onChange={e => setXp(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300" placeholder="Default" />
-                     <button onClick={handleMetaSave} className="bg-orange-600 hover:bg-orange-500 text-white rounded px-2 py-1 text-xs">Save</button>
-                  </div>
-              </div>
+        <div className="px-3 pb-3 pt-0 grid grid-cols-3 gap-3">
+          <div className="space-y-1">
+            <label className="text-[9px] text-zinc-500 uppercase font-bold">Tags</label>
+            <input value={tags} onChange={e => setTags(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300" placeholder="sql, easy" />
           </div>
+          <div className="space-y-1">
+            <label className="text-[9px] text-zinc-500 uppercase font-bold">Difficulty</label>
+            <select value={diff} onChange={e => setDiff(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300">
+              <option value="easy">Easy</option>
+              <option value="medium">Medium</option>
+              <option value="hard">Hard</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <label className="text-[9px] text-zinc-500 uppercase font-bold">XP Override</label>
+            <div className="flex gap-2">
+              <input value={xp} onChange={e => setXp(e.target.value)} className="w-full bg-zinc-950 border border-zinc-800 rounded px-2 py-1 text-xs text-zinc-300" placeholder="Default" />
+              <button onClick={handleMetaSave} className="bg-orange-600 hover:bg-orange-500 text-white rounded px-2 py-1 text-xs">Save</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -211,11 +211,11 @@ export function ModuleSettings({ tab }: ModuleSettingsProps) {
         const list = data.data
           .filter((f: any) => f.type === 'dir' && /^\d{2}_/.test(f.name))
           .map((f: any) => ({
-             name: f.name,
-             title: f.title,
-             tags: f.tags,
-             difficulty: f.difficulty,
-             xp: f.xp
+            name: f.name,
+            title: f.title,
+            tags: f.tags,
+            difficulty: f.difficulty,
+            xp: f.xp
           }))
           .sort((a: any, b: any) => a.name.localeCompare(b.name));
         setExercises(list);
@@ -311,38 +311,38 @@ export function ModuleSettings({ tab }: ModuleSettingsProps) {
   };
 
   const handleRename = async (oldName: string, newName: string) => {
-     try {
-       const res = await fetch(`/instructor/fs?path=${encodeURIComponent(modulePath + '/' + oldName)}`, {
-         method: 'PATCH',
-         headers: { 'Content-Type': 'application/json' },
-         body: JSON.stringify({ newPath: modulePath + '/' + newName })
-       });
-       if (res.ok) {
-         await loadExercises();
-         loadFileTree();
-       }
-     } catch(e) {
-       console.error(e);
-     }
+    try {
+      const res = await fetch(`/instructor/fs?path=${encodeURIComponent(modulePath + '/' + oldName)}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ newPath: modulePath + '/' + newName })
+      });
+      if (res.ok) {
+        await loadExercises();
+        loadFileTree();
+      }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   const handleUpdateMeta = async (exerciseName: string, meta: Partial<ExerciseItem>) => {
-      try {
-          const res = await fetch('/instructor/exercise-meta', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  modulePath,
-                  exerciseName,
-                  metadata: meta
-              })
-          });
-          if (res.ok) {
-              await loadExercises();
-          }
-      } catch (e) {
-          console.error(e);
+    try {
+      const res = await fetch('/instructor/exercise-meta', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          modulePath,
+          exerciseName,
+          metadata: meta
+        })
+      });
+      if (res.ok) {
+        await loadExercises();
       }
+    } catch (e) {
+      console.error(e);
+    }
   };
 
   return (
@@ -440,15 +440,15 @@ export function ModuleSettings({ tab }: ModuleSettingsProps) {
           {/* Exercise Reordering */}
           <div className="space-y-4 pt-4">
             <div className="flex items-center justify-between">
-               <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
+              <label className="text-[11px] font-bold text-zinc-500 uppercase tracking-wider flex items-center gap-2">
                 <ListOrdered size={12} />
                 Exercise List
               </label>
-              {isReordering && <span className="text-xs text-orange-500 flex items-center gap-2"><Loader2 size={12} className="animate-spin"/> Saving order...</span>}
+              {isReordering && <span className="text-xs text-orange-500 flex items-center gap-2"><Loader2 size={12} className="animate-spin" /> Saving order...</span>}
             </div>
 
             {isLoadingList ? (
-              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-zinc-600"/></div>
+              <div className="flex justify-center py-8"><Loader2 className="animate-spin text-zinc-600" /></div>
             ) : (
               <DndContext
                 sensors={sensors}
@@ -467,10 +467,10 @@ export function ModuleSettings({ tab }: ModuleSettingsProps) {
                     ) : (
                       exercises.map((ex) => (
                         <SortableItem
-                            key={ex.name}
-                            item={ex}
-                            onRename={handleRename}
-                            onUpdateMeta={(meta) => handleUpdateMeta(ex.name, meta)}
+                          key={ex.name}
+                          item={ex}
+                          onRename={handleRename}
+                          onUpdateMeta={(meta) => handleUpdateMeta(ex.name, meta)}
                         />
                       ))
                     )}
@@ -479,9 +479,9 @@ export function ModuleSettings({ tab }: ModuleSettingsProps) {
               </DndContext>
             )}
 
-             <p className="text-[10px] text-zinc-600 italic">
-                Drag and drop to reorder. The prefix (01_, 02_) will be updated automatically.
-              </p>
+            <p className="text-[10px] text-zinc-600 italic">
+              Drag and drop to reorder. The prefix (01_, 02_) will be updated automatically.
+            </p>
           </div>
         </div>
       </div>

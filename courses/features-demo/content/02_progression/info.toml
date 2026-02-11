@@ -1,0 +1,18 @@
+[module]
+title = "The Power Path"
+icon = "Zap"
+completion_message = "You're accelerating! Custom XP and difficulty dots are now in your arsenal."
+
+[[exercises]]
+name = "01_xp_boost"
+title = "The XP Boost"
+tags = ["gaming", "rewards"]
+difficulty = "hard"
+xp = 500
+
+[[exercises]]
+name = "02_easy_win"
+title = "Simple Victory"
+tags = ["intro"]
+difficulty = "easy"
+xp = 25

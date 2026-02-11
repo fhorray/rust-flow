@@ -12,6 +12,7 @@ const CourseConfigSchema = z.object({
   name: z.string(),
   version: z.string().optional().default("1.0.0"), // Add versioning
   runner: z.object({
+    type: z.string().optional().default("process"),
     command: z.string(),
     args: z.array(z.string()),
     cwd: z.string(),
@@ -28,6 +29,14 @@ const CourseConfigSchema = z.object({
     })),
     guide: z.string(),
   }),
+  branding: z.object({
+    coverImage: z.string().optional(),
+    primaryColor: z.string().optional(),
+    layout: z.string().optional().default("grid"),
+  }).optional(),
+  progression: z.object({
+    mode: z.string().optional().default("open"),
+  }).optional(),
 });
 
 export type LoaderCourseConfig = z.infer<typeof CourseConfigSchema>;
@@ -132,12 +141,30 @@ export class CourseLoader {
       throw new Error(`Exercises directory '${result.data.content.exercises}' not found.`);
     }
 
+    if (result.data.content.exercises !== "content") {
+      throw new Error(`Invalid structure: Exercises directory must be named 'content' (got '${result.data.content.exercises}').`);
+    }
+
     const setupGuide = join(path, result.data.setup.guide);
     if (!(await exists(setupGuide))) {
       throw new Error(`Setup guide '${result.data.setup.guide}' not found.`);
     }
 
-    // --- Content Naming Validation ---
+    // --- Strict Requirement: Runner & Docker ---
+    const runnerDir = join(path, "runner");
+    if (!(await exists(runnerDir))) {
+      throw new Error("Missing required 'runner/' directory at course root.");
+    }
+
+    const isProcessRunner = result.data.runner?.type === "process";
+    if (!isProcessRunner) {
+      const hasDocker = (await exists(join(path, "Dockerfile"))) || (await exists(join(path, "docker-compose.yml")));
+      if (!hasDocker) {
+        throw new Error("Missing required Docker configuration. Course must have either a 'Dockerfile' or 'docker-compose.yml' at the root for non-process runners.");
+      }
+    }
+
+    // --- Content Naming & Completeness Validation ---
     const readdirWithTypes = async (dir: string) => {
       const entries = await readdir(dir, { withFileTypes: true });
       return entries.filter(e => e.isDirectory()).map(e => e.name);
@@ -154,6 +181,19 @@ export class CourseLoader {
       for (const exerciseName of exercises) {
         if (!/^\d{2}_/.test(exerciseName)) {
           throw new Error(`Invalid exercise name: "${exerciseName}" at ${modulePath}. Exercises must start with two digits followed by an underscore (e.g., 01_hello).`);
+        }
+
+        const exercisePath = join(modulePath, exerciseName);
+        const readmePath = join(exercisePath, "README.md");
+        if (!(await exists(readmePath))) {
+          throw new Error(`Missing README.md in exercise: ${moduleName}/${exerciseName}`);
+        }
+
+        // Check for exercise.* file
+        const exFiles = await readdir(exercisePath);
+        const hasExerciseFile = exFiles.some(f => f.startsWith("exercise.") || f.startsWith("main."));
+        if (!hasExerciseFile) {
+          throw new Error(`Missing entry point file (exercise.* or main.*) in: ${moduleName}/${exerciseName}`);
         }
       }
     }

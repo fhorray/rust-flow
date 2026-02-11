@@ -1,4 +1,5 @@
 import { resolve } from "node:path";
+import { readdir, stat } from "node:fs/promises";
 import { CourseLoader, CourseContainer, loadToken, BACKEND_URL, logger, exists } from "@progy/core";
 
 import { incrementVersion } from "./version";
@@ -65,7 +66,25 @@ export async function publish(options: any) {
   const file = Bun.file(progyPath);
 
   const formData = new FormData();
-  formData.append('file', file as any); // Bun.file is compatible with FormData
+  formData.append('file', file as any);
+
+  // 3.6 Include Individual Assets
+  const assetsDir = resolve(cwd, "assets");
+  if (await exists(assetsDir)) {
+    logger.info("Including individual assets in upload...", "ASSETS");
+    const assetFiles = await readdir(assetsDir, { recursive: true });
+    for (const assetFile of assetFiles) {
+      const fullPath = resolve(assetsDir, assetFile);
+      const s = await stat(fullPath);
+      if (s.isFile()) {
+        const f = Bun.file(fullPath);
+        // Use a specific key format to help registry identify them
+        formData.append(`assets/${assetFile}`, f as any);
+        logger.info(`  + assets/${assetFile}`, "ASSETS");
+      }
+    }
+  }
+
   formData.append(
     'metadata',
     JSON.stringify({
@@ -74,6 +93,9 @@ export async function publish(options: any) {
       description: config.name,
       changelog: "Initial release via CLI",
       manifest,
+      branding: config.branding,
+      progression: config.progression,
+      runner: config.runner,
     }),
   );
 

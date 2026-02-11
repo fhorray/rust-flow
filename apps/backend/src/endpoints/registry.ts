@@ -242,22 +242,43 @@ registry.post('/publish', async (c) => {
   }
 
   // 5. Upload to R2
-  const key = `packages/${metadata.name}/${metadata.version}.progy`;
-  await c.env.R2.put(key, await file.arrayBuffer(), {
+  const prefix = `packages/${metadata.name}/${metadata.version}/`;
+  const mainKey = `${prefix}${pkg.slug}.progy`;
+
+  // 5.1 Upload Main .progy File
+  await c.env.R2.put(mainKey, await file.arrayBuffer(), {
     httpMetadata: { contentType: 'application/octet-stream' },
     customMetadata: { userId: user.id, version: metadata.version },
   });
 
+  // 5.2 Upload Assets
+  for (const [k, v] of Object.entries(body)) {
+    if (k.startsWith('assets/') && v instanceof File) {
+      const assetKey = `${prefix}${k}`;
+      await c.env.R2.put(assetKey, await v.arrayBuffer(), {
+        httpMetadata: { contentType: v.type || 'application/octet-stream' },
+        customMetadata: { userId: user.id },
+      });
+    }
+  }
+
   // 6. Record Version
+  const manifestData = {
+    modules: metadata.manifest, // In CLI, manifest is just the flow array
+    branding: metadata.branding,
+    progression: metadata.progression,
+    runner: metadata.runner,
+  };
+
   await db.insert(schema.registryVersions).values({
     id: crypto.randomUUID(),
     packageId: pkg.id,
     version: metadata.version,
-    storageKey: key,
+    storageKey: mainKey,
     sizeBytes: file.size,
-    checksum: 'sha256-placeholder', // TODO: Compute actual checksum
+    checksum: 'sha256-placeholder',
     changelog: metadata.changelog,
-    manifest: metadata.manifest ? JSON.stringify(metadata.manifest) : null,
+    manifest: JSON.stringify(manifestData),
     createdAt: new Date(),
   });
 
