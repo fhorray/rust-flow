@@ -1,6 +1,6 @@
 {
   "id": "features-demo",
-  "name": "Platform Features Demo",
+  "name": "Platforms Features Demo",
   "version": "1.1.1",
   "runner": {
     "command": "echo",
