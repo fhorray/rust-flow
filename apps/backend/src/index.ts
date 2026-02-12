@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { authServer } from './lib/auth'
+import { logger } from './lib/logger'
 import { cors } from 'hono/cors'
 import { drizzle } from 'drizzle-orm/d1'
 import { rateLimiter } from "hono-rate-limiter";
@@ -32,7 +33,7 @@ const app = new Hono<{
   .get('/auth/get-session', async (c) => {
     const session = await verifySession(c)
     if (session) {
-      console.log(`[SESSION-CHECK] Success: ${session.user.email}`)
+      logger.info('SESSION-CHECK', 'Session verification success', { email: session.user.email })
       return c.json(session)
     }
     return c.json(null)
@@ -49,25 +50,25 @@ const app = new Hono<{
   .all('/auth/:path{.*}', async (c) => {
     try {
       const auth = authServer(c.env)
-      console.log(`[AUTH-DEBUG] Handling request for: ${c.req.path}`);
+      logger.debug('AUTH-DEBUG', 'Handling auth request', { path: c.req.path });
       const res = await auth.handler(c.req.raw)
-      console.log(`[AUTH-DEBUG] Better-Auth response: ${res.status}`);
+      logger.debug('AUTH-DEBUG', 'Better-Auth response received', { status: res.status });
       return res
     } catch (err: any) {
-      console.error(`[AUTH-FATAL] ${err.message}`, err.stack)
+      logger.error('AUTH-FATAL', err.message, err)
       return c.json({ error: 'Internal Auth Error', message: err.message }, 500)
     }
   })
 
   // Global Error Handler
   .onError((err, c) => {
-    console.error(`[CRASH] ${err.message}`, err.stack)
+    logger.error('CRASH', err.message, err)
     return c.text(`Internal Server Error: ${err.message}`, 500)
   })
 
   // 404 Debugging
   .notFound((c) => {
-    console.log(`[404] Not Found: ${c.req.method} ${c.req.url}`)
+    logger.info('404', 'Route not found', { method: c.req.method, url: c.req.url })
     return c.text(`Route not found: ${c.req.method} ${c.req.path}`, 404)
   })
 
