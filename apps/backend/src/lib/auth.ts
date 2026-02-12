@@ -172,12 +172,11 @@ export const authServer = (env: CloudflareBindings) => {
                   // Cancel them efficiently
                   await stripeClient.subscriptions.cancel(sub.id);
                   console.log(`[UPGRADE-FIX] Cancelled old subscription ${sub.id} because user bought Lifetime.`);
-                }));
                   logger.info("UPGRADE-FIX", "Cancelled old subscription", {
                     subscriptionId: sub.id,
                     reason: "User bought Lifetime"
                   });
-                }
+                }));
               } catch (err) {
                 logger.error("UPGRADE-FIX-ERROR", "Failed to cancel old subscriptions", err);
               }

@@ -21,9 +21,13 @@ const notifications = new Hono<{
         prefix: `notifications:${user.id}:`,
       });
 
+      // Parallel fetch for all notifications
+      const values = await Promise.all(
+        keys.keys.map((key) => c.env.KV.get(key.name))
+      );
+
       const list: Notification[] = [];
-      for (const key of keys.keys) {
-        const val = await c.env.KV.get(key.name);
+      for (const val of values) {
         if (val) {
           list.push(JSON.parse(val));
         }
@@ -85,18 +89,22 @@ const notifications = new Hono<{
 
     try {
       const keys = await c.env.KV.list({ prefix: `notifications:${user.id}:` });
-      for (const key of keys.keys) {
-        const val = await c.env.KV.get(key.name);
-        if (val) {
-          const notification: Notification = JSON.parse(val);
-          if (!notification.read) {
-            notification.read = true;
-            await c.env.KV.put(key.name, JSON.stringify(notification), {
-              expirationTtl: 60 * 60 * 24 * 7
-            });
+
+      await Promise.all(
+        keys.keys.map(async (key) => {
+          const val = await c.env.KV.get(key.name);
+          if (val) {
+            const notification: Notification = JSON.parse(val);
+            if (!notification.read) {
+              notification.read = true;
+              await c.env.KV.put(key.name, JSON.stringify(notification), {
+                expirationTtl: 60 * 60 * 24 * 7,
+              });
+            }
           }
-        }
-      }
+        })
+      );
+
       return c.json({ success: true });
     } catch (e: any) {
       return c.json({ error: "Failed to clear notifications" }, 500);
