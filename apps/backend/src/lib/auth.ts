@@ -1,4 +1,5 @@
 import { betterAuth } from "better-auth";
+import { logger } from "./logger";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { drizzle } from "drizzle-orm/d1";
 import { eq, and, or } from "drizzle-orm";
@@ -16,7 +17,7 @@ export const authServer = (env: CloudflareBindings) => {
   });
 
   if (!env.BETTER_AUTH_SECRET) {
-    console.error("[AUTH-SECRET-MISSING] BETTER_AUTH_SECRET is not defined in environment variables!");
+    logger.error("AUTH-SECRET-MISSING", "BETTER_AUTH_SECRET is not defined in environment variables!");
   }
 
   return betterAuth({
@@ -88,7 +89,12 @@ export const authServer = (env: CloudflareBindings) => {
         const currentSubscription = isActuallyPro ? "pro" : (user.subscription || "free");
         const hasLifetime = !!user.hasLifetime || user.subscription === "lifetime";
 
-        console.log(`[SESSION-SYNC] User: ${user.email}, Sub: ${currentSubscription}, Lifetime: ${hasLifetime}, HasCustomer: ${!!user.stripeCustomerId}`);
+        logger.info("SESSION-SYNC", "User session sync", {
+          email: user.email,
+          subscription: currentSubscription,
+          hasLifetime,
+          hasStripeCustomer: !!user.stripeCustomerId
+        });
 
         return {
           ...session,
@@ -128,7 +134,10 @@ export const authServer = (env: CloudflareBindings) => {
           }
           ],
           onSubscriptionComplete: async ({ subscription, plan }) => {
-            console.log(`[STRIPE-HOOK] Subscription complete for ${subscription.referenceId}: ${plan.name}`);
+            logger.info("STRIPE-HOOK", "Subscription complete", {
+              referenceId: subscription.referenceId,
+              plan: plan.name
+            });
             const db = drizzle(env.DB);
             // Map pro-discount to pro
             const status = (plan.name === "standard" || plan.name === "pro-discount" || plan.name === "pro") ? "pro" : plan.name;
@@ -138,7 +147,9 @@ export const authServer = (env: CloudflareBindings) => {
               .execute();
           },
           onSubscriptionDeleted: async ({ subscription }) => {
-            console.log(`[STRIPE-HOOK] Subscription deleted for ${subscription.referenceId}`);
+            logger.info("STRIPE-HOOK", "Subscription deleted", {
+              referenceId: subscription.referenceId
+            });
             const db = drizzle(env.DB);
             await db.update(schema.users)
               .set({ subscription: "free" })
@@ -160,10 +171,13 @@ export const authServer = (env: CloudflareBindings) => {
                 for (const sub of subs.data) {
                   // Cancel them efficiently
                   await stripeClient.subscriptions.cancel(sub.id);
-                  console.log(`[UPGRADE-FIX] Cancelled old subscription ${sub.id} because user bought Lifetime.`);
+                  logger.info("UPGRADE-FIX", "Cancelled old subscription", {
+                    subscriptionId: sub.id,
+                    reason: "User bought Lifetime"
+                  });
                 }
               } catch (err) {
-                console.error("[UPGRADE-FIX-ERROR] Failed to cancel old subscriptions:", err);
+                logger.error("UPGRADE-FIX-ERROR", "Failed to cancel old subscriptions", err);
               }
             }
 
@@ -173,7 +187,11 @@ export const authServer = (env: CloudflareBindings) => {
               const customerId = session.customer as string;
 
               if (userId || userEmail) {
-                console.log(`[STRIPE-WEBHOOK-SYNC] Syncing ${planType} to user ${userId || userEmail}`);
+                logger.info("STRIPE-WEBHOOK-SYNC", "Syncing plan to user", {
+                  planType,
+                  userId,
+                  userEmail
+                });
                 const updateData: any = {
                   subscription: planType === "standard" ? "pro" : planType,
                   stripeCustomerId: customerId
@@ -208,7 +226,10 @@ export const authServer = (env: CloudflareBindings) => {
             const randomDigits = Math.floor(10000 + Math.random() * 90000);
             const username = `${emailPrefix}${randomDigits}`;
 
-            console.log(`[AUTH-HOOK] Generating username for ${user.email}: ${username}`);
+            logger.info("AUTH-HOOK", "Generating username for user", {
+              email: user.email,
+              username
+            });
 
             return {
               data: {

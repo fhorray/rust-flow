@@ -1,4 +1,5 @@
 import { authServer } from "../lib/auth";
+import { logger } from "../lib/logger";
 import { drizzle } from "drizzle-orm/d1";
 import * as schema from "../db/schema";
 import { eq } from "drizzle-orm";
@@ -28,7 +29,7 @@ export async function verifySession(c: Context<any>) {
     });
 
     if (sessionData) {
-      console.log(`[AUTH-DEBUG] Session found via Better Auth: ${sessionData.user.email}`);
+      logger.debug('AUTH-DEBUG', 'Session found via Better Auth', { email: sessionData.user.email });
       return {
         user: sessionData.user as typeof schema.users.$inferSelect,
         session: sessionData.session as typeof schema.sessions.$inferSelect
@@ -37,7 +38,7 @@ export async function verifySession(c: Context<any>) {
 
     // 2. Manual Lookup (Fallback for CLI/Bearer if not handled by better-auth yet)
     if (token) {
-      console.log(`[AUTH-DEBUG] Attempting manual lookup for token: ${token.substring(0, 8)}...`);
+      logger.debug('AUTH-DEBUG', 'Attempting manual lookup for token', { tokenPrefix: token.substring(0, 8) });
       // A. Check 'session' table by token string
       const sessionRow = await db.select()
         .from(schema.sessions)
@@ -51,7 +52,7 @@ export async function verifySession(c: Context<any>) {
           .get();
 
         if (userRow) {
-          console.log(`[AUTH-DEBUG] Manual session found via token field: ${userRow.email}`);
+          logger.debug('AUTH-DEBUG', 'Manual session found via token field', { email: userRow.email });
           return {
             user: userRow as typeof schema.users.$inferSelect,
             session: sessionRow as typeof schema.sessions.$inferSelect
@@ -70,18 +71,18 @@ export async function verifySession(c: Context<any>) {
           .where(eq(schema.users.id, sessionById.userId))
           .get();
         if (userRow) {
-          console.log(`[AUTH-DEBUG] Manual session found via ID field: ${userRow.email}`);
+          logger.debug('AUTH-DEBUG', 'Manual session found via ID field', { email: userRow.email });
           return {
             user: userRow as typeof schema.users.$inferSelect,
             session: sessionById as typeof schema.sessions.$inferSelect
           };
         }
       }
-      console.warn(`[AUTH-DEBUG] Manual lookup failed for token: ${token.substring(0, 8)}`);
+      logger.warn('AUTH-DEBUG', 'Manual lookup failed for token', { tokenPrefix: token.substring(0, 8) });
     }
     return null;
   } catch (err: any) {
-    console.error(`[AUTH-ERROR-CRITICAL] ${err.message}`, err.stack);
+    logger.error('AUTH-ERROR-CRITICAL', err.message, err);
     return null;
   }
 }
