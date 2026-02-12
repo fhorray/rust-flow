@@ -15,31 +15,65 @@ function getLanguage(path: string): string {
   if (fileName === 'makefile') return 'makefile';
 
   switch (ext) {
-    case 'rs': return 'rust';
-    case 'py': return 'python';
+    case 'rs':
+      return 'rust';
+    case 'py':
+      return 'python';
     case 'js':
-    case 'jsx': return 'javascript';
+    case 'jsx':
+      return 'javascript';
     case 'ts':
-    case 'tsx': return 'typescript';
-    case 'json': return 'json';
-    case 'sql': return 'sql';
+    case 'tsx':
+      return 'typescript';
+    case 'json':
+      return 'json';
+    case 'sql':
+      return 'sql';
     case 'c':
-    case 'h': return 'c';
+    case 'h':
+      return 'c';
     case 'cpp':
-    case 'hpp': return 'cpp';
-    case 'go': return 'go';
-    case 'md': return 'markdown';
-    case 'html': return 'html';
-    case 'css': return 'css';
+    case 'hpp':
+      return 'cpp';
+    case 'go':
+      return 'go';
+    case 'md':
+      return 'markdown';
+    case 'html':
+      return 'html';
+    case 'css':
+      return 'css';
     case 'yaml':
-    case 'yml': return 'yaml';
-    case 'toml': return 'ini';
+    case 'yml':
+      return 'yaml';
+    case 'toml':
+      return 'ini';
     case 'sh':
     case 'bash':
-    case 'zsh': return 'shell';
-    case 'xml': return 'xml';
-    case 'java': return 'java';
-    default: return 'plaintext';
+    case 'zsh':
+      return 'shell';
+    case 'xml':
+      return 'xml';
+    case 'java':
+      return 'java';
+    case 'cs':
+      return 'csharp';
+    case 'php':
+      return 'php';
+    case 'rb':
+      return 'ruby';
+    case 'kt':
+      return 'kotlin';
+    case 'swift':
+      return 'swift';
+    case 'lua':
+      return 'lua';
+    case 'fs':
+    case 'fsx':
+    case 'fsi':
+      return 'fsharp';
+    default:
+      return 'plaintext';
   }
 }
 
@@ -57,6 +91,7 @@ export function MonacoEditor({ initialContent, path }: MonacoEditorProps) {
 
     // Add Save Command (Cmd+S / Ctrl+S)
     editor.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.KeyS, () => {
+      editor.getAction('editor.action.formatDocument').run();
       saveActiveFile();
     });
   };
@@ -69,21 +104,29 @@ export function MonacoEditor({ initialContent, path }: MonacoEditorProps) {
 
   useEffect(() => {
     if (monaco) {
-      monaco.languages.typescript.typescriptDefaults.setCompilerOptions({
-        target: monaco.languages.typescript.ScriptTarget.ESNext,
+      const compilerOptions = {
+        target: monaco.typescript.ScriptTarget.ESNext,
         allowNonTsExtensions: true,
-        moduleResolution: monaco.languages.typescript.ModuleResolutionKind.NodeJs,
-        module: monaco.languages.typescript.ModuleKind.CommonJS,
+        moduleResolution: monaco.typescript.ModuleResolutionKind.NodeJs,
+        module: monaco.typescript.ModuleKind.CommonJS,
         noEmit: true,
         esModuleInterop: true,
-        jsx: monaco.languages.typescript.JsxEmit.React,
+        jsx: monaco.typescript.JsxEmit.React,
         reactNamespace: 'React',
         allowJs: true,
         typeRoots: ['node_modules/@types'],
-      });
+        allowSyntheticDefaultImports: true,
+      };
 
-      monaco.languages.typescript.typescriptDefaults.setDiagnosticsOptions({
-        noSemanticValidation: true,
+      monaco.typescript.typescriptDefaults.setCompilerOptions(compilerOptions);
+      monaco.typescript.javascriptDefaults.setCompilerOptions(compilerOptions);
+
+      monaco.typescript.typescriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: false,
+        noSyntaxValidation: false,
+      });
+      monaco.typescript.javascriptDefaults.setDiagnosticsOptions({
+        noSemanticValidation: false,
         noSyntaxValidation: false,
       });
     }
@@ -104,12 +147,31 @@ export function MonacoEditor({ initialContent, path }: MonacoEditorProps) {
           minimap: { enabled: false },
           fontSize: 14,
           fontFamily: '"JetBrains Mono", "Fira Code", monospace',
+          theme: 'Dracula',
           fontLigatures: true,
           scrollBeyondLastLine: false,
           automaticLayout: true,
           tabSize: 2,
           wordWrap: 'on',
           padding: { top: 16, bottom: 16 },
+          cursorBlinking: 'smooth',
+          cursorSmoothCaretAnimation: 'on',
+          smoothScrolling: true,
+          mouseWheelZoom: true,
+          formatOnPaste: true,
+          formatOnType: true,
+          autoClosingBrackets: 'always',
+          autoClosingQuotes: 'always',
+          bracketPairColorization: {
+            enabled: true,
+          },
+          suggest: {
+            showKeywords: true,
+            showSnippets: true,
+            showClasses: true,
+            showFunctions: true,
+            showVariables: true,
+          },
         }}
       />
     </div>

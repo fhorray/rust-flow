@@ -60,7 +60,7 @@ const exercisesHandler: ServerType<"/exercises"> = async () => {
  * @param req The request.
  * @returns A JSON object with the quiz.
  */
-const quizHandler: ServerType<"/exercises/quiz"> = async (req) => {
+const quizHandler: ServerType<"/exercises/quiz"> = async (req: Request) => {
   const url = new URL(req.url);
   const filePath = url.searchParams.get('path');
   if (!filePath) return new Response('Missing path', { status: 400 });
@@ -89,7 +89,7 @@ const quizHandler: ServerType<"/exercises/quiz"> = async (req) => {
  * @param req The request.
  * @returns A JSON object with the code.
  */
-const codeHandler: ServerType<"/exercises/code"> = async (req) => {
+const codeHandler: ServerType<"/exercises/code"> = async (req: Request) => {
   const url = new URL(req.url);
   const filePath = url.searchParams.get('path');
   const markdownPath = url.searchParams.get('markdownPath');
@@ -344,7 +344,7 @@ async function handleProcessRunner(body: { exerciseName: string, id: string, ent
  * @param req The request.
  * @returns A JSON object with the result.
  */
-const runHandler: ServerType<"/exercises/run"> = async (req) => {
+const runHandler: ServerType<"/exercises/run"> = async (req: Request) => {
   try {
     await ensureConfig();
     const body = await req.json() as { exerciseName: string, id: string, entryPoint?: string };
