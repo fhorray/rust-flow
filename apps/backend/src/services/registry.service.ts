@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/d1';
-import { eq, and, desc } from 'drizzle-orm';
+import { eq, and, desc, inArray } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
 export class RegistryService {
@@ -205,8 +205,10 @@ export class RegistryService {
       }
 
       const toDeleteFromDb = versions.slice(3);
-      for (const oldVer of toDeleteFromDb) {
-        await this.db.delete(schema.registryVersions).where(eq(schema.registryVersions.id, oldVer.id));
+      if (toDeleteFromDb.length > 0) {
+        await this.db
+          .delete(schema.registryVersions)
+          .where(inArray(schema.registryVersions.id, toDeleteFromDb.map((v) => v.id)));
       }
     }
   }
