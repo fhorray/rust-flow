@@ -1,5 +1,5 @@
 import { readFile, stat } from "node:fs/promises";
-import { join } from "node:path";
+import { join, resolve, relative, isAbsolute } from "node:path";
 import { spawn } from "node:child_process";
 import type { ServerType } from "@progy/core";
 import {
@@ -18,12 +18,20 @@ import {
 } from "@progy/core";
 
 async function resolveFile(relativePath: string): Promise<string | null> {
-  const local = join(PROG_CWD, relativePath);
-  if (await progyExists(local)) return local;
+  const safeJoin = (base: string, rel: string) => {
+    const absoluteBase = resolve(base);
+    const absolutePath = resolve(base, rel);
+    const relFromBase = relative(absoluteBase, absolutePath);
+    if (relFromBase.startsWith('..') || isAbsolute(relFromBase)) return null;
+    return absolutePath;
+  };
+
+  const local = safeJoin(PROG_CWD, relativePath);
+  if (local && await progyExists(local)) return local;
 
   if (PROG_RUNTIME_ROOT) {
-    const runtime = join(PROG_RUNTIME_ROOT, relativePath);
-    if (await progyExists(runtime)) return runtime;
+    const runtime = safeJoin(PROG_RUNTIME_ROOT, relativePath);
+    if (runtime && await progyExists(runtime)) return runtime;
   }
 
   return null;
@@ -57,7 +65,11 @@ const quizHandler: ServerType<"/exercises/quiz"> = async (req) => {
   const filePath = url.searchParams.get('path');
   if (!filePath) return new Response('Missing path', { status: 400 });
 
-  const dirPath = (await progyExists(filePath)) && (await stat(filePath)).isDirectory() ? filePath : join(filePath, "..");
+  const resolvedBase = await resolveFile(filePath);
+  if (!resolvedBase) return Response.json({ error: "Exercise not found" }, { status: 404 });
+
+  const s = await stat(resolvedBase);
+  const dirPath = s.isDirectory() ? resolvedBase : join(resolvedBase, "..");
   const quizPath = join(dirPath, "quiz.json");
   const actualPath = await resolveFile(quizPath);
 
