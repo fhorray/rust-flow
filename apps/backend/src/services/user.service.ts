@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/d1';
-import { eq } from 'drizzle-orm';
+import { eq, sql } from 'drizzle-orm';
 import * as schema from '../db/schema';
 
 export class UserService {
@@ -30,23 +30,18 @@ export class UserService {
 
     // 3. Migrate packages
     const packages = await this.db
-      .select()
-      .from(schema.registryPackages)
+      .update(schema.registryPackages)
+      .set({
+        name: sql`'@' || ${username} || '/' || ${schema.registryPackages.slug}`,
+        updatedAt: new Date(),
+      })
       .where(eq(schema.registryPackages.userId, userId))
-      .all();
-
-    for (const pkg of packages) {
-      const newName = `@${username}/${pkg.slug}`;
-      await this.db
-        .update(schema.registryPackages)
-        .set({ name: newName, updatedAt: new Date() })
-        .where(eq(schema.registryPackages.id, pkg.id));
-    }
+      .returning();
 
     return {
       success: true,
       username,
-      packagesMigrated: packages.length
+      packagesMigrated: packages.length,
     };
   }
 }
