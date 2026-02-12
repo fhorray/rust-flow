@@ -1,7 +1,7 @@
 import React from 'react';
 import * as Dialog from '@radix-ui/react-dialog';
 import * as LucideIcons from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@progy/ui/button';
 
 interface AchievementModalProps {
   isOpen: boolean;

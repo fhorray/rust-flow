@@ -11,9 +11,9 @@ import {
   saveFile,
   loadFileTree,
 } from '../../../stores/editor-store';
-import { Button } from '../../ui/button';
-import { Input } from '../../ui/input';
-import { Textarea } from '../../ui/textarea';
+import { Button } from '@progy/ui/button';
+import { Input } from '@progy/ui/input';
+import { Textarea } from '@progy/ui/textarea';
 import type { QuizData, QuizQuestion } from './types';
 import { QuestionCard } from './QuestionCard';
 

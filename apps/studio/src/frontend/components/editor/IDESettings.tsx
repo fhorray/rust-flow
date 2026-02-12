@@ -1,7 +1,7 @@
 import React from 'react';
 import { useStore } from '@nanostores/react';
 import { Settings, Cpu, Terminal, Key } from 'lucide-react';
-import { Input } from '../ui/input';
+import { Input } from '@progy/ui/input';
 import { $ideSettings, type ModelProvider } from '../../stores/editor-store';
 
 const MODEL_PROVIDERS: {

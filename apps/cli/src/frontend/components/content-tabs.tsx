@@ -30,14 +30,14 @@ import {
   setShowFriendly,
   runTests,
 } from '../stores/course-store';
-import { Button } from './ui/button';
+import { Button } from '@progy/ui/button';
 import { PremiumGateModal } from './modals/premium-gate-modal';
 import { MarkdownRenderer } from '@progy/ui';
 import { QuizView } from './quiz-view';
-import { Label } from './ui/label';
-import { ScrollArea } from './ui/scroll-area';
-import { Switch } from './ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
+import { Label } from '@progy/ui/label';
+import { ScrollArea } from '@progy/ui/scroll-area';
+import { Switch } from '@progy/ui/switch';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@progy/ui/tabs';
 import React, { useState, useEffect } from 'react';
 import { $activeContentTab, setActiveContentTab } from '@/stores/ui-store';
 import { $hasUnread } from '../stores/notification-store';

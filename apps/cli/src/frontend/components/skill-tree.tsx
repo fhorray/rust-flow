@@ -1,8 +1,8 @@
 import React from 'react';
 import { CheckCircle2, Circle, Lock, Star } from 'lucide-react';
 import * as LucideIcons from 'lucide-react';
-import { Card } from './ui/card';
-import { ScrollArea } from './ui/scroll-area';
+import { Card } from '@progy/ui/card';
+import { ScrollArea } from '@progy/ui/scroll-area';
 
 interface Exercise {
   id: string;

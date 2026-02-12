@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { AlertTriangle, Loader2, RefreshCw } from 'lucide-react';
 import mermaid from 'mermaid';
-import { Button } from '../ui/button';
+import { Button } from '@progy/ui/button';
 
 interface ExerciseFlow {
   id: string;

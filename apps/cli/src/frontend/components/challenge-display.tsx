@@ -1,8 +1,8 @@
 import React from 'react';
 import { Sparkles } from 'lucide-react';
-import { Card } from './ui/card';
-import { Badge } from './ui/badge';
-import { Button } from './ui/button';
+import { Card } from '@progy/ui/card';
+import { Badge } from '@progy/ui/badge';
+import { Button } from '@progy/ui/button';
 
 interface ChallengeDisplayProps {
   challenge: any;

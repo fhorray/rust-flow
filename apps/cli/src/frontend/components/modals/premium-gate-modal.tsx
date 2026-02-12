@@ -8,9 +8,9 @@ import {
   DialogFooter,
   DialogClose,
   DialogTrigger,
-} from '../ui/dialog';
-import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
+} from '@progy/ui/dialog';
+import { Button } from '@progy/ui/button';
+import { Badge } from '@progy/ui/badge';
 import {
   Sparkles,
   Key,

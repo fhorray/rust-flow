@@ -12,8 +12,8 @@ import {
   FileText,
   Type,
 } from 'lucide-react';
-import { Button } from '../../ui/button';
-import { Textarea } from '../../ui/textarea';
+import { Button } from '@progy/ui/button';
+import { Textarea } from '@progy/ui/textarea';
 import type { QuizQuestion, QuestionType } from './types';
 
 // Editors

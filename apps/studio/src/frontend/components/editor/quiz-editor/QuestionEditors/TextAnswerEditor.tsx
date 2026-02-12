@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trash2 } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
+import { Button } from '@progy/ui/button';
+import { Input } from '@progy/ui/input';
 import type { TextAnswerQuestion } from '../types';
 
 interface TextAnswerEditorProps {

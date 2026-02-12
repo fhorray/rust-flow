@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Terminal, X, Play, Trash2, Maximize2, Minimize2 } from 'lucide-react';
-import { Button } from '../ui/button';
+import { Button } from '@progy/ui/button';
 
 interface TerminalPanelProps {
   onClose: () => void;

@@ -10,13 +10,13 @@ import {
   CommandList,
   CommandSeparator,
   CommandShortcut,
-} from "../ui/command";
+} from '@progy/ui/command';
 import {
   Dialog,
   DialogContent,
   DialogTitle,
   DialogTrigger,
-} from "../ui/dialog";
+} from '@progy/ui/dialog';
 import { cn } from "../../lib/utils";
 
 export type ModelSelectorProps = ComponentProps<typeof Dialog>;

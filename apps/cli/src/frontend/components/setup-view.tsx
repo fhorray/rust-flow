@@ -11,15 +11,15 @@ import {
   Sparkles,
   BookOpen,
 } from 'lucide-react';
-import { Button } from './ui/button';
+import { Button } from '@progy/ui/button';
 import {
   Card,
   CardHeader,
   CardTitle,
   CardContent,
   CardFooter,
-} from './ui/card';
-import { Badge } from './ui/badge';
+} from '@progy/ui/card';
+import { Badge } from '@progy/ui/badge';
 
 interface Check {
   name: string;

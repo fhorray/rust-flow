@@ -4,12 +4,12 @@ import {
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
-} from '@/components/ui/accordion';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+} from '@progy/ui/accordion';
+import { Badge } from '@progy/ui/badge';
+import { Button } from '@progy/ui/button';
+import { Card, CardContent } from '@progy/ui/card';
+import { ScrollArea } from '@progy/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@progy/ui/tabs';
 import { $router } from '@/stores/router';
 import { useStore } from '@nanostores/react';
 import {

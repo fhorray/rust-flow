@@ -41,7 +41,7 @@ import {
   ResizablePanelGroup,
   ResizablePanel,
   ResizableHandle,
-} from '../ui/resizable';
+} from '@progy/ui/resizable';
 import { CommandPalette } from './CommandPalette';
 
 // ─── Tiptap Editor Styles (injected once) ───────────────────────────────────

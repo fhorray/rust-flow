@@ -2,8 +2,8 @@ import { setSelectedExercise } from '@/stores/course-store';
 import { Loader2, Sparkles, Wand2Icon } from 'lucide-react';
 import React, { useState } from 'react';
 import { callAi } from '../../lib/ai-client';
-import { Button } from '../ui/button';
-import { Dialog, DialogContent, DialogTrigger } from '../ui/dialog';
+import { Button } from '@progy/ui/button';
+import { Dialog, DialogContent, DialogTrigger } from '@progy/ui/dialog';
 
 
 interface ChallengeGeneratorProps {

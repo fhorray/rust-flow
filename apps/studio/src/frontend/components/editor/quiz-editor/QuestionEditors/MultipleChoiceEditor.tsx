@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, CheckCircle2, X } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
+import { Button } from '@progy/ui/button';
+import { Input } from '@progy/ui/input';
 import type { MultipleChoiceQuestion } from '../types';
 
 interface MultipleChoiceEditorProps {

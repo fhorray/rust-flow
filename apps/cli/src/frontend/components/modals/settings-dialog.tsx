@@ -6,7 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
   DialogClose,
-} from '../ui/dialog';
+} from '@progy/ui/dialog';
 import { X, Monitor, Cpu, Key, Save, Check, Settings } from 'lucide-react';
 import {
   $user,
@@ -15,8 +15,8 @@ import {
   updateLocalSettings,
   updateMetadata,
 } from '../../stores/user-store';
-import { Button } from '../ui/button';
-import { Label } from '../ui/label';
+import { Button } from '@progy/ui/button';
+import { Label } from '@progy/ui/label';
 
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const user = useStore($user);

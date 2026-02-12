@@ -1,8 +1,8 @@
 import React from 'react';
 import { X } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
-import { Textarea } from '../../../ui/textarea';
+import { Button } from '@progy/ui/button';
+import { Input } from '@progy/ui/input';
+import { Textarea } from '@progy/ui/textarea';
 import type { CodingQuestion } from '../types';
 
 interface CodingEditorProps {

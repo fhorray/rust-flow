@@ -1,7 +1,7 @@
 import React from 'react';
 import { Trash2, Link as LinkIcon } from 'lucide-react';
-import { Button } from '../../../ui/button';
-import { Input } from '../../../ui/input';
+import { Button } from '@progy/ui/button';
+import { Input } from '@progy/ui/input';
 import type { MatchingQuestion } from '../types';
 
 interface MatchingEditorProps {

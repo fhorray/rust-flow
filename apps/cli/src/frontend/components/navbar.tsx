@@ -2,12 +2,12 @@ import { useStore } from '@nanostores/react';
 import { Flame, Layout, Map, Pencil, Share2, Zap } from 'lucide-react';
 import { useState } from 'react';
 import { $progress } from '../stores/course-store';
-import { Tabs, TabsList, TabsTrigger } from './ui/tabs';
+import { Tabs, TabsList, TabsTrigger } from '@progy/ui/tabs';
 import { UserNav } from './user-nav';
 import { $router } from '@/stores/router';
 import { BellIcon } from 'lucide-react';
-import { Button } from './ui/button';
-import { ScrollArea } from './ui/scroll-area';
+import { Button } from '@progy/ui/button';
+import { ScrollArea } from '@progy/ui/scroll-area';
 import {
   $hasUnread,
   $unreadNotifications,

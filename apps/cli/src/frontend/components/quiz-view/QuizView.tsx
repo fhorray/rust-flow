@@ -13,9 +13,9 @@ import {
   RotateCcw
 } from 'lucide-react';
 
-import { Button } from '../ui/button';
-import { Card } from '../ui/card';
-import { ScrollArea } from '../ui/scroll-area';
+import { Button } from '@progy/ui/button';
+import { Card } from '@progy/ui/card';
+import { ScrollArea } from '@progy/ui/scroll-area';
 import { getQuizSession, saveQuizSession, clearQuizSession } from '../../stores/quiz-store';
 
 import type {

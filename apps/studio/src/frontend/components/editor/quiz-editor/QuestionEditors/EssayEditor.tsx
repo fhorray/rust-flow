@@ -1,6 +1,6 @@
 import React from 'react';
 import { Settings2 } from 'lucide-react';
-import { Input } from '../../../ui/input';
+import { Input } from '@progy/ui/input';
 import type { EssayQuestion } from '../types';
 
 interface EssayEditorProps {

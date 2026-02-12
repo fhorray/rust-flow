@@ -1,6 +1,6 @@
 import React from 'react';
 import { CheckCircle2, XCircle } from 'lucide-react';
-import { Button } from '../../ui/button';
+import { Button } from '@progy/ui/button';
 import type { MultipleChoiceQuestion } from '../types';
 
 interface MultipleChoiceViewerProps {

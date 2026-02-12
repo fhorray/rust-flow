@@ -1,5 +1,5 @@
 import React from 'react';
-import { Button } from '../../../ui/button';
+import { Button } from '@progy/ui/button';
 import type { TrueFalseQuestion } from '../types';
 
 interface TrueFalseEditorProps {
