@@ -122,13 +122,15 @@ export class RegistryService {
     });
 
     const ONE_MB = 1 * 1024 * 1024;
-    for (const [k, v] of Object.entries(assets)) {
-      if (v.size > ONE_MB) throw new Error(`Asset ${k} exceeds 1MB`);
-      await this.env.R2.put(`${prefix}${k}`, await v.arrayBuffer(), {
-        httpMetadata: { contentType: v.type || 'application/octet-stream' },
-        customMetadata: { userId: userId },
-      });
-    }
+    await Promise.all(
+      Object.entries(assets).map(async ([k, v]) => {
+        if (v.size > ONE_MB) throw new Error(`Asset ${k} exceeds 1MB`);
+        await this.env.R2.put(`${prefix}${k}`, await v.arrayBuffer(), {
+          httpMetadata: { contentType: v.type || 'application/octet-stream' },
+          customMetadata: { userId: userId },
+        });
+      })
+    );
 
     const versionId = crypto.randomUUID();
     await this.db.insert(schema.registryVersions).values({
