@@ -28,10 +28,11 @@ import {
   fetchProgress,
   getAiHint,
   setShowFriendly,
+  runTests,
 } from '../stores/course-store';
 import { Button } from './ui/button';
 import { PremiumGateModal } from './modals/premium-gate-modal';
-import { MarkdownRenderer } from './markdown-renderer';
+import { MarkdownRenderer } from '@progy/ui';
 import { QuizView } from './quiz-view';
 import { Label } from './ui/label';
 import { ScrollArea } from './ui/scroll-area';
@@ -274,7 +275,7 @@ export function ContentTabs() {
               <p className="text-sm">Carregando instruções...</p>
             </div>
           ) : description ? (
-            <MarkdownRenderer content={description} />
+            <MarkdownRenderer content={description} onRunTests={runTests} />
           ) : (
             <div className="flex flex-col items-center justify-center h-full text-zinc-600 gap-4 text-center min-h-[300px]">
               <div className="w-12 h-12 bg-zinc-900 rounded-full flex items-center justify-center animate-pulse">
@@ -301,7 +302,7 @@ export function ContentTabs() {
           )}
 
           {output && showFriendly && friendlyOutput ? (
-            <MarkdownRenderer content={friendlyOutput} />
+            <MarkdownRenderer content={friendlyOutput} onRunTests={runTests} />
           ) : (
             output && (
               <pre className="font-mono text-sm leading-relaxed whitespace-pre-wrap break-all">
@@ -384,6 +385,7 @@ export function ContentTabs() {
                     <div className="prose prose-invert prose-sm max-w-none">
                       <MarkdownRenderer
                         content={progress.tutorSuggestion.lesson}
+                        onRunTests={runTests}
                       />
                     </div>
                     <div className="text-[10px] text-zinc-600 italic">
@@ -427,7 +429,7 @@ export function ContentTabs() {
                     </div>
                   ) : (
                     <div className="prose prose-invert prose-sm max-w-none bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 shadow-2xl">
-                      <MarkdownRenderer content={aiResponse || ''} />
+                      <MarkdownRenderer content={aiResponse || ''} onRunTests={runTests} />
                       {isAiLoading && (
                         <div className="mt-4 flex items-center gap-2 text-zinc-500 italic text-[10px]">
                           <span className="flex gap-1">

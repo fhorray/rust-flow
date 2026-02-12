@@ -15,7 +15,7 @@ import {
 } from '../../stores/editor-store';
 import { FileTree } from './FileTree';
 import { MarkdownEditor } from './MarkdownEditor';
-import { CodeEditor } from './CodeEditor';
+import { MonacoEditor } from './MonacoEditor';
 import { ConfigForm } from './ConfigForm';
 import { QuizEditor } from './quiz-editor/QuizEditor';
 import { GraphView } from './GraphView';
@@ -576,7 +576,7 @@ export function EditorLayout() {
                     ) : activeTab.type === 'ide-settings' ? (
                       <IDESettings key="ide-settings" />
                     ) : (
-                      <CodeEditor
+                      <MonacoEditor
                         key={activeTab.path}
                         initialContent={activeTab.content}
                         path={activeTab.path}

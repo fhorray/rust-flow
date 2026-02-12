@@ -116,6 +116,18 @@ export const NoteNode = Node.create({
     } as any;
   },
 
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: any, node: any) {
+          state.write(`:::${node.attrs.type}\n`);
+          state.renderContent(node);
+          state.write(`:::\n`);
+        },
+      },
+    };
+  },
+
   addNodeView() {
     return ReactNodeViewRenderer(NoteComponent);
   },

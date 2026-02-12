@@ -114,6 +114,16 @@ export const VideoNode = Node.create({
     } as any;
   },
 
+  addStorage() {
+    return {
+      markdown: {
+        serialize(state: any, node: any) {
+          state.write(`::video{src="${node.attrs.url}"}\n`);
+        },
+      },
+    };
+  },
+
   addNodeView() {
     return ReactNodeViewRenderer(VideoComponent);
   },

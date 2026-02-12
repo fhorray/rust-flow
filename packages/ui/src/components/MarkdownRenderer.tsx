@@ -8,7 +8,7 @@ import rehypeHighlight from 'rehype-highlight';
 import remarkBreaks from 'remark-breaks';
 import remarkCallouts from 'remark-callouts';
 import { visit } from 'unist-util-visit';
-import { VideoPlayer } from './video-player';
+import { VideoPlayer } from './VideoPlayer';
 import {
   Copy,
   Play,
@@ -18,7 +18,6 @@ import {
   Lightbulb,
   Terminal,
 } from 'lucide-react';
-import { runTests } from '../stores/course-store';
 import mermaid from 'mermaid';
 
 // Traditional Highlight.js languages
@@ -82,11 +81,12 @@ function remarkDirectiveTransformer() {
   };
 }
 
-interface MarkdownRendererProps {
+export interface MarkdownRendererProps {
   content: string;
+  onRunTests?: () => void;
 }
 
-const CodeBlock = ({ children, className, ...props }: any) => {
+const CodeBlock = ({ children, className, onRunTests, ...props }: any) => {
   const [copied, setCopied] = useState(false);
   const isMermaid = className === 'language-mermaid' || className === 'mermaid';
   const language = className ? className.replace('language-', '') : '';
@@ -121,12 +121,14 @@ const CodeBlock = ({ children, className, ...props }: any) => {
             )}
             {copied ? 'Copied' : 'Copy'}
           </button>
-          <button
-            onClick={() => runTests()}
-            className="text-rust hover:text-rust-light transition-colors flex items-center gap-1 font-bold"
-          >
-            <Play className="w-3 h-3" /> Run
-          </button>
+          {onRunTests && (
+            <button
+              onClick={() => onRunTests()}
+              className="text-rust hover:text-rust-light transition-colors flex items-center gap-1 font-bold"
+            >
+              <Play className="w-3 h-3" /> Run
+            </button>
+          )}
         </div>
       </div>
       <div className="bg-zinc-950 border border-zinc-700/50 rounded-b-lg overflow-hidden">
@@ -257,7 +259,7 @@ const Callout = ({
   );
 };
 
-export function MarkdownRenderer({ content }: MarkdownRendererProps) {
+export function MarkdownRenderer({ content, onRunTests }: MarkdownRendererProps) {
   if (!content) return null;
 
   return (
@@ -276,52 +278,52 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           rehypeKatex,
         ]}
         components={{
-          h1: ({ ...props }) => (
+          h1: ({ node, ...props }: any) => (
             <h1
               className="text-3xl font-black text-white mt-12 mb-6 first:mt-0 tracking-tight"
               {...props}
             />
           ),
-          h2: ({ ...props }) => (
+          h2: ({ node, ...props }: any) => (
             <h2
               className="text-2xl font-bold text-zinc-100 mt-10 mb-5 border-b border-zinc-800 pb-3 tracking-tight"
               {...props}
             />
           ),
-          h3: ({ ...props }) => (
+          h3: ({ node, ...props }: any) => (
             <h3
               className="text-xl font-bold text-zinc-100 mt-8 mb-4 tracking-tight"
               {...props}
             />
           ),
-          h4: ({ ...props }) => (
+          h4: ({ node, ...props }: any) => (
             <h4
               className="text-lg font-bold text-zinc-200 mt-6 mb-3"
               {...props}
             />
           ),
-          p: ({ ...props }) => (
+          p: ({ node, ...props }: any) => (
             <div className="mb-5 leading-relaxed last:mb-0" {...props} />
           ),
-          ul: ({ ...props }) => (
+          ul: ({ node, ...props }: any) => (
             <ul
               className="list-disc list-outside mb-6 ml-6 space-y-2"
               {...props}
             />
           ),
-          ol: ({ ...props }) => (
+          ol: ({ node, ...props }: any) => (
             <ol
               className="list-decimal list-outside mb-6 ml-6 space-y-2"
               {...props}
             />
           ),
-          li: ({ ...props }) => (
+          li: ({ node, ...props }: any) => (
             <li className="pl-1 text-zinc-300" {...props} />
           ),
           hr: () => <hr className="my-12 border-zinc-800/50" />,
 
           // Tables
-          table: ({ ...props }) => (
+          table: ({ node, ...props }: any) => (
             <div className="overflow-x-auto my-8 border border-zinc-800/50 rounded-xl bg-zinc-900/20 shadow-inner">
               <table
                 className="w-full text-sm text-left border-collapse"
@@ -329,19 +331,19 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               />
             </div>
           ),
-          thead: ({ ...props }) => (
+          thead: ({ node, ...props }: any) => (
             <thead
               className="bg-zinc-800/40 border-b border-zinc-800"
               {...props}
             />
           ),
-          th: ({ ...props }) => (
+          th: ({ node, ...props }: any) => (
             <th
               className="px-6 py-4 font-bold text-zinc-100 text-xs uppercase tracking-wider"
               {...props}
             />
           ),
-          td: ({ ...props }) => (
+          td: ({ node, ...props }: any) => (
             <td
               className="px-6 py-4 border-b border-zinc-800/30 text-zinc-400 transition-colors"
               {...props}
@@ -349,9 +351,9 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ),
 
           // Code
-          code: ({ inline, ...props }: any) => {
+          code: ({ node, inline, ...props }: any) => {
             if (props.className?.includes('language-')) {
-              return <CodeBlock {...props} />;
+              return <CodeBlock {...props} onRunTests={onRunTests} />;
             }
             return (
               <code
@@ -360,16 +362,16 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
               />
             );
           },
-          pre: ({ children }) => <>{children}</>,
+          pre: ({ node, children, ...props }: any) => <>{children}</>,
 
           // Links & Format
-          strong: ({ ...props }) => (
+          strong: ({ node, ...props }: any) => (
             <strong className="text-rust-light font-bold" {...props} />
           ),
-          em: ({ ...props }) => (
+          em: ({ node, ...props }: any) => (
             <em className="italic text-zinc-400" {...props} />
           ),
-          a: ({ ...props }) => (
+          a: ({ node, ...props }: any) => (
             <a
               target="_blank"
               rel="noopener noreferrer"
@@ -379,7 +381,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
           ),
 
           // Blockquotes
-          blockquote: ({ children, ...props }: any) => {
+          blockquote: ({ node, children, ...props }: any) => {
             // Attempt to match data-callout set by remark-callouts
             const dataAttributes = props as any;
             if (dataAttributes?.['data-callout']) {

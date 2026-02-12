@@ -190,6 +190,28 @@ function Toolbar({ editor }: { editor: ReturnType<typeof useEditor> }) {
 
 // ─── MarkdownEditor ─────────────────────────────────────────────────────────
 
+function preProcessMarkdown(content: string): string {
+  if (!content) return '';
+  // Convert ::video{src="..."} to HTML for Tiptap
+  let processed = content.replace(
+    /::video\{src="([^"]+)"\}/g,
+    '<div data-type="video" url="$1"></div>',
+  );
+
+  // Convert :::note ... ::: to HTML for Tiptap
+  // Support note, tip, warning, info, important, danger
+  processed = processed.replace(
+    /^:::(note|tip|warning|info|important|danger)\s*\n([\s\S]*?)\n:::/gm,
+    (match, type, innerContent) => {
+      // We need to recursively process inner content or just wrap it?
+      // Tiptap will parse inner content as markdown if we wrap it in div
+      return `<div data-type="note" data-note-type="${type}">\n${innerContent}\n</div>`;
+    },
+  );
+
+  return processed;
+}
+
 export function MarkdownEditor({
   initialContent,
   path,
@@ -216,7 +238,7 @@ export function MarkdownEditor({
       VideoNode,
       NoteNode,
     ],
-    content: initialContent,
+    content: preProcessMarkdown(initialContent),
     editorProps: {
       attributes: {
         class:

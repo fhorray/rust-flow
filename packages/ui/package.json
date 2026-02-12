@@ -1,0 +1,37 @@
+{
+  "name": "@progy/ui",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^9.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-directive": "^4.0.0",
+    "remark-math": "^6.0.0",
+    "rehype-katex": "^7.0.1",
+    "rehype-highlight": "^7.0.0",
+    "remark-breaks": "^4.0.0",
+    "remark-callouts": "^2.0.0",
+    "unist-util-visit": "^5.1.0",
+    "lucide-react": "^0.394.0",
+    "mermaid": "^11.12.2",
+    "highlight.js": "^11.11.1",
+    "katex": "^0.16.28",
+    "clsx": "^2.1.1",
+    "tailwind-merge": "^2.3.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/node": "^20.11.24",
+    "typescript": "^5.3.3"
+  }
+}
