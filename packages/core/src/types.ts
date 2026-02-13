@@ -61,8 +61,7 @@ export const CourseConfigSchema = z.object({
   id: z.string(),
   name: z.string(),
   version: z.string().optional().default("1.0.0"), // Add versioning
-  runner: RunnerSchema,
-  runners: z.array(RunnerSchema).optional(),
+  runners: z.array(RunnerSchema),
   content: ContentSchema,
   setup: SetupSchema.optional(),
   branding: BrandingSchema.optional(),

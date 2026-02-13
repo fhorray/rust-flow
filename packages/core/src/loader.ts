@@ -101,12 +101,7 @@ export class CourseLoader {
       throw new Error("Missing required 'runner/' directory at course root.");
     }
 
-    const runnersToValidate = [result.data.runner];
-    if (result.data.runners) {
-      runnersToValidate.push(...result.data.runners);
-    }
-
-    for (const runner of runnersToValidate) {
+    for (const runner of result.data.runners) {
       const runnerType = runner.type || "process";
       const runnerName = runner.name || runner.id || "Default Runner";
 

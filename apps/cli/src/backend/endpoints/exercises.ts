@@ -241,16 +241,21 @@ async function handleDockerLocalRunner(body: { exerciseName: string, id: string,
   }
 
   let dockerfile = runnerConfig.dockerfile || "Dockerfile";
+
+  // Resolve dockerfile from runtime root (cache) primarily
   let dockerfilePath = join(PROG_CWD, dockerfile);
+  let contextPath = PROG_CWD;
 
-  if (!(await progyExists(dockerfilePath)) && PROG_RUNTIME_ROOT) {
-    const runtimeDockerfile = join(PROG_RUNTIME_ROOT, dockerfile);
-    if (await progyExists(runtimeDockerfile)) {
-      dockerfilePath = runtimeDockerfile;
-    }
+  if (PROG_RUNTIME_ROOT) {
+     const runtimeDockerfile = join(PROG_RUNTIME_ROOT, dockerfile);
+     if (await progyExists(runtimeDockerfile)) {
+         dockerfilePath = runtimeDockerfile;
+         // Context needs to be where the Dockerfile is for COPY to work if it copies runner scripts
+         // But usually we mount the student code.
+         // If Dockerfile copies files from the repo (like a runner script), context should be runtime root.
+         contextPath = PROG_RUNTIME_ROOT;
+     }
   }
-
-  const contextPath = PROG_CWD;
 
   try {
     await imgMgr.ensureImage(imageTag, contextPath, dockerfilePath);
@@ -281,7 +286,8 @@ async function handleDockerComposeRunner(body: { exerciseName: string, id: strin
   const config = currentConfig!;
 
   let composeFile = join(PROG_CWD, runnerConfig.compose_file || "docker-compose.yml");
-  if (!(await progyExists(composeFile)) && PROG_RUNTIME_ROOT) {
+  // Prefer runtime root for compose file
+  if (PROG_RUNTIME_ROOT) {
     const runtimeFile = join(PROG_RUNTIME_ROOT, runnerConfig.compose_file || "docker-compose.yml");
     if (await progyExists(runtimeFile)) {
       composeFile = runtimeFile;
@@ -321,15 +327,35 @@ async function handleProcessRunner(body: { exerciseName: string, id: string, ent
   const idParts = id?.split('/') || [];
   const module = idParts[0] || "";
 
-  const runnerCmd = runnerConfig.command;
+  // The command might be a script in the runner folder, likely in PROG_RUNTIME_ROOT
+  // We need to resolve the executable path if it's relative
+  let runnerCmd = runnerConfig.command;
+
+  // If the command is a relative path (e.g. "./runner/main"), resolve it against PROG_RUNTIME_ROOT first
+  if (runnerCmd.startsWith("./") || runnerCmd.startsWith("../")) {
+     if (PROG_RUNTIME_ROOT) {
+        const runtimeCmd = resolve(PROG_RUNTIME_ROOT, runnerCmd);
+        if (await progyExists(runtimeCmd)) {
+            runnerCmd = runtimeCmd;
+        } else {
+             // Fallback to CWD
+            runnerCmd = resolve(PROG_CWD, runnerCmd);
+        }
+     } else {
+         runnerCmd = resolve(PROG_CWD, runnerCmd);
+     }
+  }
+
   const runnerArgs = runnerConfig.args.map((a: string) =>
     a.replace("{{exercise}}", body.entryPoint ? join(id, body.entryPoint) : exerciseName)
       .replace("{{id}}", id || "")
       .replace("{{module}}", module)
   );
 
-  const cwdLink = runnerConfig.cwd ? join(PROG_CWD, runnerConfig.cwd) : PROG_CWD;
-  const finalCwd = cwdLink.replace("{{exercise}}", exerciseName).replace("{{id}}", id || "").replace("{{module}}", module);
+  // CWD for the process should usually be the student's workspace (PROG_CWD)
+  // But if configured explicitly, we resolve it relative to PROG_CWD
+  const configCwd = runnerConfig.cwd ? join(PROG_CWD, runnerConfig.cwd) : PROG_CWD;
+  const finalCwd = configCwd.replace("{{exercise}}", exerciseName).replace("{{id}}", id || "").replace("{{module}}", module);
 
   return new Promise<{ success: boolean, output: string, friendlyOutput?: string }>((resolve) => {
     const child = spawn(runnerCmd, runnerArgs, {
@@ -357,10 +383,16 @@ const runHandler: ServerType<"/exercises/run"> = async (req: Request) => {
     await ensureConfig();
     const body = await req.json() as { exerciseName: string, id: string, entryPoint?: string, runnerId?: string };
 
-    let runnerConfig = currentConfig!.runner;
+    // Default to the first runner in the list if no ID provided
+    let runnerConfig = currentConfig!.runners?.[0];
+
     if (body.runnerId && currentConfig!.runners) {
       const found = currentConfig!.runners.find(r => r.id === body.runnerId);
       if (found) runnerConfig = found;
+    }
+
+    if (!runnerConfig) {
+        return Response.json({ success: false, output: "No runner configuration found." });
     }
 
     let result: { success: boolean, output: string, friendlyOutput?: string } | null = null;

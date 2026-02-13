@@ -340,16 +340,10 @@ export const $courseConfig = computed($configQuery, (q) => q.data || {});
  * @returns {any[]} The available runners.
  */
 export const $availableRunners = computed($courseConfig, (config) => {
-  const runners = [];
-  // Main/Default runner
-  if (config.runner) {
-    runners.push({ ...config.runner, id: config.runner.id || 'default', name: config.runner.name || 'Default' });
-  }
-  // Additional runners
   if (config.runners && Array.isArray(config.runners)) {
-    runners.push(...config.runners);
+    return config.runners;
   }
-  return runners;
+  return [];
 });
 
 /**

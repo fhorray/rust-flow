@@ -6,14 +6,6 @@
     "root": "content",
     "exercises": "content"
   },
-  "runner": {
-    "id": "process-local",
-    "name": "Local (Process)",
-    "type": "process",
-    "command": "./runner/main",
-    "args": ["{{exercise}}"],
-    "cwd": "."
-  },
   "runners": [
     {
       "id": "process-local",
