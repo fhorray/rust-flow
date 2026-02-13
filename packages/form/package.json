@@ -1,0 +1,30 @@
+{
+  "name": "@progy/form",
+  "version": "0.1.0",
+  "type": "module",
+  "main": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./use-form": "./src/use-form/index.tsx",
+    "./fields": "./src/fields/index.ts"
+  },
+  "scripts": {
+    "build": "tsc"
+  },
+  "dependencies": {
+    "@progy/ui": "workspace:*",
+    "@tanstack/react-form": "^0.37.0",
+    "@tanstack/zod-form-adapter": "^0.37.0",
+    "lucide-react": "^0.344.0",
+    "zod": "^3.22.4"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "typescript": "^5.3.3"
+  }
+}

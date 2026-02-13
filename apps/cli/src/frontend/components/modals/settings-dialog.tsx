@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
+import { useForm, useStore as useFormStore } from '@progy/form/use-form';
 import {
   Dialog,
   DialogContent,
@@ -21,61 +22,76 @@ import { Label } from '@progy/ui/label';
 export function SettingsDialog({ onClose }: { onClose: () => void }) {
   const user = useStore($user);
   const localSettings = useStore($localSettings);
-
-  const [ide, setIde] = useState('vs-code');
-  const [openaiKey, setOpenaiKey] = useState('');
-  const [anthropicKey, setAnthropicKey] = useState('');
-  const [geminiKey, setGeminiKey] = useState('');
-  const [xaiKey, setXaiKey] = useState('');
-  const [aiProvider, setAiProvider] = useState('openai');
-  const [aiModel, setAiModel] = useState('gpt-4o-mini');
-
-  const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  const form = useForm({
+    defaultValues: {
+      ide: 'vs-code',
+      openaiKey: '',
+      anthropicKey: '',
+      geminiKey: '',
+      xaiKey: '',
+      aiProvider: 'openai',
+      aiModel: 'gpt-4o-mini',
+    },
+    onSubmit: async ({ value }) => {
+        await updateMetadata({ ide: value.ide });
+        await updateLocalSettings({
+            openaiKey: value.openaiKey,
+            anthropicKey: value.anthropicKey,
+            geminiKey: value.geminiKey,
+            xaiKey: value.xaiKey,
+            ide: value.ide,
+            aiProvider: value.aiProvider,
+            aiModel: value.aiModel
+        });
+
+        setShowSuccess(true);
+        setTimeout(() => {
+            setShowSuccess(false);
+            onClose();
+        }, 1500);
+    }
+  });
+
+  const isSubmitting = useFormStore(form.store, (state) => state.isSubmitting);
+  const { values } = useFormStore(form.store, (state) => state);
 
   useEffect(() => {
     fetchLocalSettings();
+  }, []);
+
+  useEffect(() => {
     if (user?.metadata) {
       try {
         const meta = JSON.parse(user.metadata);
-        if (meta.ide) setIde(meta.ide);
+        if (meta.ide) form.setFieldValue('ide', meta.ide);
       } catch (e) { }
     }
   }, [user]);
 
   useEffect(() => {
-    if (localSettings.openaiKey) setOpenaiKey(localSettings.openaiKey);
-    if (localSettings.anthropicKey) setAnthropicKey(localSettings.anthropicKey);
-    if (localSettings.geminiKey) setGeminiKey(localSettings.geminiKey);
-    if (localSettings.xaiKey) setXaiKey(localSettings.xaiKey);
-    if (localSettings.ide) setIde(localSettings.ide);
-    if (localSettings.aiProvider) setAiProvider(localSettings.aiProvider);
-    if (localSettings.aiModel) setAiModel(localSettings.aiModel);
+    const updates: any = {};
+    if (localSettings.openaiKey) updates.openaiKey = localSettings.openaiKey;
+    if (localSettings.anthropicKey) updates.anthropicKey = localSettings.anthropicKey;
+    if (localSettings.geminiKey) updates.geminiKey = localSettings.geminiKey;
+    if (localSettings.xaiKey) updates.xaiKey = localSettings.xaiKey;
+    if (localSettings.ide) updates.ide = localSettings.ide;
+    if (localSettings.aiProvider) updates.aiProvider = localSettings.aiProvider;
+    if (localSettings.aiModel) updates.aiModel = localSettings.aiModel;
+
+    if (Object.keys(updates).length > 0) {
+        // We use setState to update multiple values without triggering validation immediately if not needed
+        form.store.setState(s => ({
+            ...s,
+            values: { ...s.values, ...updates }
+        }));
+    }
   }, [localSettings]);
 
-  const handleSave = async () => {
-    setIsSaving(true);
-
-    // 1. Save IDE to cloud metadata
-    await updateMetadata({ ide });
-
-    // 2. Save keys and settings to local config
-    await updateLocalSettings({
-      openaiKey,
-      anthropicKey,
-      geminiKey,
-      xaiKey,
-      ide,
-      aiProvider,
-      aiModel
-    });
-
-    setIsSaving(false);
-    setShowSuccess(true);
-    setTimeout(() => {
-      setShowSuccess(false);
-      onClose();
-    }, 1500);
+  const handleSave = (e: React.MouseEvent) => {
+    e.preventDefault();
+    form.handleSubmit();
   };
 
   return (
@@ -109,28 +125,32 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
               Choose which editor you're using for a better experience.
             </p>
 
-            <div className="grid grid-cols-2 gap-3">
-              {[
-                { id: 'vs-code', name: 'VS Code' },
-                { id: 'cursor', name: 'Cursor' },
-                { id: 'zed', name: 'Zed' },
-                { id: 'antigravity', name: 'Antigravity' },
-                { id: 'vim', name: 'Vim/Neovim' },
-              ].map((item) => (
-                <button
-                  key={item.id}
-                  onClick={() => setIde(item.id)}
-                  className={`p-3 text-xs font-semibold rounded-xl border transition-all text-left flex items-center justify-between
-                      ${ide === item.id
-                      ? 'bg-rust/10 border-rust text-white'
-                      : 'bg-zinc-950/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
-                    }`}
-                >
-                  {item.name}
-                  {ide === item.id && <Check className="w-3.5 h-3.5" />}
-                </button>
-              ))}
-            </div>
+            <form.Field name="ide">
+              {(field) => (
+                <div className="grid grid-cols-2 gap-3">
+                  {[
+                    { id: 'vs-code', name: 'VS Code' },
+                    { id: 'cursor', name: 'Cursor' },
+                    { id: 'zed', name: 'Zed' },
+                    { id: 'antigravity', name: 'Antigravity' },
+                    { id: 'vim', name: 'Vim/Neovim' },
+                  ].map((item) => (
+                    <button
+                      key={item.id}
+                      onClick={() => field.handleChange(item.id)}
+                      className={`p-3 text-xs font-semibold rounded-xl border transition-all text-left flex items-center justify-between
+                          ${field.state.value === item.id
+                          ? 'bg-rust/10 border-rust text-white'
+                          : 'bg-zinc-950/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
+                        }`}
+                    >
+                      {item.name}
+                      {field.state.value === item.id && <Check className="w-3.5 h-3.5" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </form.Field>
           </div>
 
           {/* AI Section */}
@@ -146,65 +166,108 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             </p>
 
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-2">
-                {[
-                  { id: 'openai', name: 'OpenAI', model: 'gpt-4o-mini' },
-                  { id: 'anthropic', name: 'Anthropic', model: 'claude-sonnet-4-5' },
-                  { id: 'google', name: 'Google', model: 'gemini-3-flash-preview' },
-                  { id: 'xai', name: 'xAI', model: 'grok-4-1-fast-reasoning' },
-                ].map((p) => (
-                  <button
-                    key={p.id}
-                    onClick={() => {
-                      setAiProvider(p.id);
-                      setAiModel(p.model);
-                    }}
-                    className={`p-2.5 text-xs font-semibold rounded-xl border transition-all text-left flex items-center gap-2
-                       ${aiProvider === p.id
-                        ? 'bg-rust/10 border-rust text-white'
-                        : 'bg-zinc-950/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
-                      }`}
-                  >
-                    <div className={`w-2 h-2 rounded-full ${aiProvider === p.id ? 'bg-rust' : 'bg-zinc-700'}`} />
-                    <div>
-                      <div className="font-bold">{p.name}</div>
-                      <div className="text-[9px] opacity-70 font-mono mt-0.5">{p.model}</div>
-                    </div>
-                  </button>
-                ))}
-              </div>
+              <form.Field name="aiProvider">
+                {(field) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {[
+                      { id: 'openai', name: 'OpenAI', model: 'gpt-4o-mini' },
+                      { id: 'anthropic', name: 'Anthropic', model: 'claude-sonnet-4-5' },
+                      { id: 'google', name: 'Google', model: 'gemini-3-flash-preview' },
+                      { id: 'xai', name: 'xAI', model: 'grok-4-1-fast-reasoning' },
+                    ].map((p) => (
+                      <button
+                        key={p.id}
+                        onClick={() => {
+                          field.handleChange(p.id);
+                          form.setFieldValue('aiModel', p.model);
+                        }}
+                        className={`p-2.5 text-xs font-semibold rounded-xl border transition-all text-left flex items-center gap-2
+                           ${field.state.value === p.id
+                            ? 'bg-rust/10 border-rust text-white'
+                            : 'bg-zinc-950/50 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-300'
+                          }`}
+                      >
+                        <div className={`w-2 h-2 rounded-full ${field.state.value === p.id ? 'bg-rust' : 'bg-zinc-700'}`} />
+                        <div>
+                          <div className="font-bold">{p.name}</div>
+                          <div className="text-[9px] opacity-70 font-mono mt-0.5">{p.model}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </form.Field>
 
               <div className="space-y-2">
                 <Label
                   htmlFor="apiKey"
                   className="text-[10px] uppercase font-black text-zinc-600 tracking-widest ml-1"
                 >
-                  {aiProvider === 'openai' ? 'OpenAI API Key' :
-                    aiProvider === 'anthropic' ? 'Anthropic API Key' :
-                      aiProvider === 'google' ? 'Google API Key' :
-                        aiProvider === 'xai' ? 'xAI API Key' : 'API Key'}
+                  {values.aiProvider === 'openai' ? 'OpenAI API Key' :
+                    values.aiProvider === 'anthropic' ? 'Anthropic API Key' :
+                      values.aiProvider === 'google' ? 'Google API Key' :
+                        values.aiProvider === 'xai' ? 'xAI API Key' : 'API Key'}
                 </Label>
                 <div className="relative">
                   <Key className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-600" />
-                  <input
-                    id="apiKey"
-                    type="password"
-                    value={
-                      aiProvider === 'openai' ? openaiKey :
-                        aiProvider === 'anthropic' ? anthropicKey :
-                          aiProvider === 'google' ? geminiKey :
-                            aiProvider === 'xai' ? xaiKey : ''
-                    }
-                    onChange={(e) => {
-                      const val = e.target.value;
-                      if (aiProvider === 'openai') setOpenaiKey(val);
-                      else if (aiProvider === 'anthropic') setAnthropicKey(val);
-                      else if (aiProvider === 'google') setGeminiKey(val);
-                      else if (aiProvider === 'xai') setXaiKey(val);
-                    }}
-                    placeholder={`sk-...`}
-                    className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-zinc-200 focus:outline-none focus:border-rust transition-colors"
-                  />
+
+                  {/* Conditionally render the correct field based on provider */}
+                  {values.aiProvider === 'openai' && (
+                    <form.Field name="openaiKey">
+                        {(field) => (
+                            <input
+                                id="apiKey"
+                                type="password"
+                                value={field.state.value as string}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="sk-..."
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-zinc-200 focus:outline-none focus:border-rust transition-colors"
+                            />
+                        )}
+                    </form.Field>
+                  )}
+                   {values.aiProvider === 'anthropic' && (
+                    <form.Field name="anthropicKey">
+                        {(field) => (
+                            <input
+                                id="apiKey"
+                                type="password"
+                                value={field.state.value as string}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="sk-ant-..."
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-zinc-200 focus:outline-none focus:border-rust transition-colors"
+                            />
+                        )}
+                    </form.Field>
+                  )}
+                   {values.aiProvider === 'google' && (
+                    <form.Field name="geminiKey">
+                        {(field) => (
+                            <input
+                                id="apiKey"
+                                type="password"
+                                value={field.state.value as string}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="AIza..."
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-zinc-200 focus:outline-none focus:border-rust transition-colors"
+                            />
+                        )}
+                    </form.Field>
+                  )}
+                   {values.aiProvider === 'xai' && (
+                    <form.Field name="xaiKey">
+                        {(field) => (
+                            <input
+                                id="apiKey"
+                                type="password"
+                                value={field.state.value as string}
+                                onChange={(e) => field.handleChange(e.target.value)}
+                                placeholder="xai-..."
+                                className="w-full bg-zinc-950 border border-zinc-800 rounded-xl py-2.5 pl-10 pr-4 text-sm text-zinc-200 focus:outline-none focus:border-rust transition-colors"
+                            />
+                        )}
+                    </form.Field>
+                  )}
                 </div>
               </div>
             </div>
@@ -215,9 +278,9 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
           <Button
             onClick={handleSave}
             className="flex-1 bg-rust hover:bg-rust/90 h-11 rounded-xl font-bold"
-            disabled={isSaving}
+            disabled={isSubmitting}
           >
-            {isSaving ? (
+            {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
             ) : showSuccess ? (
               <div className="flex items-center gap-2">

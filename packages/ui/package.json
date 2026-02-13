@@ -5,6 +5,7 @@
   "main": "./src/index.ts",
   "exports": {
     ".": "./src/index.ts",
+    "./lib/utils": "./src/lib/utils.ts",
     "./accordion": "./src/components/ui/accordion.tsx",
     "./alert-dialog": "./src/components/ui/alert-dialog.tsx",
     "./alert": "./src/components/ui/alert.tsx",
@@ -24,6 +25,7 @@
     "./dialog": "./src/components/ui/dialog.tsx",
     "./drawer": "./src/components/ui/drawer.tsx",
     "./dropdown-menu": "./src/components/ui/dropdown-menu.tsx",
+    "./field": "./src/components/ui/field.tsx",
     "./hover-card": "./src/components/ui/hover-card.tsx",
     "./input-group": "./src/components/ui/input-group.tsx",
     "./input-otp": "./src/components/ui/input-otp.tsx",
