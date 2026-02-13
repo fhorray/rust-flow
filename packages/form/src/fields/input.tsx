@@ -3,7 +3,6 @@
 import { Input } from '@progy/ui/input';
 import { Field, FieldDescription, FieldError, FieldLabel } from '@progy/ui/field';
 import { useFieldContext } from '../use-form';
-import { useStore } from '@tanstack/react-store';
 import React from 'react';
 import type { LucideIcon } from 'lucide-react';
 
@@ -15,7 +14,7 @@ interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, '
 
 const InputField = ({ label, icon: Icon, description, ...props }: InputProps) => {
     const field = useFieldContext();
-    const { value, meta } = useStore(field.store, (state: any) => state);
+    const { value, meta } = field.state;
     const { errors } = meta;
     const isInvalid = errors.length > 0;
 
@@ -41,7 +40,7 @@ const InputField = ({ label, icon: Icon, description, ...props }: InputProps) =>
                 />
             </div>
 
-            {label && <FieldLabel className="sr-only">{label}</FieldLabel>}
+            {label && <FieldLabel>{label}</FieldLabel>}
 
             {description && (
                 <FieldDescription className="text-sm opacity-45">

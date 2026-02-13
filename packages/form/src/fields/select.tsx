@@ -3,7 +3,6 @@
 import { Field, FieldDescription, FieldError, FieldLabel } from '@progy/ui/field';
 import { useFieldContext } from '../use-form';
 import { cn } from '@progy/ui/lib/utils';
-import { useStore } from '@tanstack/react-store';
 import React from 'react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@progy/ui/select';
 
@@ -18,7 +17,7 @@ interface SelectFieldProps extends Omit<React.ComponentProps<typeof Select>, 'va
 
 const SelectField = ({ label, description, placeholder = 'Select an option', options, disabled, className, ...props }: SelectFieldProps) => {
     const field = useFieldContext();
-    const { value, meta } = useStore(field.store, (state: any) => state);
+    const { value, meta } = field.state;
     const { errors } = meta;
 
     const handleValueChange = (newValue: string) => {

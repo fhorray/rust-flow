@@ -2,7 +2,6 @@
 
 import { Field, FieldDescription, FieldError, FieldLabel } from '@progy/ui/field';
 import { useFieldContext } from '../use-form';
-import { useStore } from '@tanstack/react-store';
 import { Textarea } from '@progy/ui/textarea';
 import React from 'react';
 
@@ -13,7 +12,7 @@ interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaEl
 
 const TextareaField = ({ label, description, ...props }: TextareaProps) => {
     const field = useFieldContext();
-    const { value, meta } = useStore(field.store, (state: any) => state);
+    const { value, meta } = field.state;
     const { errors } = meta;
     const isInvalid = errors.length > 0;
 
