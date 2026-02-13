@@ -139,6 +139,27 @@ describe("Comprehensive Scenarios", () => {
     expect(mockSpawn).toHaveBeenCalled();
   });
 
+  test("start command should fail if no token and not offline", async () => {
+    mockToken = null;
+    const { start } = await import("../src/commands/course");
+    const progyFile = join(tempDir, "local.progy");
+    await writeFile(progyFile, "dummy");
+
+    expect(start(progyFile, {})).rejects.toThrow("ProcessExit: 1");
+    expect(mockLogger.error).toHaveBeenCalledWith("Authentication required.", expect.stringContaining("progy login"));
+  });
+
+  test("start command should succeed if no token but offline mode enabled", async () => {
+    mockToken = null;
+    mockSpawn.mockClear();
+    const { start } = await import("../src/commands/course");
+    const progyFile = join(tempDir, "local.progy");
+    await writeFile(progyFile, "dummy");
+
+    await start(progyFile, { offline: true });
+    expect(mockSpawn).toHaveBeenCalled();
+  });
+
   // Instructor Flow tests removed (dev command moved to Studio)
 });
 

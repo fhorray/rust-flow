@@ -238,6 +238,13 @@ export async function start(file: string | undefined, options: { offline?: boole
   }
 
   // --- Student Flow ---
+  if (!isOffline) {
+    const token = await loadToken();
+    if (!token) {
+      logger.error("Authentication required.", "Run 'progy login' to sync your progress to the cloud, or use '--offline' to learn without an account.");
+      process.exit(1);
+    }
+  }
 
   try {
     // Case 1: Manual .progy File
