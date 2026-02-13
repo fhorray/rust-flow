@@ -24,7 +24,8 @@
     "link:cli": "--cwd apps/cli bun link",
     "link:editor": " --cwd apps/studio bun link",
 
-    "check-types": "tsc --noEmit"
+    "check-types": "tsc --noEmit",
+    "test:coverage": "bun test --cwd apps/cli && bun test --cwd apps/studio && bun test --cwd packages/core"
   },
   "workspaces": [
     "apps/*",

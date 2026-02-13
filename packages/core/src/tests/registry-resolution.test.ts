@@ -1,8 +1,15 @@
-import { expect, test, describe, beforeAll, afterAll, spyOn } from "bun:test";
+import { expect, test, describe, beforeAll, afterAll, spyOn, mock } from "bun:test";
 import { CourseLoader } from "@progy/core";
 import { OFICIAL_USERNAME } from "@consts";
 
 describe("CourseLoader Registry Resolution", () => {
+
+  beforeAll(() => {
+    // Ensure we are using the REAL @progy/core and CourseLoader
+    mock.restore();
+    // Point to the source file to bypass mocked module cache
+    mock.module("@progy/core", () => require("../index"));
+  });
 
   test("should auto-prefix simple slug with official username", async () => {
     // Mock fetch to simulate successful resolution
@@ -16,17 +23,20 @@ describe("CourseLoader Registry Resolution", () => {
       })
     };
 
-    const globalFetch = spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as any);
+    const originalFetch = global.fetch;
+    global.fetch = mock(() => Promise.resolve(mockResponse)) as any;
 
-    const source = await CourseLoader.resolveSource("sql-basics");
+    try {
+      const source = await CourseLoader.resolveSource("sql-basics");
 
-    expect(globalFetch).toHaveBeenCalled();
-    const callUrl = globalFetch.mock.calls[0]![0] as string;
-    expect(callUrl).toContain(encodeURIComponent(`${OFICIAL_USERNAME}/sql-basics`));
-    expect(source.isRegistry).toBe(true);
-    expect(source.url).toContain("sql-basics/1.0.0");
-
-    globalFetch.mockRestore();
+      expect(global.fetch).toHaveBeenCalled();
+      const callUrl = (global.fetch as any).mock.calls[0][0] as string;
+      expect(callUrl).toContain(encodeURIComponent(`${OFICIAL_USERNAME}/sql-basics`));
+      expect(source.isRegistry).toBe(true);
+      expect(source.url).toContain("sql-basics/1.0.0");
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
   test("should preserve explicit community handle", async () => {
@@ -40,21 +50,37 @@ describe("CourseLoader Registry Resolution", () => {
       })
     };
 
-    const globalFetch = spyOn(globalThis, "fetch").mockResolvedValue(mockResponse as any);
+    const originalFetch = global.fetch;
+    global.fetch = mock(() => Promise.resolve(mockResponse)) as any;
 
-    const source = await CourseLoader.resolveSource("@fhorray/rust-flow");
+    try {
+      const source = await CourseLoader.resolveSource("@fhorray/rust-flow");
 
-    expect(globalFetch).toHaveBeenCalled();
-    const callUrl = globalFetch.mock.calls[0]![0] as string;
-    expect(callUrl).toContain(encodeURIComponent("@fhorray/rust-flow"));
-    expect(source.url).toContain("fhorray/rust-flow/0.5.0");
-
-    globalFetch.mockRestore();
+      expect(global.fetch).toHaveBeenCalled();
+      const callUrl = (global.fetch as any).mock.calls[0][0] as string;
+      expect(callUrl).toContain(encodeURIComponent("@fhorray/rust-flow"));
+      expect(source.url).toContain("fhorray/rust-flow/0.5.0");
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 
-  test("should return git url for non-registry inputs containing slashes", async () => {
-    const source = await CourseLoader.resolveSource("fhorray/some-repo");
-    expect(source.isRegistry).toBeFalsy();
-    expect(source.url).toBe("https://github.com/progy-dev/fhorray/some-repo.git");
+  test("should throw error for non-registry inputs", async () => {
+    // Assert that it throws the specific error message about Git URLs not being supported
+    const originalFetch = global.fetch;
+    // Mock failure to trigger the catch block in loader.ts
+    global.fetch = mock(() => Promise.reject(new Error("Network Error"))) as any;
+
+    try {
+      await CourseLoader.resolveSource("fhorray/some-repo");
+      expect(true).toBe(false); // Should not reach here
+    } catch (e: any) {
+      if (!e.message.includes("Git URLs are no longer supported")) {
+        console.log("Registry Test Caught Unexpected Error:", e.message);
+      }
+      expect(e.message).toContain("Git URLs are no longer supported");
+    } finally {
+      global.fetch = originalFetch;
+    }
   });
 });

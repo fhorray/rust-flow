@@ -1,4 +1,4 @@
-// Core utilities
+// Core utilities - Refreshed legacy exports
 export { exists } from "./utils.ts";
 
 // Paths & constants

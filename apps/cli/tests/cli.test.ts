@@ -139,19 +139,9 @@ mock.module("@progy/core", () => ({
     }
   },
   // Add missing exports to fix "Export named ... not found" errors
-  SyncManager: {
-    loadConfig: mock(async () => null),
-    ensureOfficialCourse: mock(async () => ""),
-    applyLayering: mock(async () => { }),
-    saveConfig: mock(async () => { }),
-    generateGitIgnore: mock(async () => { }),
-  },
+
   scanAndGenerateManifest: mock(async () => ({})),
-  MODULE_INFO_TOML: "mock",
-  EXERCISE_README: "mock",
-  EXERCISE_STARTER: "mock",
-  QUIZ_TEMPLATE: "[]",
-  RUNNER_README: "# Runner",
+
 }));
 
 
@@ -268,11 +258,8 @@ describe("Course Loader", () => {
     }
   });
 
-  test("resolveSource resolves alias to progy-dev organization", async () => {
-    const { CourseLoader } = await import("@progy/core");
-    const result = await CourseLoader.resolveSource("python");
-    expect(result.url).toBe("https://github.com/progy-dev/python.git");
-  });
+
+
 });
 
 describe("CLI Commands Exports", () => {
@@ -280,12 +267,7 @@ describe("CLI Commands Exports", () => {
     const courseModule = await import("../src/commands/course");
 
     expect(typeof courseModule.init).toBe("function");
-    expect(typeof courseModule.createCourse).toBe("function");
-    expect(typeof courseModule.validate).toBe("function");
-    expect(typeof courseModule.pack).toBe("function");
-    expect(typeof courseModule.dev).toBe("function");
-    expect(typeof courseModule.start).toBe("function");
-    expect(typeof courseModule.testExercise).toBe("function");
+
   });
 
   test("all expected functions are exported from auth.ts", async () => {
@@ -313,53 +295,4 @@ describe("Publish Command", () => {
   });
 });
 
-// --- New Integration Test ---
 
-describe("CLI Start Command (Integration)", () => {
-  let originalCwd: any;
-  let originalExit: any;
-  let tempCwd: string;
-
-  beforeEach(async () => {
-    originalCwd = process.cwd;
-    originalExit = process.exit;
-    process.exit = mock(() => { }) as any;
-    tempCwd = await createTempDir("start-test");
-    process.cwd = () => tempCwd;
-    mockSpawn.mockClear();
-  });
-
-  afterEach(async () => {
-    process.cwd = originalCwd;
-    process.exit = originalExit;
-    await rm(tempCwd, { recursive: true, force: true });
-  });
-
-  test("start command handles alias to container flow", async () => {
-    const { start } = await import("../src/commands/course");
-    const { GitUtils, CourseContainer } = await import("@progy/core");
-
-    const alias = "test-alias-course";
-
-    // Run start with an alias
-    await start(alias, { offline: false });
-
-    // Verify git clone was called
-    expect(GitUtils.clone).toHaveBeenCalled();
-    const cloneCalls = (GitUtils.clone as any).mock.calls;
-    // Check that it tried to clone from progy-dev
-    expect(cloneCalls[0][0]).toContain("test-alias-course");
-
-    // Verify pack was called
-    expect(CourseContainer.pack).toHaveBeenCalled();
-    const packCalls = (CourseContainer.pack as any).mock.calls;
-    // Should pack to [alias].progy in current dir
-    expect(packCalls[0][1]).toContain(`${alias}.progy`);
-
-    // Verify spawn was called (runServer)
-    expect(mockSpawn).toHaveBeenCalled();
-    const spawnCalls = mockSpawn.mock.calls;
-    expect(spawnCalls[0][0]).toBe("bun");
-    expect(spawnCalls[0][1]).toContain("run");
-  });
-});

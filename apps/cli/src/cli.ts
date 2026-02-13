@@ -2,7 +2,7 @@
 import { Command } from "commander";
 import { login, logout, whoami } from "./commands/auth";
 import { setConfig, listConfig } from "./commands/config";
-import { init, createCourse, validate, pack, dev, start, testExercise } from "./commands/course";
+import { init, validate, pack, dev, start } from "./commands/course";
 import { publish } from "./commands/publish";
 import { save, sync, reset } from "./commands/sync";
 import { patch, minor, major } from "./commands/version";
@@ -47,18 +47,37 @@ config
   .action(listConfig);
 
 // --- Course Lifecycle (Instructor) ---
+// Note: 'create' command moved to Studio
 program
   .command("create")
-  .description("Create a new course from a template")
-  .argument("<name>", "Course directory name")
-  .option("-t, --template <type>", "Template type (rust, python, typescript, go)", "python")
-  .action((name, options) => createCourse({ name, course: options.template }));
+  .description("Moved to Studio")
+  .argument("[args...]")
+  .action(() => {
+    console.log("The 'create' command has been moved to Progy Studio.");
+    process.exit(1);
+  });
 
 program
-  .command("dev")
-  .description("Test course locally as GUEST (no progress saved)")
-  .option("--bypass", "Unlock all lessons for testing")
-  .action(dev);
+  .command("add")
+  .description("Moved to Studio")
+  .argument("[args...]")
+  .action(() => {
+    console.log("The 'add' command has been moved to Progy Studio.");
+    process.exit(1);
+  });
+
+program
+  .command("test")
+  .description("Moved to Studio")
+  .argument("[args...]")
+  .action(() => {
+    console.log("The 'test' command has been moved to Progy Studio.");
+    process.exit(1);
+  }); program
+    .command("dev")
+    .description("Test course locally as GUEST (no progress saved)")
+    .option("--bypass", "Unlock all lessons for testing")
+    .action(dev);
 
 program
   .command("validate")
@@ -72,11 +91,7 @@ program
   .option("-o, --out <filename>", "Output filename")
   .action(pack);
 
-program
-  .command("test")
-  .description("Run a specific exercise and show output (instructor use)")
-  .argument("<path>", "Exercise path (e.g., content/01_intro/01_hello)")
-  .action(testExercise);
+
 
 program
   .command("publish")
@@ -103,33 +118,8 @@ program
   .action(major);
 
 // --- Scaffolding (Instructor) ---
-const add = program.command("add").description("Scaffold course content");
+// Note: 'add' commands moved to Studio
 
-add.command("module")
-  .description("Add a new module")
-  .argument("<name>", "Module name")
-  .option("-t, --title <title>", "Module title")
-  .action(async (name, options) => {
-    const { addModule } = await import("./commands/scaffold");
-    await addModule(name, options);
-  });
-
-add.command("exercise")
-  .description("Add a new exercise to a module")
-  .argument("<module>", "Module shortcut (e.g., 1)")
-  .argument("<name>", "Exercise name")
-  .action(async (mod, name) => {
-    const { addExercise } = await import("./commands/scaffold");
-    await addExercise(mod, name);
-  });
-
-add.command("quiz")
-  .description("Add a quiz template to an exercise")
-  .argument("<path>", "Exercise shortcut (e.g., 1/1)")
-  .action(async (path) => {
-    const { addQuiz } = await import("./commands/scaffold");
-    await addQuiz(path);
-  });
 
 // --- Student Commands ---
 program
