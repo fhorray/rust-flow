@@ -1,6 +1,7 @@
 {
   "name": "progy-monorepo",
   "private": true,
+  "packageManager": "bun@1.2.0",
   "scripts": {
     "dev:cli": "bun run --cwd apps/cli dev",
     "dev:editor": "bun run --cwd apps/studio dev",
@@ -21,7 +22,9 @@
     "db:deploy": "bun run --cwd apps/backend db:up:remote",
     "db:studio": "bun run --cwd apps/backend db:studio",
     "link:cli": "--cwd apps/cli bun link",
-    "link:editor": " --cwd apps/studio bun link"
+    "link:editor": " --cwd apps/studio bun link",
+
+    "check-types": "tsc --noEmit"
   },
   "workspaces": [
     "apps/*",
@@ -30,5 +33,8 @@
   ],
   "devDependencies": {
     "@types/bun": "latest"
+  },
+  "dependencies": {
+    "turbo": "^2.8.7"
   }
 }

@@ -54,32 +54,32 @@ async function runServer(
       CourseContainer.sync(runtimeCwd, containerFile).then(() => process.exit(0));
     });
   } else if (courseIdForSync) {
-     logger.info("☁️  Cloud Sync: Active (every 2m & on exit)", "SYNC");
-     const { watch } = await import("node:fs");
-     let hasChanges = false;
+    logger.info("☁️  Cloud Sync: Active (every 2m & on exit)", "SYNC");
+    const { watch } = await import("node:fs");
+    let hasChanges = false;
 
-     const watcher = watch(runtimeCwd, { recursive: true }, (event, filename) => {
-        if (!filename || filename.includes(".git") || filename.includes("node_modules") || filename.includes(".DS_Store")) return;
-        hasChanges = true;
-     });
+    const watcher = watch(runtimeCwd, { recursive: true }, (event, filename) => {
+      if (!filename || filename.includes(".git") || filename.includes("node_modules") || filename.includes(".DS_Store")) return;
+      hasChanges = true;
+    });
 
-     const syncInterval = setInterval(async () => {
-         if (hasChanges) {
-             logger.info("Auto-syncing to cloud...", "SYNC");
-             const buffer = await SyncManager.packProgress(runtimeCwd);
-             await SyncManager.uploadProgress(courseIdForSync, buffer);
-             hasChanges = false;
-         }
-     }, 2 * 60 * 1000); // 2 minutes
+    const syncInterval = setInterval(async () => {
+      if (hasChanges) {
+        logger.info("Auto-syncing to cloud...", "SYNC");
+        const buffer = await SyncManager.packProgress(runtimeCwd);
+        await SyncManager.uploadProgress(courseIdForSync, buffer.buffer as ArrayBuffer);
+        hasChanges = false;
+      }
+    }, 2 * 60 * 1000); // 2 minutes
 
-     child.on("close", async (code) => {
-         clearInterval(syncInterval);
-         watcher.close();
-         logger.info("Saving final progress...", "SYNC");
-         const buffer = await SyncManager.packProgress(runtimeCwd);
-         await SyncManager.uploadProgress(courseIdForSync, buffer);
-         process.exit(code ?? 0);
-     });
+    child.on("close", async (code) => {
+      clearInterval(syncInterval);
+      watcher.close();
+      logger.info("Saving final progress...", "SYNC");
+      const buffer = await SyncManager.packProgress(runtimeCwd);
+      await SyncManager.uploadProgress(courseIdForSync, buffer.buffer as ArrayBuffer);
+      process.exit(code ?? 0);
+    });
   } else {
     child.on("close", (code) => process.exit(code ?? 0));
   }
@@ -108,6 +108,11 @@ export async function init(options: { course?: string; offline?: boolean }) {
   try {
     const source = await CourseLoader.resolveSource(courseId!);
 
+    // FIX: Use canonical ID from registry if available
+    if (source.id) {
+      courseId = source.id;
+    }
+
     if (source.isRegistry) {
       logger.info(`Resolving ${courseId} from Registry...`, "REGISTRY");
 
@@ -124,7 +129,7 @@ export async function init(options: { course?: string; offline?: boolean }) {
       }
 
       // 1. If no progress, Download Course Artifact to Cache
-      const artifactName = `${basename(courseId!)}.progy`;
+      const artifactName = `${courseId!.replace(/\//g, "-")}.progy`;
       const cacheDir = getCourseCachePath(courseId!);
       await mkdir(cacheDir, { recursive: true });
       const artifactPath = join(cacheDir, artifactName);
@@ -162,8 +167,8 @@ export async function init(options: { course?: string; offline?: boolean }) {
       logger.info(`Run 'progy' to start learning.`, "INFO");
 
     } else {
-       logger.error("Git-based init is removed. Please use official registry packages (e.g. @scope/course).");
-       process.exit(1);
+      logger.error("Git-based init is removed. Please use official registry packages (e.g. @scope/course).");
+      process.exit(1);
     }
   } catch (e: any) {
     logger.error(`Init failed`, e.message);
@@ -340,33 +345,33 @@ export async function start(file: string | undefined, options: { offline?: boole
     // IMPORTANT: Distinguish between registry IDs (@scope/pkg) and local paths
     const { isAbsolute } = await import("node:path");
     const isLocalPath = config.course.repo.endsWith(".progy") ||
-                        config.course.repo.startsWith("./") ||
-                        config.course.repo.startsWith("../") ||
-                        isAbsolute(config.course.repo);
+      config.course.repo.startsWith("./") ||
+      config.course.repo.startsWith("../") ||
+      isAbsolute(config.course.repo);
 
     if (isLocalPath) {
-         // Explicit local path
-         artifactPath = resolve(cwd, config.course.repo);
+      // Explicit local path
+      artifactPath = resolve(cwd, config.course.repo);
     } else {
-         // Registry ID (e.g. "python-basics", "@scope/course")
-         const artifactName = `${basename(config.course.id)}.progy`;
-         artifactPath = join(getCourseCachePath(config.course.id), artifactName);
+      // Registry ID (e.g. "python-basics", "@scope/course")
+      const artifactName = `${config.course.id.replace(/\//g, "-")}.progy`;
+      artifactPath = join(getCourseCachePath(config.course.id), artifactName);
     }
 
     // Hydration Check
     if (!(await exists(artifactPath))) {
-        logger.info(`Course assets missing. Redownloading...`, "SYNC");
-        try {
-            const source = await CourseLoader.resolveSource(config.course.id);
-            const resp = await fetch(source.url);
-            if (!resp.ok) throw new Error(`Download failed: ${resp.statusText}`);
-            await mkdir(dirname(artifactPath), { recursive: true });
-            await writeFile(artifactPath, Buffer.from(await resp.arrayBuffer()));
-            logger.success("Course assets restored.");
-        } catch (e: any) {
-            logger.error(`Failed to restore course assets`, e.message);
-            process.exit(1);
-        }
+      logger.info(`Course assets missing. Redownloading...`, "SYNC");
+      try {
+        const source = await CourseLoader.resolveSource(config.course.id);
+        const resp = await fetch(source.url);
+        if (!resp.ok) throw new Error(`Download failed: ${resp.statusText}`);
+        await mkdir(dirname(artifactPath), { recursive: true });
+        await writeFile(artifactPath, Buffer.from(await resp.arrayBuffer()));
+        logger.success("Course assets restored.");
+      } catch (e: any) {
+        logger.error(`Failed to restore course assets`, e.message);
+        process.exit(1);
+      }
     }
 
     if (await exists(artifactPath)) {

@@ -20,6 +20,7 @@ import {
   CardFooter,
 } from '@progy/ui/card';
 import { Badge } from '@progy/ui/badge';
+import { MarkdownRenderer } from '@progy/ui';
 
 interface Check {
   name: string;
@@ -129,79 +130,7 @@ export function SetupView({ onCheckComplete }: SetupViewProps) {
               </CardHeader>
               <CardContent className="p-8">
                 <div className="text-zinc-300">
-                  <ReactMarkdown
-                    rehypePlugins={[rehypeHighlight]}
-                    components={{
-                      h1: ({ node, ...props }) => (
-                        <h1
-                          className="text-3xl font-bold text-zinc-100 mt-0 mb-4"
-                          {...props}
-                        />
-                      ),
-                      h2: ({ node, ...props }) => (
-                        <h2
-                          className="text-2xl font-bold text-zinc-100 mt-5 mb-3"
-                          {...props}
-                        />
-                      ),
-                      h3: ({ node, ...props }) => (
-                        <h3
-                          className="text-xl font-bold text-zinc-100 mt-4 mb-2"
-                          {...props}
-                        />
-                      ),
-                      p: ({ node, ...props }) => (
-                        <p className="mb-4 leading-relaxed" {...props} />
-                      ),
-                      ul: ({ node, ...props }) => (
-                        <ul
-                          className="list-disc list-inside mb-4 space-y-1"
-                          {...props}
-                        />
-                      ),
-                      li: ({ node, ...props }) => (
-                        <li className="ml-4" {...props} />
-                      ),
-                      code: ({ node, className, children, ...props }: any) => {
-                        const match = /language-(\w+)/.exec(className || '');
-                        return !match ? (
-                          <code
-                            className="bg-zinc-900/50 text-rust-light px-1.5 py-0.5 rounded text-sm font-mono"
-                            {...props}
-                          >
-                            {children}
-                          </code>
-                        ) : (
-                          <code className={className} {...props}>
-                            {children}
-                          </code>
-                        );
-                      },
-                      pre: ({ node, ...props }) => (
-                        <pre
-                          className="bg-zinc-900 border border-zinc-800 rounded-lg p-4 mb-4 overflow-x-auto"
-                          {...props}
-                        />
-                      ),
-                      strong: ({ node, ...props }) => (
-                        <strong className="text-rust font-bold" {...props} />
-                      ),
-                      a: ({ node, ...props }) => (
-                        <a
-                          className="text-rust hover:text-rust-light underline underline-offset-4"
-                          {...props}
-                        />
-                      ),
-                      blockquote: ({ node, ...props }) => (
-                        <blockquote
-                          className="border-l-4 border-rust pl-4 italic text-zinc-400 my-4"
-                          {...props}
-                        />
-                      ),
-                    }}
-                  >
-                    {guide}
-                  </ReactMarkdown>
+                  <MarkdownRenderer content={guide} />
                 </div>
               </CardContent>
             </Card>

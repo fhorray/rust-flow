@@ -12,7 +12,7 @@ const getBackendUrl = () => process.env.PROGY_API_URL || DEFAULT_BACKEND_URL;
 
 
 export class CourseLoader {
-  static async resolveSource(courseInput: string): Promise<{ url: string; branch?: string; path?: string; isRegistry?: boolean }> {
+  static async resolveSource(courseInput: string): Promise<{ url: string; branch?: string; path?: string; isRegistry?: boolean; id?: string; scope?: string; name?: string }> {
     // 1. Local Paths
     const resolvedLocal = resolve(courseInput);
     if (await exists(resolvedLocal)) {
@@ -39,6 +39,9 @@ export class CourseLoader {
         const data: any = await response.json();
         // Registry packages point to download endpoint
         return {
+          id: query,
+          scope: data.scope,
+          name: data.name,
           url: data.downloadUrl || `${getBackendUrl()}/registry/download/${data.scope}/${data.slug}/${data.latest}`,
           isRegistry: true
         };

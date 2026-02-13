@@ -1,5 +1,6 @@
 import { useStore } from '@nanostores/react';
 import { atom, computed } from 'nanostores';
+import { persistentAtom } from '@nanostores/persistent';
 import { createFetcherStore, mutateCache, revalidateKeys } from './query-client';
 import { API_URL } from '@consts';
 
@@ -26,6 +27,7 @@ export interface LocalSettings {
   aiProvider?: string;
   aiModel?: string;
   ide?: string;
+  runnerId?: string;
 }
 
 interface ConfigResponse {
@@ -99,7 +101,14 @@ export const $session = computed([$sessionQuery, $isInstructor], (q, isInstructo
 });
 export const $user = computed($session, (s) => s?.user || null);
 
-export const $localSettings = computed($localSettingsQuery, (q) => q.data || {});
+// Persistent Settings Atom
+export const $settings = persistentAtom<LocalSettings>('progy:settings', {}, {
+  encode: JSON.stringify,
+  decode: JSON.parse,
+});
+
+// Backward compatibility (deprecated)
+export const $localSettings = computed($settings, (s) => s);
 
 // Loading state aggregates all queries
 export const $isUserLoading = computed(
@@ -112,7 +121,20 @@ export const $isUserLoading = computed(
 /**
  * Fetches the local settings.
  */
-export const fetchLocalSettings = () => $localSettingsQuery.revalidate();
+export const fetchLocalSettings = async () => {
+  try {
+    const res = await fetch('/local-settings');
+    if (res.ok) {
+      const data = await res.json();
+      // Merge with local settings, preferring remote if valid? 
+      // Or just overwrite? Usually remote is source of truth if syncing.
+      // Let's overwrite but keep any local-only keys if we had them (not likely here)
+      $settings.set({ ...$settings.get(), ...data });
+    }
+  } catch (e) {
+    console.error('Failed to fetch local settings', e);
+  }
+};
 
 /**
  * Updates the local settings.
@@ -120,16 +142,20 @@ export const fetchLocalSettings = () => $localSettingsQuery.revalidate();
  */
 export const updateLocalSettings = async (settings: Partial<LocalSettings>) => {
   try {
+    // 1. Optimistic Update
+    const next = { ...$settings.get(), ...settings };
+    $settings.set(next);
+
+    // 2. Sync to Backend
     const res = await fetch('/local-settings', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(settings),
+      body: JSON.stringify(settings), // Sending partial updates is fine if backend handles it
     });
-    if (res.ok) {
-      // Optimistic update using mutateCache
-      mutateCache('/local-settings', { ...$localSettings.get(), ...settings });
-      // Revalidate to ensure consistency
-      $localSettingsQuery.revalidate();
+
+    if (!res.ok) {
+      // Revert on failure? For now, just log.
+      console.error('Failed to sync settings to backend');
     }
   } catch (e) {
     console.error('Failed to update local settings', e);

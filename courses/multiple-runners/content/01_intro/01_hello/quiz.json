@@ -1,0 +1,93 @@
+{
+  "title": "SQL Basics & General Knowledge",
+  "description": "Test your knowledge on SQL basics and other question formats.",
+  "questions": [
+    {
+      "id": "q2",
+      "type": "true-false",
+      "question": "SQL stands for Structured Query Language.",
+      "correctAnswer": true,
+      "explanation": "Yes, that's exactly what it stands for!"
+    },
+    {
+      "id": "q3",
+      "type": "short-answer",
+      "question": "Which keyword is used to remove a table from the database?",
+      "acceptedAnswers": [
+        "DROP",
+        "DROP TABLE"
+      ],
+      "caseSensitive": false,
+      "explanation": "The DROP command is used to delete entire database objects."
+    },
+    {
+      "id": "q4",
+      "type": "coding",
+      "question": "Write a query to select all users from the 'users' table.",
+      "language": "sql",
+      "startingCode": "-- Write your code here\n",
+      "solutionCode": "SELECT * FROM users;",
+      "testCases": [
+        {
+          "input": "SELECT * FROM users;",
+          "expectedOutput": "All rows from users"
+        }
+      ]
+    },
+    {
+      "id": "q5",
+      "type": "matching",
+      "question": "Match the SQL clause to its function.",
+      "pairs": [
+        {
+          "left": "WHERE",
+          "right": "Filtering rows"
+        },
+        {
+          "left": "ORDER BY",
+          "right": "Sorting results"
+        },
+        {
+          "left": "GROUP BY",
+          "right": "Aggregating data"
+        }
+      ]
+    },
+    {
+      "id": "q6",
+      "type": "essay",
+      "question": "Explain the difference between INNER JOIN and LEFT JOIN.",
+      "minWords": 20,
+      "rubric": "Should mention that INNER JOIN returns common records while LEFT JOIN returns all from the left table."
+    },
+    {
+      "id": "q1",
+      "type": "multiple-choice",
+      "question": "What does SELECT * do?",
+      "options": [
+        {
+          "id": "o1",
+          "text": "Selects all rows and columns",
+          "isCorrect": true,
+          "explanation": "The asterisk (*) is a wildcard that represents all columns."
+        },
+        {
+          "id": "o2",
+          "text": "Selects only the ID column",
+          "isCorrect": false
+        },
+        {
+          "id": "o3",
+          "text": "Deletes all rows",
+          "isCorrect": false
+        },
+        {
+          "id": "o4",
+          "text": "Updates all rows",
+          "isCorrect": false
+        }
+      ],
+      "explanation": "SELECT * is a fundamental SQL command to retrieve everything from a table."
+    }
+  ]
+}

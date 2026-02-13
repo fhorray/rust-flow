@@ -63,68 +63,73 @@ export function UserNav() {
     <>
       <DropdownMenu.Root>
         <DropdownMenu.Trigger asChild>
-          <button className="cursor-pointer flex items-center gap-3 p-1 rounded-xl hover:bg-zinc-800/40 transition-all focus:outline-none group">
+          <button className="cursor-pointer flex items-center gap-3 p-1.5 rounded-xl hover:bg-zinc-800/50 transition-all focus:outline-none group active:scale-95 border border-transparent hover:border-zinc-800">
             <div className="flex flex-col items-end hidden sm:flex">
               <span className="text-xs font-bold text-zinc-100 group-hover:text-rust transition-colors">
                 {user.name}
               </span>
-              <span className="text-[10px] text-zinc-500 font-medium opacity-80">
-                Online
-              </span>
+              <div className="flex items-center gap-1.5">
+                <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+                <span className="text-[10px] text-zinc-500 font-medium">
+                  Online
+                </span>
+              </div>
             </div>
             <div className="relative">
               {user.image ? (
                 <img
                   src={user.image}
                   alt={user.name}
-                  className="w-9 h-9 rounded-xl object-cover border border-zinc-800 group-hover:border-rust/30 transition-all shadow-sm"
+                  className="w-10 h-10 rounded-xl object-cover border-2 border-zinc-800 group-hover:border-rust/50 transition-all shadow-md"
                 />
               ) : (
-                <div className="w-9 h-9 rounded-xl bg-rust/20 flex items-center justify-center text-sm font-bold text-rust border border-rust/10">
-                  {user.name.charAt(0)}
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rust/20 to-orange-500/20 flex items-center justify-center text-sm font-bold text-rust border-2 border-rust/20 shadow-md">
+                  {user.name.charAt(0).toUpperCase()}
                 </div>
               )}
-              <div className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-green-500 border-2 border-zinc-950 rounded-full" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-green-500 border-2 border-zinc-950 rounded-full shadow-lg shadow-green-500/50" />
             </div>
-            <ChevronDown className="w-3.5 h-3.5 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
+            <ChevronDown className="w-4 h-4 text-zinc-600 group-hover:text-zinc-400 transition-colors" />
           </button>
         </DropdownMenu.Trigger>
 
         <DropdownMenu.Portal>
           <DropdownMenu.Content
-            className="z-50 min-w-[200px] bg-zinc-900 border border-zinc-800 rounded-2xl p-2 shadow-2xl animate-in fade-in zoom-in-95 duration-200"
-            sideOffset={8}
+            className="z-50 min-w-[220px] bg-zinc-900/95 backdrop-blur-md border border-zinc-800 rounded-xl p-2 shadow-2xl animate-in fade-in zoom-in-95 slide-in-from-top-2 duration-200"
+            sideOffset={12}
             align="end"
           >
-            <div className="px-3 py-2 border-b border-zinc-800 mb-2">
-              <p className="text-xs font-bold text-zinc-100">{user.name}</p>
-              <p className="text-[10px] text-zinc-500 truncate">{user.email}</p>
+            <div className="px-4 py-3 border-b border-zinc-800 mb-2">
+              <p className="text-sm font-bold text-zinc-100 truncate">{user.name}</p>
+              <p className="text-[10px] text-zinc-500 truncate mt-0.5">{user.email}</p>
             </div>
 
             {!isOffline && (
               <DropdownMenu.Item
                 onClick={() => setShowMyCourses(true)}
-                className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 rounded-lg hover:bg-zinc-800 hover:text-white cursor-pointer outline-none transition-colors group"
+                className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 rounded-lg hover:bg-zinc-800 hover:text-white cursor-pointer outline-none transition-all group active:scale-95"
               >
-                <BookOpen className="w-4 h-4 text-zinc-500 group-hover:text-rust" />
-                My Courses
+                <BookOpen className="w-4 h-4 text-zinc-500 group-hover:text-rust transition-colors" />
+                <span className="font-medium">My Courses</span>
               </DropdownMenu.Item>
             )}
 
             <DropdownMenu.Item
               onClick={() => setShowSettings(true)}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 rounded-lg hover:bg-zinc-800 hover:text-white cursor-pointer outline-none transition-colors group"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 rounded-lg hover:bg-zinc-800 hover:text-white cursor-pointer outline-none transition-all group active:scale-95"
             >
-              <Settings className="w-4 h-4 text-zinc-500 group-hover:text-rust" />
-              Settings
+              <Settings className="w-4 h-4 text-zinc-500 group-hover:text-rust transition-colors" />
+              <span className="font-medium">Settings</span>
             </DropdownMenu.Item>
+
+            <div className="my-1 border-t border-zinc-800" />
 
             <DropdownMenu.Item
               onClick={logout}
-              className="flex items-center gap-2 px-3 py-2 text-xs text-zinc-300 rounded-lg hover:bg-zinc-800 hover:text-white cursor-pointer outline-none transition-colors group"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-zinc-300 rounded-lg hover:bg-red-500/10 hover:text-red-400 cursor-pointer outline-none transition-all group active:scale-95"
             >
-              <LogOut className="w-4 h-4 text-zinc-500 group-hover:text-red-400" />
-              Log out
+              <LogOut className="w-4 h-4 text-zinc-500 group-hover:text-red-400 transition-colors" />
+              <span className="font-medium">Logout</span>
             </DropdownMenu.Item>
           </DropdownMenu.Content>
         </DropdownMenu.Portal>

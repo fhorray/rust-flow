@@ -1,0 +1,8 @@
+[course]
+id = "@progy/rust-test-runners"
+repo = "@progy/rust-test-runners"
+branch = "registry"
+path = "."
+
+[sync]
+last_sync = "2026-02-13T15:29:05.726Z"

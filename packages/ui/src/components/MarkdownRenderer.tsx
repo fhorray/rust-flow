@@ -263,7 +263,7 @@ export function MarkdownRenderer({ content, onRunTests }: MarkdownRendererProps)
   if (!content) return null;
 
   return (
-    <div className="markdown-body text-zinc-300">
+    <div className="w-full markdown-body text-zinc-300">
       <ReactMarkdown
         remarkPlugins={[
           remarkGfm,

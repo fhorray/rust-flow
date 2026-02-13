@@ -92,16 +92,30 @@ export function MapView() {
   }, [progress, config, exerciseGroups, results, user]);
 
   return (
-    <div className="w-full h-full bg-zinc-950/50 flex-1">
-      <SkillTree
-        exerciseGroups={exerciseGroups}
-        results={results}
-        selectedExerciseId={selectedExercise?.id}
-        onSelectExercise={(ex) => {
-          $router.open(`/studio/${ex.id}`);
-        }}
-        config={config}
-      />
+    <div className="w-full h-full bg-zinc-950 flex-1 overflow-auto">
+      <div className="container mx-auto p-4 md:p-6 lg:p-8 max-w-7xl">
+        <div className="mb-6 space-y-2">
+          <h1 className="text-3xl md:text-4xl font-bold bg-gradient-to-r from-rust via-amber-400 to-rust bg-clip-text text-transparent">
+            Progress Map
+          </h1>
+          <p className="text-zinc-400 text-sm md:text-base">
+            Visualize your learning journey and conquer new skills
+          </p>
+        </div>
+
+        <div className="bg-zinc-900/50 backdrop-blur-sm border border-zinc-800 rounded-xl p-4 md:p-6 shadow-2xl">
+          <SkillTree
+            exerciseGroups={exerciseGroups}
+            results={results}
+            selectedExerciseId={selectedExercise?.id}
+            onSelectExercise={(ex) => {
+              $router.open(`/studio/${ex.id}`);
+            }}
+            config={config}
+          />
+        </div>
+      </div>
+
       {notification && (
         <AchievementModal
           isOpen={!!notification}

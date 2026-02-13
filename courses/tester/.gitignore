@@ -1,0 +1,19 @@
+# Progy Course Ignore File
+# This file ensures only your solutions are tracked in Git.
+
+# System & Dependencies
+.DS_Store
+node_modules/
+dist/
+.env
+
+# Course Metadata (Do not commit these)
+**/README.md
+**/info.toml
+**/quiz.json
+**/solution.*
+**/.progy/
+
+# Keep these
+!progy.toml
+!.gitignore

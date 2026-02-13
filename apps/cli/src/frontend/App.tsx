@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
 import { useStore } from '@nanostores/react';
 import { Loader2 } from 'lucide-react';
@@ -46,13 +48,13 @@ export function App() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-zinc-950 via-zinc-950 to-zinc-900 text-zinc-100 flex flex-col font-sans selection:bg-rust/30">
-      {/* SECURITY BNANNER */}
+    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col font-sans selection:bg-rust/30 antialiased">
       <SecurityBanner />
       <Navbar />
 
       {error && (
-        <div className="bg-red-500/10 border-b border-red-500/20 p-2 text-center text-xs text-red-400">
+        <div className="bg-red-500/10 border-b border-red-500/20 px-4 py-2.5 text-center text-xs text-red-400 font-medium flex items-center justify-center gap-2">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
           {error}
         </div>
       )}

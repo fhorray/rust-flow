@@ -161,9 +161,10 @@ export function MyCoursesDialog({ onClose, token }: MyCoursesDialogProps) {
                       onClick={() => handleCourseClick(course.courseId)}
                       className={`
                         relative bg-zinc-900/50 border rounded-2xl p-4 transition-all duration-300 cursor-pointer overflow-hidden group
-                        ${isActive
-                          ? 'border-rust/50 shadow-[0_0_15px_-5px_rgba(206,65,43,0.3)] opacity-100'
-                          : 'border-zinc-800 opacity-50 hover:opacity-100 hover:border-zinc-700 hover:bg-zinc-900'
+                        ${
+                          isActive
+                            ? 'border-rust/50 shadow-[0_0_15px_-5px_rgba(206,65,43,0.3)] opacity-100'
+                            : 'border-zinc-800 opacity-50 hover:opacity-100 hover:border-zinc-700 hover:bg-zinc-900'
                         }
                       `}
                     >

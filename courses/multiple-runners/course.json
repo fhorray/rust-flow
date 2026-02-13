@@ -1,7 +1,7 @@
 {
   "id": "rust-test-runners",
   "name": "Rust Test (Multi-Runner)",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "content": {
     "root": "content",
     "exercises": "content"
@@ -12,7 +12,9 @@
       "name": "Local (Process)",
       "type": "process",
       "command": "./runner/main",
-      "args": ["{{exercise}}"],
+      "args": [
+        "{{exercise}}"
+      ],
       "cwd": "."
     },
     {

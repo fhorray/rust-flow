@@ -30,12 +30,12 @@ import type {
 } from './types';
 
 // Viewers
-import { MultipleChoiceViewer } from './QuestionViewers/MultipleChoiceViewer';
-import { TrueFalseViewer } from './QuestionViewers/TrueFalseViewer';
-import { TextAnswerViewer } from './QuestionViewers/TextAnswerViewer';
-import { CodingViewer } from './QuestionViewers/CodingViewer';
-import { MatchingViewer } from './QuestionViewers/MatchingViewer';
-import { EssayViewer } from './QuestionViewers/EssayViewer';
+import { MultipleChoiceViewer } from './question-viewers/MultipleChoiceViewer';
+import { TrueFalseViewer } from './question-viewers/TrueFalseViewer';
+import { TextAnswerViewer } from './question-viewers/TextAnswerViewer';
+import { CodingViewer } from './question-viewers/CodingViewer';
+import { MatchingViewer } from './question-viewers/MatchingViewer';
+import { EssayViewer } from './question-viewers/EssayViewer';
 
 interface QuizViewProps {
   id?: string;
