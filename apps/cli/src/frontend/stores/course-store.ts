@@ -17,6 +17,9 @@ export const $selectedExercise = persistentAtom<Exercise | null>('progy:selected
 // Persist the expanded module in the sidebar
 export const $expandedModule = persistentAtom<string | undefined>('progy:expandedModule', undefined);
 
+// Persist selected runner
+export const $selectedRunnerId = persistentAtom<string | undefined>('progy:selectedRunnerId', undefined);
+
 // Reactive chain for exercise details (Description)
 export const $descriptionQuery = createFetcherStore<{ code: string; markdown: string }>([
   '/exercises/code?path=',
@@ -333,6 +336,23 @@ export const $quizData = computed($quizQuery, (q) => q.data || null);
 export const $courseConfig = computed($configQuery, (q) => q.data || {});
 
 /**
+ * Computed property that returns the available runners.
+ * @returns {any[]} The available runners.
+ */
+export const $availableRunners = computed($courseConfig, (config) => {
+  const runners = [];
+  // Main/Default runner
+  if (config.runner) {
+    runners.push({ ...config.runner, id: config.runner.id || 'default', name: config.runner.name || 'Default' });
+  }
+  // Additional runners
+  if (config.runners && Array.isArray(config.runners)) {
+    runners.push(...config.runners);
+  }
+  return runners;
+});
+
+/**
  * Computed property that returns the total number of exercises.
  * @returns {number} The total number of exercises.
  */
@@ -416,6 +436,8 @@ export const runTests = async () => {
   const selected = $selectedExercise.get();
   if (!selected) return;
 
+  const runnerId = $selectedRunnerId.get();
+
   $isRunning.set(true);
   $activeContentTab.set('output');
   try {
@@ -427,6 +449,7 @@ export const runTests = async () => {
         id: selected.id,
         module: selected.module,
         entryPoint: selected.entryPoint,
+        runnerId: runnerId
       }),
     });
     const data = await res.json();

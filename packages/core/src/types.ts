@@ -7,6 +7,8 @@ import { z } from "zod";
  */
 
 const RunnerSchema = z.object({
+  id: z.string().optional(),
+  name: z.string().optional(),
   type: z.enum(["process", "docker-file", "docker-compose"]).optional().default("process"),
   command: z.string(),
   args: z.array(z.string()),
@@ -60,6 +62,7 @@ export const CourseConfigSchema = z.object({
   name: z.string(),
   version: z.string().optional().default("1.0.0"), // Add versioning
   runner: RunnerSchema,
+  runners: z.array(RunnerSchema).optional(),
   content: ContentSchema,
   setup: SetupSchema.optional(),
   branding: BrandingSchema.optional(),

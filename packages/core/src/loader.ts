@@ -101,16 +101,37 @@ export class CourseLoader {
       throw new Error("Missing required 'runner/' directory at course root.");
     }
 
-    const runnerType = result.data.runner?.type || "process";
-    if (runnerType === "docker-file") {
-      const hasDockerfile = await exists(join(path, "Dockerfile"));
-      if (!hasDockerfile) {
-        throw new Error("Missing required 'Dockerfile' at the root for 'docker-file' runner.");
-      }
-    } else if (runnerType === "docker-compose") {
-      const hasCompose = await exists(join(path, "docker-compose.yml"));
-      if (!hasCompose) {
-        throw new Error("Missing required 'docker-compose.yml' at the root for 'docker-compose' runner.");
+    const runnersToValidate = [result.data.runner];
+    if (result.data.runners) {
+      runnersToValidate.push(...result.data.runners);
+    }
+
+    for (const runner of runnersToValidate) {
+      const runnerType = runner.type || "process";
+      const runnerName = runner.name || runner.id || "Default Runner";
+
+      if (runnerType === "docker-file") {
+        const hasDockerfile = await exists(join(path, runner.dockerfile || "Dockerfile"));
+        if (!hasDockerfile) {
+          throw new Error(`[${runnerName}] Missing required '${runner.dockerfile || "Dockerfile"}' at the root for 'docker-file' runner.`);
+        }
+      } else if (runnerType === "docker-compose") {
+        const hasCompose = await exists(join(path, runner.compose_file || "docker-compose.yml"));
+        if (!hasCompose) {
+          throw new Error(`[${runnerName}] Missing required '${runner.compose_file || "docker-compose.yml"}' at the root for 'docker-compose' runner.`);
+        }
+      } else if (runnerType === "process") {
+        // Process runner validation: requires runner directory and main/index/runner script
+        const runnerFiles = await readdir(runnerDir);
+        const validEntryPoints = ["main", "index", "runner"];
+        const hasEntryPoint = runnerFiles.some(file => {
+          const name = file.split(".")[0];
+          return validEntryPoints.includes(name || "");
+        });
+
+        if (!hasEntryPoint) {
+          throw new Error(`[${runnerName}] Missing required entry point (main.*, index.*, or runner.*) in 'runner/' directory for 'process' runner.`);
+        }
       }
     }
 

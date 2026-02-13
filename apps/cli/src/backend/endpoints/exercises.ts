@@ -217,7 +217,7 @@ async function trackExerciseFailure(exerciseId: string, context: any) {
   }
 }
 
-async function handleDockerLocalRunner(body: { exerciseName: string, id: string, entryPoint?: string }) {
+async function handleDockerLocalRunner(body: { exerciseName: string, id: string, entryPoint?: string }, runnerConfig: any) {
   const docker = new DockerClient();
   const imgMgr = new ImageManager();
 
@@ -230,9 +230,17 @@ async function handleDockerLocalRunner(body: { exerciseName: string, id: string,
   }
 
   const config = currentConfig!;
-  const imageTag = config.runner.image_tag || imgMgr.generateTag(config.id);
 
-  let dockerfile = config.runner.dockerfile || "Dockerfile";
+  // Generate a unique tag if one isn't provided, appending runner ID to avoid collisions
+  let imageTag = runnerConfig.image_tag;
+  if (!imageTag) {
+    const suffix = (runnerConfig.id && runnerConfig.id !== 'default') ? `-${runnerConfig.id}` : '';
+    // Replicates logic from ImageManager.generateTag but with suffix support
+    const safeId = config.id.toLowerCase().replace(/[^a-z0-9]/g, "-");
+    imageTag = `progy-course-${safeId}${suffix}:latest`;
+  }
+
+  let dockerfile = runnerConfig.dockerfile || "Dockerfile";
   let dockerfilePath = join(PROG_CWD, dockerfile);
 
   if (!(await progyExists(dockerfilePath)) && PROG_RUNTIME_ROOT) {
@@ -254,7 +262,7 @@ async function handleDockerLocalRunner(body: { exerciseName: string, id: string,
     };
   }
 
-  const command = config.runner.command || "echo 'No command'";
+  const command = runnerConfig.command || "echo 'No command'";
   // Replace placeholders in command
   const exerciseLabel = body.entryPoint ? `${body.id}/${body.entryPoint}` : body.exerciseName;
   const finalCommand = command.replace("{{exercise}}", exerciseLabel).replace("{{id}}", body.id || "");
@@ -262,28 +270,28 @@ async function handleDockerLocalRunner(body: { exerciseName: string, id: string,
   const result = await docker.runContainer(imageTag, {
     cwd: contextPath,
     command: finalCommand,
-    network: config.runner.network_access ? "bridge" : "none"
+    network: runnerConfig.network_access ? "bridge" : "none"
   });
 
   return parseRunnerOutput(result.output, result.exitCode);
 }
 
-async function handleDockerComposeRunner(body: { exerciseName: string, id: string, entryPoint?: string }) {
+async function handleDockerComposeRunner(body: { exerciseName: string, id: string, entryPoint?: string }, runnerConfig: any) {
   const client = new DockerComposeClient();
   const config = currentConfig!;
 
-  let composeFile = join(PROG_CWD, config.runner.compose_file || "docker-compose.yml");
+  let composeFile = join(PROG_CWD, runnerConfig.compose_file || "docker-compose.yml");
   if (!(await progyExists(composeFile)) && PROG_RUNTIME_ROOT) {
-    const runtimeFile = join(PROG_RUNTIME_ROOT, config.runner.compose_file || "docker-compose.yml");
+    const runtimeFile = join(PROG_RUNTIME_ROOT, runnerConfig.compose_file || "docker-compose.yml");
     if (await progyExists(runtimeFile)) {
       composeFile = runtimeFile;
     }
   }
 
-  const service = config.runner.service_to_run || "app";
+  const service = runnerConfig.service_to_run || "app";
   // body.id is like "01_select/01_simple-query", we need to append entryPoint if folder
   const exercisePath = body.entryPoint ? `${config.content.exercises}/${body.id}/${body.entryPoint}` : `${config.content.exercises}/${body.id}`;
-  const command = (config.runner.command || "echo 'No command'")
+  const command = (runnerConfig.command || "echo 'No command'")
     .replace("{{exercise}}", exercisePath)
     .replace("{{id}}", body.id || "");
 
@@ -308,19 +316,19 @@ async function handleDockerComposeRunner(body: { exerciseName: string, id: strin
   }
 }
 
-async function handleProcessRunner(body: { exerciseName: string, id: string, entryPoint?: string }) {
+async function handleProcessRunner(body: { exerciseName: string, id: string, entryPoint?: string }, runnerConfig: any) {
   const { exerciseName, id } = body;
   const idParts = id?.split('/') || [];
   const module = idParts[0] || "";
 
-  const runnerCmd = currentConfig!.runner.command;
-  const runnerArgs = currentConfig!.runner.args.map((a: string) =>
+  const runnerCmd = runnerConfig.command;
+  const runnerArgs = runnerConfig.args.map((a: string) =>
     a.replace("{{exercise}}", body.entryPoint ? join(id, body.entryPoint) : exerciseName)
       .replace("{{id}}", id || "")
       .replace("{{module}}", module)
   );
 
-  const cwdLink = currentConfig!.runner.cwd ? join(PROG_CWD, currentConfig!.runner.cwd) : PROG_CWD;
+  const cwdLink = runnerConfig.cwd ? join(PROG_CWD, runnerConfig.cwd) : PROG_CWD;
   const finalCwd = cwdLink.replace("{{exercise}}", exerciseName).replace("{{id}}", id || "").replace("{{module}}", module);
 
   return new Promise<{ success: boolean, output: string, friendlyOutput?: string }>((resolve) => {
@@ -347,17 +355,23 @@ async function handleProcessRunner(body: { exerciseName: string, id: string, ent
 const runHandler: ServerType<"/exercises/run"> = async (req: Request) => {
   try {
     await ensureConfig();
-    const body = await req.json() as { exerciseName: string, id: string, entryPoint?: string };
+    const body = await req.json() as { exerciseName: string, id: string, entryPoint?: string, runnerId?: string };
+
+    let runnerConfig = currentConfig!.runner;
+    if (body.runnerId && currentConfig!.runners) {
+      const found = currentConfig!.runners.find(r => r.id === body.runnerId);
+      if (found) runnerConfig = found;
+    }
 
     let result: { success: boolean, output: string, friendlyOutput?: string } | null = null;
-    const runnerType = currentConfig!.runner.type || 'process';
+    const runnerType = runnerConfig.type || 'process';
 
     if (runnerType === 'docker-file') {
-      result = await handleDockerLocalRunner(body);
+      result = await handleDockerLocalRunner(body, runnerConfig);
     } else if (runnerType === 'docker-compose') {
-      result = await handleDockerComposeRunner(body);
+      result = await handleDockerComposeRunner(body, runnerConfig);
     } else {
-      result = await handleProcessRunner(body);
+      result = await handleProcessRunner(body, runnerConfig);
     }
 
     // Progress

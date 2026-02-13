@@ -9,6 +9,13 @@ import { Badge } from '@progy/ui/badge';
 import { Button } from '@progy/ui/button';
 import { Card, CardContent } from '@progy/ui/card';
 import { ScrollArea } from '@progy/ui/scroll-area';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@progy/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@progy/ui/tabs';
 import { $router } from '@/stores/router';
 import { useStore } from '@nanostores/react';
@@ -42,6 +49,8 @@ import {
   $totalExercises,
   $results,
   $selectedExercise,
+  $availableRunners,
+  $selectedRunnerId,
   explainExercise,
   getAiHint,
   runTests,
@@ -66,6 +75,8 @@ export function EditorView() {
   const completedCount = useStore($completedCount);
   const totalExercises = useStore($totalExercises);
   const expandedModule = useStore($expandedModule);
+  const availableRunners = useStore($availableRunners);
+  const selectedRunnerId = useStore($selectedRunnerId);
 
   // Local States
   const [sidebarTab, setSidebarTab] = useState<SidebarTab>('learning');
@@ -429,6 +440,24 @@ export function EditorView() {
               </div>
 
               <div className="flex items-center gap-2">
+                {availableRunners.length > 1 && (
+                  <Select
+                    value={selectedRunnerId || availableRunners[0]?.id}
+                    onValueChange={(val) => $selectedRunnerId.set(val)}
+                  >
+                    <SelectTrigger className="w-[140px] bg-zinc-800/50 border-zinc-700/50 h-10 text-xs font-medium">
+                      <SelectValue placeholder="Select Environment" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableRunners.map((runner: any) => (
+                        <SelectItem key={runner.id} value={runner.id}>
+                          {runner.name || runner.id || runner.type}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
                 <Button
                   size="lg"
                   disabled={isRunning || selectedExercise?.isLocked}
