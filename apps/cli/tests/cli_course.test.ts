@@ -103,6 +103,7 @@ mock.module("@progy/core", () => ({
     if (p.includes("progy.toml")) return false;
     return true;
   }),
+  detectEnvironment: mock(async (cwd: string) => "student"),
   BACKEND_URL: "https://api.progy.dev",
   getCourseCachePath: mock((id: string) => join(tmpdir(), "progy-cache-" + id)),
   TEMPLATES: {

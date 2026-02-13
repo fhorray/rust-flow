@@ -3,7 +3,7 @@ import { mkdir, writeFile, readFile, readdir, stat, rm } from "node:fs/promises"
 import { spawn } from "node:child_process";
 import { tmpdir } from "node:os";
 import pkg from "../../package.json";
-import { GitUtils, SyncManager, CourseLoader, CourseContainer, RegistryCache, loadToken, getCourseCachePath, BACKEND_URL, COURSE_CONFIG_NAME, TEMPLATES, RUNNER_README, logger, exists } from "@progy/core";
+import { GitUtils, SyncManager, CourseLoader, CourseContainer, RegistryCache, loadToken, getCourseCachePath, BACKEND_URL, COURSE_CONFIG_NAME, TEMPLATES, RUNNER_README, logger, exists, detectEnvironment } from "@progy/core";
 
 async function runServer(
   runtimeCwd: string,
@@ -288,13 +288,6 @@ async function cpRecursive(src: string, dst: string) {
   }
 }
 
-
-export async function detectEnvironment(cwd: string): Promise<"student" | "instructor"> {
-  const hasCourseJson = await exists(join(cwd, "course.json"));
-
-  if (hasCourseJson) return "instructor";
-  return "student";
-}
 
 export async function dev(options: { offline?: boolean; bypass?: boolean }) {
   const cwd = process.cwd();

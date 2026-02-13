@@ -1,5 +1,5 @@
 // Core utilities
-export { exists } from "./utils.ts";
+export { exists, detectEnvironment } from "./utils.ts";
 
 // Paths & constants
 export {
