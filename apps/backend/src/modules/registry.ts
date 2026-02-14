@@ -33,7 +33,10 @@ const registry = new Hono<{
       const service = new RegistryService(c.env);
       const ip = c.req.header('CF-Connecting-IP') || 'unknown';
       try {
-        const object = await service.downloadArtifact(scope, slug, version, user?.id, ip);
+        const { object, trackPromise } = await service.downloadArtifact(scope, slug, version, user?.id, ip);
+
+        c.executionCtx.waitUntil(trackPromise);
+
         const headers = new Headers();
         object.writeHttpMetadata(headers);
         headers.set('etag', object.httpEtag);

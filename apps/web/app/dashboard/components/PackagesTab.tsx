@@ -44,6 +44,20 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@progy/ui/dialog';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@progy/ui/table';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@progy/ui/tooltip';
 
 type RegistryPackage = {
   id: string;
@@ -95,7 +109,7 @@ export function PackagesTab({ session }: { session: any }) {
     switch (status) {
       case 'published':
         return (
-          <Badge className="bg-green-500/20 text-green-400 border-green-500/20 uppercase text-[8px] font-black">
+          <Badge className="bg-emerald-500/10 text-emerald-500 border-emerald-500/20 uppercase text-[9px] font-black tracking-wider px-2 py-0.5 shadow-[0_0_10px_-3px_rgba(16,185,129,0.3)]">
             Published
           </Badge>
         );
@@ -103,7 +117,7 @@ export function PackagesTab({ session }: { session: any }) {
         return (
           <Badge
             variant="outline"
-            className="text-zinc-400 border-zinc-500/20 uppercase text-[8px] font-black"
+            className="text-zinc-500 border-zinc-500/20 uppercase text-[9px] font-black tracking-wider px-2 py-0.5"
           >
             Draft
           </Badge>
@@ -112,32 +126,32 @@ export function PackagesTab({ session }: { session: any }) {
         return (
           <Badge
             variant="outline"
-            className="text-orange-400 border-orange-500/20 uppercase text-[8px] font-black"
+            className="text-orange-400 border-orange-500/20 uppercase text-[9px] font-black tracking-wider px-2 py-0.5"
           >
             Archived
           </Badge>
         );
       case 'in_review':
         return (
-          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/20 uppercase text-[8px] font-black">
+          <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/20 uppercase text-[9px] font-black tracking-wider px-2 py-0.5">
             In Review
           </Badge>
         );
       case 'in_development':
         return (
-          <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/20 uppercase text-[8px] font-black">
+          <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/20 uppercase text-[9px] font-black tracking-wider px-2 py-0.5">
             In Dev
           </Badge>
         );
       case 'rejected':
         return (
-          <Badge className="bg-red-500/20 text-red-400 border-red-500/20 uppercase text-[8px] font-black">
+          <Badge className="bg-red-500/20 text-red-400 border-red-500/20 uppercase text-[9px] font-black tracking-wider px-2 py-0.5">
             Rejected
           </Badge>
         );
       default:
         return (
-          <Badge variant="outline" className="uppercase text-[8px] font-black">
+          <Badge variant="outline" className="uppercase text-[9px] font-black tracking-wider px-2 py-0.5">
             {status}
           </Badge>
         );
@@ -159,7 +173,7 @@ export function PackagesTab({ session }: { session: any }) {
 
   if (packages.length === 0) {
     return (
-      <div className="text-center py-20 bg-white/2 backdrop-blur-sm rounded-3xl border border-white/5 border-dashed">
+      <div className="text-center py-20 bg-zinc-900/30 backdrop-blur-sm rounded-3xl border border-white/5 border-dashed">
         <Package className="w-12 h-12 text-white/5 mx-auto mb-5" />
         <h3 className="text-sm font-black uppercase tracking-widest text-muted-foreground/60 mb-2">
           No Packages Found
@@ -182,166 +196,177 @@ export function PackagesTab({ session }: { session: any }) {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between border-b border-white/5 pb-5">
+      <div className="flex items-center justify-between pb-2">
         <h2 className="text-2xl font-black uppercase italic tracking-tighter flex items-center gap-3">
           <Package className="w-6 h-6 text-primary" />
           My Published Packages
         </h2>
       </div>
 
-      <div className="grid gap-4">
-        {packages.map((pkg) => (
-          <Card
-            key={pkg.id}
-            className="bg-white/5 border-white/5 rounded-3xl overflow-hidden group hover:bg-white/10 transition-colors p-1"
-          >
-            <CardHeader className="p-6 flex flex-row items-center justify-between space-y-0">
-              <div className="space-y-1">
-                <div className="flex items-center gap-3 mb-1">
-                  <CardTitle className="font-black text-sm tracking-tight text-white uppercase italic">
-                    {pkg.name}
-                  </CardTitle>
-                  {getStatusBadge(pkg.status)}
-                  {!pkg.isPublic && (
-                    <Lock className="w-3 h-3 text-muted-foreground" />
-                  )}
-                </div>
-                <CardDescription className="text-[10px] italic font-medium opacity-60">
-                  {pkg.latestVersion
-                    ? `Version ${pkg.latestVersion}`
-                    : 'No versions published'}{' '}
-                  • Updated {new Date(pkg.updatedAt).toLocaleDateString()}
-                </CardDescription>
-
-                {pkg.guard && !pkg.guard.passed && (
-                  <div className="mt-4 p-4 bg-red-500/5 border border-red-500/10 rounded-2xl">
-                    <div className="flex items-center gap-2 mb-2">
-                      <AlertTriangle className="w-3.5 h-3.5 text-red-400" />
-                      <span className="text-[10px] font-black uppercase text-red-400">AI Guard Feedback</span>
+      <div className="rounded-3xl border border-white/5 overflow-hidden bg-zinc-900/20 backdrop-blur-sm">
+        <Table>
+          <TableHeader className="bg-white/5">
+            <TableRow className="hover:bg-transparent border-white/5">
+              <TableHead className="w-[300px] text-[10px] font-black uppercase tracking-widest text-zinc-500 py-4 pl-6">
+                Package
+              </TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Status
+              </TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Security
+              </TableHead>
+              <TableHead className="text-[10px] font-black uppercase tracking-widest text-zinc-500">
+                Updated
+              </TableHead>
+              <TableHead className="text-right text-[10px] font-black uppercase tracking-widest text-zinc-500 pr-6">
+                Actions
+              </TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {packages.map((pkg) => (
+              <TableRow
+                key={pkg.id}
+                className="border-white/5 hover:bg-white/5 transition-colors group"
+              >
+                <TableCell className="font-medium py-5 pl-6">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-950/50 border border-white/10 flex items-center justify-center group-hover:border-primary/20 transition-colors">
+                      <Package className="w-5 h-5 text-zinc-400 group-hover:text-primary transition-colors" />
                     </div>
-                    <p className="text-[11px] text-red-200/70 italic leading-relaxed">
-                      {pkg.guard.reason}
-                    </p>
+                    <div>
+                      <div className="font-bold text-sm text-zinc-200 group-hover:text-white transition-colors tracking-tight">
+                        {pkg.name}
+                      </div>
+                      <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
+                        v{pkg.latestVersion || '0.0.0'}
+                      </div>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-9 w-9 p-0 rounded-xl hover:bg-white/10"
+                </TableCell>
+                <TableCell>{getStatusBadge(pkg.status)}</TableCell>
+                <TableCell>
+                  <TooltipProvider delayDuration={0}>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        {pkg.guard ? (
+                          pkg.guard.passed ? (
+                            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-emerald-500/5 border border-emerald-500/10 text-emerald-500">
+                              <Check className="w-3 h-3" />
+                              <span className="text-[9px] font-black uppercase tracking-wider">
+                                Pass
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-red-500/5 border border-red-500/10 text-red-500 hover:bg-red-500/10 transition-colors cursor-help">
+                              <AlertTriangle className="w-3 h-3" />
+                              <span className="text-[9px] font-black uppercase tracking-wider">
+                                Fail
+                              </span>
+                            </div>
+                          )
+                        ) : (
+                          <span className="text-zinc-600 text-[10px] font-mono">
+                            -
+                          </span>
+                        )}
+                      </TooltipTrigger>
+                      {pkg.guard && !pkg.guard.passed && (
+                        <TooltipContent className="bg-black/90 backdrop-blur-xl border-red-900/30 text-red-200 text-xs p-4 rounded-xl max-w-xs leading-relaxed shadow-2xl">
+                          <p>
+                            <span className="font-black text-red-400 block mb-1 uppercase text-[9px] tracking-widest">
+                              Security Alert
+                            </span>
+                            {pkg.guard.reason}
+                          </p>
+                        </TooltipContent>
+                      )}
+                    </Tooltip>
+                  </TooltipProvider>
+                </TableCell>
+                <TableCell className="text-zinc-400 text-xs font-medium">
+                  {new Date(pkg.updatedAt).toLocaleDateString()}
+                </TableCell>
+                <TableCell className="text-right pr-6">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-lg hover:bg-white/10 text-zinc-500 hover:text-white transition-colors"
+                      >
+                        <MoreHorizontal className="w-4 h-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="bg-zinc-950/95 backdrop-blur-xl border-white/10 rounded-2xl w-52 p-2 shadow-2xl shadow-black"
                     >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="bg-zinc-950 border-white/10 rounded-2xl w-48 p-2"
-                  >
-                    <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest italic opacity-50 px-2 py-1">
-                      Direct Actions
-                    </DropdownMenuLabel>
+                      <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest italic opacity-40 px-2 py-1.5">
+                        Actions
+                      </DropdownMenuLabel>
+                      <DropdownMenuItem
+                        className="text-[11px] font-bold uppercase tracking-wide rounded-lg focus:bg-white/10 px-2 py-2 cursor-pointer mb-1 text-zinc-300 focus:text-white"
+                        onClick={() =>
+                          router.push(`/dashboard/packages/${pkg.id}`)
+                        }
+                      >
+                        <Package className="w-3.5 h-3.5 mr-2 text-primary" />
+                        Manage Details
+                      </DropdownMenuItem>
 
-                    <DropdownMenuItem
-                      className="text-[11px] font-bold uppercase italic rounded-lg focus:bg-white/5 px-2 cursor-pointer"
-                      onClick={() => router.push(`/dashboard/packages/${pkg.id}`)}
-                    >
-                      <Package className="w-3.5 h-3.5 mr-2 text-primary" />{' '}
-                      Manage Details
-                    </DropdownMenuItem>
+                      <DropdownMenuSeparator className="bg-white/5 my-1" />
 
-                    <DropdownMenuSeparator className="bg-white/5 my-2" />
-
-                    <DropdownMenuItem
-                      className="text-[11px] font-bold uppercase italic rounded-lg focus:bg-white/5 px-2"
-                      disabled={updatePackageStatus.isPending}
-                      onClick={() => handleUpdateStatus(pkg.id, 'published')}
-                    >
-                      <Globe className="w-3.5 h-3.5 mr-2 text-green-500" />{' '}
-                      Published
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                      className="text-[11px] font-bold uppercase italic rounded-lg focus:bg-white/5 px-2"
-                      disabled={updatePackageStatus.isPending}
-                      onClick={() => handleUpdateStatus(pkg.id, 'draft')}
-                    >
-                      <Package className="w-3.5 h-3.5 mr-2 text-zinc-500" />{' '}
-                      Mark as Draft
-                    </DropdownMenuItem>
-
-                    <DropdownMenuItem
-                      className="text-[11px] font-bold uppercase italic rounded-lg focus:bg-white/5 px-2"
-                      disabled={updatePackageStatus.isPending}
-                      onClick={() => handleUpdateStatus(pkg.id, 'archived')}
-                    >
-                      <Box className="w-3.5 h-3.5 mr-2 text-orange-500" />{' '}
-                      Archive
-                    </DropdownMenuItem>
-
-                    <DropdownMenuSeparator className="bg-white/5 my-2" />
-
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <button className="w-full flex items-center px-2 py-1.5 text-[11px] font-bold uppercase italic text-orange-500 hover:bg-orange-600/10 outline-none rounded-lg transition-colors text-left">
-                          <Trash2 className="w-3.5 h-3.5 mr-2" /> Delete Package
-                        </button>
-                      </DialogTrigger>
-                      <DialogContent className="bg-zinc-950/90 backdrop-blur-xl border-white/10 rounded-[2rem] sm:max-w-[400px] p-8 shadow-2xl shadow-black">
-                        <DialogHeader>
-                          <DialogTitle className="text-white uppercase font-black italic tracking-tight flex items-center gap-2">
-                            <AlertTriangle className="w-4 h-4 text-orange-500" />
-                            Confirm Permanent Deletion
-                          </DialogTitle>
-                          <DialogDescription className="text-muted-foreground/60 text-[11px] italic leading-relaxed pt-2">
-                            This action is <span className="text-destructive font-black">irreversible</span>.
-                            By deleting <strong>{pkg.name}</strong>, all associated versions
-                            and artifacts will be wiped from the registry.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <DialogFooter className="mt-8">
-                          <Button
-                            variant="default"
-                            size="lg"
-                            onClick={() => handleDeletePackage(pkg.id)}
-                            disabled={deletePackage.isPending}
-                            className="w-full uppercase font-black text-[11px] tracking-[0.2em] rounded-2xl h-14 px-8 shadow-xl shadow-orange-500/20 active:scale-95 transition-all bg-orange-600 hover:bg-orange-700 text-white"
+                      <Dialog>
+                        <DialogTrigger asChild>
+                          <DropdownMenuItem
+                            className="text-[11px] font-bold uppercase tracking-wide rounded-lg focus:bg-red-500/10 focus:text-red-400 px-2 py-2 cursor-pointer text-zinc-400"
+                            onSelect={(e) => e.preventDefault()}
                           >
-                            {deletePackage.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              'Execute Deletion'
-                            )}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                {pkg.status === 'published' && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                    className="h-9 px-4 border-white/10 bg-white/5 hover:bg-white/10 text-[10px] font-black uppercase tracking-widest rounded-xl shadow-lg shadow-black/20 transition-all active:scale-95"
-                  >
-                    <a
-                      href={`/courses/${pkg.slug}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5 mr-2" /> View
-                    </a>
-                  </Button>
-                )}
-              </div>
-            </CardHeader>
-          </Card>
-        ))}
+                            <Trash2 className="w-3.5 h-3.5 mr-2" />
+                            Delete Package
+                          </DropdownMenuItem>
+                        </DialogTrigger>
+                        <DialogContent className="bg-zinc-950 border-white/10 rounded-[2rem] sm:max-w-[400px] p-8 shadow-2xl shadow-black">
+                          <DialogHeader>
+                            <DialogTitle className="text-white uppercase font-black italic tracking-tight flex items-center gap-2">
+                              <AlertTriangle className="w-4 h-4 text-orange-500" />
+                              Confirm Deletion
+                            </DialogTitle>
+                            <DialogDescription className="text-muted-foreground/60 text-[11px] italic leading-relaxed pt-2">
+                              This action is{' '}
+                              <span className="text-destructive font-black">
+                                irreversible
+                              </span>
+                              . By deleting <strong>{pkg.name}</strong>, all
+                              versions will be wiped.
+                            </DialogDescription>
+                          </DialogHeader>
+                          <DialogFooter className="mt-8">
+                            <Button
+                              variant="default"
+                              size="lg"
+                              onClick={() => handleDeletePackage(pkg.id)}
+                              disabled={deletePackage.isPending}
+                              className="w-full uppercase font-black text-[11px] tracking-[0.2em] rounded-2xl h-12 shadow-xl shadow-orange-500/20 active:scale-95 transition-all bg-orange-600 hover:bg-orange-700 text-white"
+                            >
+                              {deletePackage.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                'Execute Deletion'
+                              )}
+                            </Button>
+                          </DialogFooter>
+                        </DialogContent>
+                      </Dialog>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       </div>
     </div>
   );

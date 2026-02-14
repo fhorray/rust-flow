@@ -118,9 +118,9 @@ export class RegistryService {
     };
 
     // Execute tracking without awaiting
-    trackDownload();
+    const trackPromise = trackDownload();
 
-    return object;
+    return { object, trackPromise };
   }
 
   async publish(userId: string, userUsername: string, file: File, metadata: any, assets: Record<string, File>, guardSnapshot?: Record<string, string>) {

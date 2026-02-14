@@ -116,30 +116,43 @@ export async function init(options: { course?: string; offline?: boolean }) {
     if (source.isRegistry) {
       logger.info(`Resolving ${courseId} from Registry...`, "REGISTRY");
 
-      // 0. Check for Cloud Progress
-      logger.info(`Checking for existing progress...`, "SYNC");
-      const progressBuffer = await SyncManager.downloadProgress(courseId!);
-
-      if (progressBuffer) {
-        logger.info(`Progress found! Restoring...`, "SYNC");
-        await SyncManager.restoreProgress(progressBuffer, cwd);
-        logger.success("Resumed course from cloud progress!");
-        logger.info(`Run 'progy' to continue learning.`, "INFO");
-        return;
-      }
-
-      // 1. If no progress, Download Course Artifact to Cache
+      // 1. Download Course Artifact to Cache (Always, to ensure fresh content & track stats)
       const artifactName = `${courseId!.replace(/\//g, "-")}.progy`;
       const cacheDir = getCourseCachePath(courseId!);
       await mkdir(cacheDir, { recursive: true });
       const artifactPath = join(cacheDir, artifactName);
 
       logger.info(`Downloading course content...`, "SYNC");
+      // Force download to ensure tracker is hit
       const resp = await fetch(source.url);
       if (!resp.ok) throw new Error(`Download failed: ${resp.statusText}`);
       await writeFile(artifactPath, Buffer.from(await resp.arrayBuffer()));
 
-      // 2. Provisioning: Extract only 'content/' to local CWD if not present
+      // 2. Check for Cloud Progress
+      logger.info(`Checking for existing progress...`, "SYNC");
+      const progressBuffer = await SyncManager.downloadProgress(courseId!);
+
+      if (progressBuffer) {
+        logger.info(`Progress found! Restoring...`, "SYNC");
+        await SyncManager.restoreProgress(progressBuffer, cwd);
+
+        // Ensure progy.toml exists if progress didn't include it
+        await SyncManager.saveConfig(cwd, {
+          course: {
+            id: courseId!,
+            repo: courseId!,
+            branch: "registry",
+            path: "."
+          }
+        });
+        await SyncManager.generateGitIgnore(cwd, courseId!);
+
+        logger.success("Resumed course from cloud progress!");
+        logger.info(`Run 'progy' to continue learning.`, "INFO");
+        return;
+      }
+
+      // 3. Provisioning (If no progress): Extract only 'content/' to local CWD if not present
       logger.info(`Provisioning workspace...`, "LAYER");
       const tempDir = join(tmpdir(), `progy-init-${Date.now()}`);
       await CourseContainer.unpackTo(artifactPath, tempDir);
