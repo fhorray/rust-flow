@@ -4,6 +4,8 @@ import { resolve, join } from "node:path";
 import { existsSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { logger, CourseContainer, SyncManager, CoursePublisher, getUser } from "@progy/core";
+import { prepareOptimizedTempDir } from "../utils/optimize";
+import { generateGuardSnapshot } from "../utils/scanner";
 
 export function publish(program: Command) {
   program
@@ -133,7 +135,13 @@ export function publish(program: Command) {
       try {
         // 1. Pack
         logger.info("📦 Packing course...");
-        await CourseContainer.pack(cwd, tempFile);
+        const optimizedDir = await prepareOptimizedTempDir(cwd);
+        await CourseContainer.pack(optimizedDir, tempFile);
+
+        // 1.5 Generate Guard Snapshot (from optimized dir to exclude heavy assets)
+        const guardSnapshot = await generateGuardSnapshot(optimizedDir);
+
+        await rm(optimizedDir, { recursive: true, force: true });
 
         // 2. Publish
         logger.info("Uploading to registry...");
@@ -149,7 +157,7 @@ export function publish(program: Command) {
 
         // We pass 'finalName' as courseId to print it correctly or use it if publisher uses it
         // Publisher uses metadata mainly, but we pass finalName as 1st arg just in case
-        const result = await CoursePublisher.publish(finalName, newVersion, tempFile, metadata);
+        const result = await CoursePublisher.publish(finalName, newVersion, tempFile, metadata, JSON.parse(guardSnapshot));
 
         if (result.success) {
           logger.success(`Successfully published ${finalName}@${newVersion}!`);

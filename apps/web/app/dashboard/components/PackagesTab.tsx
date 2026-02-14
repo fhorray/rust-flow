@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   Card,
   CardContent,
@@ -67,6 +68,7 @@ type RegistryPackage = {
 import { useDashboard } from '@/hooks/use-dashboard';
 
 export function PackagesTab({ session }: { session: any }) {
+  const router = useRouter();
   const { listPackages, updatePackageStatus, deletePackage } = useDashboard(
     session?.session.token,
   );
@@ -242,6 +244,16 @@ export function PackagesTab({ session }: { session: any }) {
                     <DropdownMenuLabel className="text-[9px] font-black uppercase tracking-widest italic opacity-50 px-2 py-1">
                       Direct Actions
                     </DropdownMenuLabel>
+
+                    <DropdownMenuItem
+                      className="text-[11px] font-bold uppercase italic rounded-lg focus:bg-white/5 px-2 cursor-pointer"
+                      onClick={() => router.push(`/dashboard/packages/${pkg.id}`)}
+                    >
+                      <Package className="w-3.5 h-3.5 mr-2 text-primary" />{' '}
+                      Manage Details
+                    </DropdownMenuItem>
+
+                    <DropdownMenuSeparator className="bg-white/5 my-2" />
 
                     <DropdownMenuItem
                       className="text-[11px] font-bold uppercase italic rounded-lg focus:bg-white/5 px-2"

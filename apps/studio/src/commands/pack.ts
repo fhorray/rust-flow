@@ -2,7 +2,9 @@
 import { Command } from "commander";
 import { join, resolve } from "node:path";
 import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { logger, CourseContainer, SyncManager, CourseLoader } from "@progy/core";
+import { prepareOptimizedTempDir } from "../utils/optimize";
 
 export function pack(program: Command) {
   program
@@ -53,7 +55,9 @@ export function pack(program: Command) {
         const defaultName = `${courseId}.progy`;
         const outputPath = resolve(options.output || defaultName);
 
-        await CourseContainer.pack(cwd, outputPath);
+        const optimizedDir = await prepareOptimizedTempDir(cwd);
+        await CourseContainer.pack(optimizedDir, outputPath);
+        await rm(optimizedDir, { recursive: true, force: true });
 
         logger.success(`Course packed successfully to: ${outputPath}`);
       } catch (e: any) {

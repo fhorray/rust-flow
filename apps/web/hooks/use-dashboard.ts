@@ -130,6 +130,33 @@ export const useDashboard = (token?: string) => {
     },
   });
 
+  type RegistryVersion = {
+    id: string;
+    version: string;
+    createdAt: string;
+    sizeBytes: number;
+    engineVersion?: string;
+    manifest?: any;
+    guard?: { passed: boolean; reason: string };
+  };
+
+  // ...
+
+  const usePackage = (pkgId: string) =>
+    useQuery({
+      queryKey: ['package', pkgId, token],
+      enabled: !!token && !!pkgId,
+      queryFn: async () => {
+        const res = await fetch(`${API_URL}/registry/packages/${pkgId}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        if (!res.ok) throw new Error('Failed to fetch package');
+        return (await res.json()) as RegistryPackage & {
+          versions: RegistryVersion[];
+        };
+      },
+    });
+
   return {
     listProgress,
     resetCourse,
@@ -138,5 +165,6 @@ export const useDashboard = (token?: string) => {
     updatePackageStatus,
     deletePackage,
     checkout,
+    usePackage,
   };
 };

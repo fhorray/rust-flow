@@ -79,7 +79,7 @@ export class RegistryService {
     return object;
   }
 
-  async publish(userId: string, userUsername: string, file: File, metadata: any, assets: Record<string, File>) {
+  async publish(userId: string, userUsername: string, file: File, metadata: any, assets: Record<string, File>, guardSnapshot?: Record<string, string>) {
     const nameParts = metadata.name.split('/');
     if (nameParts.length !== 2 || !nameParts[0].startsWith('@')) {
       throw new Error('Invalid package name');
@@ -155,7 +155,12 @@ export class RegistryService {
     try {
       await this.env.COURSE_GUARD.create({
         id: `cg-${versionId}`,
-        params: { versionId, packageName: metadata.name, version: metadata.version }
+        params: {
+          versionId,
+          packageName: metadata.name,
+          version: metadata.version,
+          guardSnapshot // Pass the snapshot to the workflow
+        }
       });
     } catch (e) {
       console.error(`[Registry] Workflow trigger failed`, e);
@@ -229,6 +234,32 @@ export class RegistryService {
       .where(eq(schema.registryPackages.isPublic, true))
       .orderBy(desc(schema.registryPackages.updatedAt))
       .all();
+  }
+
+  async getPackageDetails(userId: string, packageId: string) {
+    const pkg = await this.db.select().from(schema.registryPackages).where(and(eq(schema.registryPackages.id, packageId), eq(schema.registryPackages.userId, userId))).get();
+
+    if (!pkg) throw new Error('Package not found');
+
+    const versions = await this.db
+      .select()
+      .from(schema.registryVersions)
+      .where(eq(schema.registryVersions.packageId, pkg.id))
+      .orderBy(desc(schema.registryVersions.createdAt))
+      .limit(10)
+      .all();
+
+    // Parse guard results & manifest
+    const versionsWithParsedData = versions.map(v => ({
+      ...v,
+      guard: v.guard ? JSON.parse(v.guard as string) : null,
+      manifest: v.manifest ? JSON.parse(v.manifest as string) : null
+    }));
+
+    return {
+      ...pkg,
+      versions: versionsWithParsedData
+    };
   }
 
   async listMyPackages(userId: string) {

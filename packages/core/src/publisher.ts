@@ -4,7 +4,7 @@ import { BACKEND_URL } from "./paths.ts";
 import { loadToken } from "./config.ts";
 
 export class CoursePublisher {
-  static async publish(courseId: string, version: string, filePath: string, metadata: any = {}): Promise<{ success: boolean; message?: string }> {
+  static async publish(courseId: string, version: string, filePath: string, metadata: any = {}, guardSnapshot?: any): Promise<{ success: boolean; message?: string }> {
     const token = await loadToken();
     if (!token) {
       return { success: false, message: "Not authenticated. Please run 'progy login' first." };
@@ -18,6 +18,9 @@ export class CoursePublisher {
       formData.append("courseId", courseId);
       formData.append("version", version);
       formData.append("metadata", JSON.stringify(metadata));
+      if (guardSnapshot) {
+        formData.append("guardSnapshot", JSON.stringify(guardSnapshot));
+      }
       formData.append("file", blob, "course.progy");
 
       const response = await fetch(`${BACKEND_URL}/registry/publish`, {

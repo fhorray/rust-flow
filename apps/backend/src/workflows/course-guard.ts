@@ -12,6 +12,7 @@ type CourseGuardParams = {
   versionId: string;
   packageName: string;
   version: string;
+  guardSnapshot?: Record<string, string>;
 };
 
 export class CourseGuardWorkflow extends WorkflowEntrypoint<CloudflareBindings, CourseGuardParams> {
@@ -20,8 +21,17 @@ export class CourseGuardWorkflow extends WorkflowEntrypoint<CloudflareBindings, 
     const db = drizzle(this.env.DB);
     const logger = workflowLogger(step, 'CourseGuard');
 
-    // 0. Fetch Artifact
-    const unzippedFiles = await step.do('Unzip Artifact', async () => {
+    // 0. Fetch Artifact & Prepare Filtered Context
+    const { filteredFiles, totalFilesCount } = await step.do('Unzip & Filter Artifact', async () => {
+      // 1. Fast Path: Client-Provided Snapshot
+      if (event.payload.guardSnapshot && Object.keys(event.payload.guardSnapshot).length > 0) {
+        return {
+          filteredFiles: event.payload.guardSnapshot,
+          totalFilesCount: Object.keys(event.payload.guardSnapshot).length
+        };
+      }
+
+      // 2. Slow Path: Download & Unzip (Legacy/Fallback)
       const versionData = await db.select({
         storageKey: schema.registryVersions.storageKey
       })
@@ -36,32 +46,74 @@ export class CourseGuardWorkflow extends WorkflowEntrypoint<CloudflareBindings, 
 
       const buffer = await obj.arrayBuffer();
       const files = unzipSync(new Uint8Array(buffer));
+      const binaryExtensions = [
+        '.png', '.jpg', '.jpeg', '.gif', '.svg', '.webp', '.ico',
+        '.mp4', '.mov', '.avi', '.mp3', '.wav',
+        '.zip', '.gz', '.tar', '.pdf', '.bin', '.exe', '.dll', '.so', '.wasm'
+      ];
+      const excludedFolders = ['assets/', 'images/', 'public/', 'node_modules/', '.git/', '.progy/'];
 
-      return Object.keys(files).reduce((acc: Record<string, string>, key) => {
-        const content = new TextDecoder().decode(files[key]);
-        acc[key] = content;
-        return acc;
-      }, {});
+      const filtered: Record<string, string> = {};
+      let count = 0;
+
+      for (const key of Object.keys(files)) {
+        count++;
+
+        // Ignore directories (keys ending in / or with 0 length content)
+        if (key.endsWith('/') || files[key].length === 0) continue;
+
+        const isExcluded = excludedFolders.some(folder => key.startsWith(folder)) ||
+          binaryExtensions.some(ext => key.toLowerCase().endsWith(ext));
+
+        if (!isExcluded) {
+          try {
+            const content = new TextDecoder().decode(files[key]);
+            // Only add if it's likely text
+            if (!content.includes('\u0000')) {
+              filtered[key] = content.slice(0, 50000); // 50KB limit per file
+            }
+          } catch (e) {
+            // Ignore decoding errors
+          }
+        }
+      }
+
+
+      return {
+        filteredFiles: filtered,
+        totalFilesCount: count
+      };
     });
 
-    await logger.info(`Unzipped ${Object.keys(unzippedFiles).length} files`);
+    await logger.info(`Unzipped ${totalFilesCount} files, filtered ${Object.keys(filteredFiles).length} for analysis`);
 
     // 1. Static Analysis
     const securityResult = await step.do('Security Scan', async () => {
-      const scriptExtensions = ['.py', '.sh', '.js', 'Dockerfile'];
-      const filesToScan = Object.keys(unzippedFiles).filter(key =>
-        scriptExtensions.some(ext => key.endsWith(ext))
+      // Prioritize files that look like scripts or config
+      const suspiciousExtensions = ['.sh', '.py', '.js', '.bat', 'Dockerfile', '.yml', '.yaml'];
+
+      const allFiles = Object.keys(filteredFiles).filter(key =>
+        !key.endsWith('course.json') && !key.endsWith('progy.toml')
       );
 
-      if (filesToScan.length === 0) {
+      // Sort: Suspicious files first, then the rest
+      const sortedFiles = allFiles.sort((a, b) => {
+        const aSusp = suspiciousExtensions.some(ext => a.toLowerCase().endsWith(ext)) ? 0 : 1;
+        const bSusp = suspiciousExtensions.some(ext => b.toLowerCase().endsWith(ext)) ? 0 : 1;
+        return aSusp - bSusp;
+      });
+
+      if (sortedFiles.length === 0) {
         return { passed: true, reason: 'No scripts to scan' };
       }
 
-      const sample = filesToScan.slice(0, 5);
+      // Take a larger sample (up to 20 files) prioritizing the suspicious ones
+      const sample = sortedFiles.slice(0, 20);
       let contextFiles = "";
       for (const key of sample) {
-        contextFiles += `\n--- FILE: ${key} ---\n${unzippedFiles[key]}\n`;
+        contextFiles += `\n--- FILE: ${key} ---\n${filteredFiles[key]}\n`;
       }
+
 
       const model = getModel({ provider: 'openai', apiKey: this.env.OPENAI_API_KEY });
       const { text } = await generateText({

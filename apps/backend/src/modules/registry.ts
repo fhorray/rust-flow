@@ -70,6 +70,7 @@ const registry = new Hono<{
     const body = await c.req.parseBody();
     const file = body['file'];
     const metaStr = body['metadata'] as string;
+    const guardSnapshotStr = body['guardSnapshot'] as string;
 
     if (!file || !(file instanceof File)) return c.json({ error: 'Invalid file upload' }, 400);
 
@@ -78,6 +79,15 @@ const registry = new Hono<{
       metadata = JSON.parse(metaStr);
     } catch (e) {
       return c.json({ error: 'Invalid metadata JSON' }, 400);
+    }
+
+    let guardSnapshot;
+    if (guardSnapshotStr) {
+      try {
+        guardSnapshot = JSON.parse(guardSnapshotStr);
+      } catch (e) {
+        // Ignore invalid snapshot JSON
+      }
     }
 
     const assets: Record<string, File> = {};
@@ -89,7 +99,7 @@ const registry = new Hono<{
 
     const service = new RegistryService(c.env);
     try {
-      const result = await service.publish(user.id, (user as any).username, file, metadata, assets);
+      const result = await service.publish(user.id, (user as any).username, file, metadata, assets, guardSnapshot);
       return c.json(result);
     } catch (e: any) {
       return c.json({ error: e.message }, 500);
@@ -107,6 +117,22 @@ const registry = new Hono<{
     const packages = await service.listMyPackages(user.id);
     return c.json({ packages });
   })
+  .get(
+    '/packages/:id',
+    zValidator('param', z.object({ id: z.string() })),
+    async (c) => {
+      const user = c.get('user');
+      if (!user) return c.json({ error: 'Unauthorized' }, 401);
+      const { id } = c.req.valid('param');
+      const service = new RegistryService(c.env);
+      try {
+        const pkg = await service.getPackageDetails(user.id, id);
+        return c.json(pkg);
+      } catch (e: any) {
+        return c.json({ error: e.message }, 404);
+      }
+    }
+  )
   .patch(
     '/packages/:id',
     zValidator('param', z.object({ id: z.string() })),

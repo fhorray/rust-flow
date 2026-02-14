@@ -1,6 +1,7 @@
 import sharp from "sharp";
 import { join, extname, dirname } from "node:path";
-import { readdir, stat, mkdir, rm } from "node:fs/promises";
+import { readdir, stat, mkdir, rm, cp } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import { logger, exists } from "@progy/core";
 
 const IMAGE_EXTENSIONS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg"]);
@@ -139,5 +140,37 @@ export async function updateAssetReferences(dir: string) {
       // Skip binary or unreadable files
     }
   }
+}
+
+/**
+ * Creates a temporary optimized copy of a course directory.
+ * Returns the path to the temporary directory.
+ */
+export async function prepareOptimizedTempDir(courseDir: string): Promise<string> {
+  const tempDir = join(tmpdir(), `progy-opt-${Date.now()}-${Math.random().toString(36).substring(7)}`);
+
+  logger.info(`🔨 Preparing optimized build in ${tempDir}...`);
+
+  // 1. Copy everything to temp
+  await cp(courseDir, tempDir, {
+    recursive: true,
+    filter: (src) => {
+      // Don't copy huge folders we don't need
+      const n = src.toLowerCase();
+      return !n.includes('node_modules') && !n.includes('.git') && !n.includes('target') && !n.includes('.progy');
+    }
+  });
+
+  // 2. Optimize images in place in temp
+  const result = await optimizeDirectory(tempDir, tempDir);
+
+  if (result.filesProcessed > 0) {
+    logger.success(`✨ Optimized ${result.filesProcessed} images. Saved ${Math.round(result.saved / 1024)}KB.`);
+
+    // 3. Update references in place in temp
+    await updateAssetReferences(tempDir);
+  }
+
+  return tempDir;
 }
 

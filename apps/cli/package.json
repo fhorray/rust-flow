@@ -76,7 +76,6 @@
     "remark-directive": "^4.0.0",
     "remark-gfm": "^4.0.1",
     "remark-math": "^6.0.0",
-    "sharp": "^0.34.5",
     "unist-util-visit": "^5.1.0",
     "use-sound": "^5.0.0",
     "use-stick-to-bottom": "^1.1.3"

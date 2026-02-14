@@ -1,0 +1,9 @@
+[course]
+id = "@progy/sql-basics-with-postgres"
+repo = "@progy/sql-basics-with-postgres"
+branch = "registry"
+path = "."
+version = "1.0.0"
+
+[sync]
+last_sync = "2026-02-14T04:33:46.484Z"
