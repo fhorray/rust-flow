@@ -359,9 +359,19 @@ export class RegistryService {
     if (!pkg) throw new Error('Package not found');
 
     const updates: any = { updatedAt: new Date() };
-    if (body.status) updates.status = body.status;
-    if (body.description !== undefined) updates.description = body.description;
-    if (body.isPublic !== undefined) updates.isPublic = body.isPublic;
+
+    // Explicitly allow only specific fields to be updated
+    if (body.status && ['draft', 'published', 'archived', 'in_development'].includes(body.status)) {
+      updates.status = body.status;
+    }
+
+    if (typeof body.description === 'string') {
+      updates.description = body.description.slice(0, 500); // Enforce length limit
+    }
+
+    if (typeof body.isPublic === 'boolean') {
+      updates.isPublic = body.isPublic;
+    }
 
     await this.db.update(schema.registryPackages).set(updates).where(eq(schema.registryPackages.id, id));
     return { success: true };

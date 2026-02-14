@@ -16,7 +16,7 @@ export default function PackageDetailsPage() {
   const pkgId = params.id as string;
   const router = useRouter();
   const { data: session } = authClient.useSession();
-  const { usePackage, deletePackage, updatePackageStatus } = useDashboard(session?.session.token);
+  const { usePackage, deletePackage, updatePackage } = useDashboard(session?.session.token);
 
   const { data: pkg, isLoading, error } = usePackage(pkgId);
 
@@ -30,13 +30,12 @@ export default function PackageDetailsPage() {
     }
   };
 
-  const handleUpdateStatus = async (status: string) => {
+  const handleUpdateStatus = async (data: any) => {
     try {
-      await updatePackageStatus.mutateAsync({ pkgId, status });
-      toast.success(`Status updated to ${status}`);
-      // Invalidate query handled by hook
+      await updatePackage.mutateAsync({ pkgId, data });
+      toast.success(`Package updated successfully`);
     } catch (e: any) {
-      toast.error(e.message || 'Error updating status');
+      toast.error(e.message || 'Error updating package');
     }
   };
 
@@ -122,29 +121,26 @@ export default function PackageDetailsPage() {
             )}
             <Dialog>
               <DialogTrigger asChild>
-                <Button variant="default" className="h-11 px-6 uppercase font-black text-[10px] tracking-widest gap-2 bg-orange-600 hover:bg-orange-700 text-white shadow-xl shadow-orange-900/20 rounded-xl transition-all active:scale-95">
+                <Button variant="destructive" className="h-11 px-6 uppercase font-black text-[10px] tracking-widest gap-2 rounded-xl transition-all active:scale-95">
                   <Trash2 className="w-4 h-4" /> Delete
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-zinc-950 border-white/10 rounded-[2rem] sm:max-w-[400px] p-8 shadow-2xl shadow-black">
+              <DialogContent>
                 <DialogHeader>
-                  <DialogTitle className="text-white uppercase font-black italic tracking-tight flex items-center gap-2">
-                    <AlertTriangle className="w-5 h-5 text-orange-500" />
-                    Delete Package?
-                  </DialogTitle>
-                  <DialogDescription className="text-muted-foreground/60 text-[11px] italic leading-relaxed pt-2">
-                    This action is <span className="text-destructive font-black">irreversible</span>. The package and all its versions will be permanently removed.
+                  <DialogTitle>Delete Package</DialogTitle>
+                  <DialogDescription>
+                    Are you sure you want to delete <strong>{pkg.name}</strong>? This action cannot be undone.
                   </DialogDescription>
                 </DialogHeader>
-                <DialogFooter className="mt-6">
+                <DialogFooter>
                   <Button
-                    variant="default"
-                    size="lg"
+                    variant="destructive"
                     onClick={handleDelete}
                     disabled={deletePackage.isPending}
-                    className="w-full bg-orange-600 hover:bg-orange-700 text-white font-black uppercase text-[11px] tracking-widest rounded-2xl h-12 shadow-xl shadow-orange-500/20"
                   >
-                    {deletePackage.isPending ? 'Deleting...' : 'Confirm Delete'}
+                    {deletePackage.isPending ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : 'Delete Package'}
                   </Button>
                 </DialogFooter>
               </DialogContent>
@@ -207,45 +203,84 @@ export default function PackageDetailsPage() {
               </CardContent>
             </Card>
 
-            {/* Manifest / Config */}
+            {/* Manifest / Config / Settings */}
             <Card className="bg-zinc-900/30 border-white/5 rounded-3xl overflow-hidden backdrop-blur-sm">
-              <CardHeader className="bg-white/2 border-b border-white/5 py-4">
+              <CardHeader className="bg-white/2 border-b border-white/5 py-4 flex flex-row items-center justify-between">
                 <CardTitle className="text-[10px] font-black uppercase tracking-[0.2em] text-muted-foreground flex items-center gap-2">
-                  <Box className="w-3.5 h-3.5" /> Manifest Configuration
+                  <Box className="w-3.5 h-3.5" /> Manifest & Settings
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-6">
-                {manifest ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-2 gap-4">
-                      <div className="p-4 bg-zinc-950/50 rounded-2xl border border-white/5">
-                        <span className="text-[9px] uppercase font-bold text-zinc-500 block mb-1.5 tracking-wider">Engine</span>
-                        <div className="text-sm font-mono text-white bg-white/5 inline-block px-2 py-1 rounded-md">
-                          {latestVersion?.engineVersion || 'N/A'}
-                        </div>
+                <div className="space-y-6">
+                  {/* Settings Controls */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pb-6 border-b border-white/5">
+                    <div className="p-4 bg-zinc-950/50 rounded-2xl border border-white/5 flex flex-col justify-between">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Visibility</span>
+                        {pkg.isPublic ? <Globe className="w-3.5 h-3.5 text-blue-400" /> : <Lock className="w-3.5 h-3.5 text-zinc-500" />}
                       </div>
-                      <div className="p-4 bg-zinc-950/50 rounded-2xl border border-white/5">
-                        <span className="text-[9px] uppercase font-bold text-zinc-500 block mb-1.5 tracking-wider">Runner</span>
-                        <div className="text-sm font-mono text-white bg-white/5 inline-block px-2 py-1 rounded-md">
-                          {manifest.runner || 'default'}
+                      <div className="flex items-center gap-2">
+                        <div
+                          onClick={() => handleUpdateStatus({ isPublic: !pkg.isPublic })}
+                          className={`relative w-10 h-5 rounded-full cursor-pointer transition-colors ${pkg.isPublic ? 'bg-blue-600' : 'bg-zinc-700'}`}
+                        >
+                          <div className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white transition-transform ${pkg.isPublic ? 'translate-x-5' : 'translate-x-0'}`} />
                         </div>
+                        <span className="text-xs font-bold text-white uppercase tracking-wider">{pkg.isPublic ? 'Public' : 'Private'}</span>
                       </div>
                     </div>
 
-                    <div className="space-y-3">
-                      <span className="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Modules</span>
-                      <div className="flex flex-wrap gap-2">
-                        {manifest.modules?.map((m: any, i: number) => (
-                          <Badge key={i} variant="secondary" className="bg-white/5 hover:bg-white/10 text-zinc-300 border-white/5 px-3 py-1.5 rounded-lg transition-colors">
-                            {m.title || m.slug}
-                          </Badge>
-                        )) || <span className="text-muted-foreground italic text-sm">No modules defined</span>}
+                    <div className="p-4 bg-zinc-950/50 rounded-2xl border border-white/5 flex flex-col justify-between">
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Status</span>
+                        {getStatusBadge(pkg.status)}
                       </div>
+                      <select
+                        value={pkg.status}
+                        onChange={(e) => handleUpdateStatus({ status: e.target.value })}
+                        className="w-full bg-zinc-900 border border-white/10 rounded-lg text-xs text-white p-2 font-mono uppercase focus:outline-none focus:border-primary/50"
+                      >
+                        <option value="draft">Draft</option>
+                        <option value="in_development">In Dev</option>
+                        <option value="in_review">In Review</option>
+                        <option value="published">Published</option>
+                        <option value="archived">Archived</option>
+                      </select>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground italic text-sm">No manifest data available</div>
-                )}
+
+                  {manifest ? (
+                    <div className="space-y-6">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="p-4 bg-zinc-950/50 rounded-2xl border border-white/5">
+                          <span className="text-[9px] uppercase font-bold text-zinc-500 block mb-1.5 tracking-wider">Engine</span>
+                          <div className="text-sm font-mono text-white bg-white/5 inline-block px-2 py-1 rounded-md">
+                            {latestVersion?.engineVersion || 'N/A'}
+                          </div>
+                        </div>
+                        <div className="p-4 bg-zinc-950/50 rounded-2xl border border-white/5">
+                          <span className="text-[9px] uppercase font-bold text-zinc-500 block mb-1.5 tracking-wider">Runner</span>
+                          <div className="text-sm font-mono text-white bg-white/5 inline-block px-2 py-1 rounded-md">
+                            {manifest.runner || 'default'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="space-y-3">
+                        <span className="text-[9px] uppercase font-bold text-zinc-500 tracking-wider">Modules</span>
+                        <div className="flex flex-wrap gap-2">
+                          {manifest.modules?.map((m: any, i: number) => (
+                            <Badge key={i} variant="secondary" className="bg-white/5 hover:bg-white/10 text-zinc-300 border-white/5 px-3 py-1.5 rounded-lg transition-colors">
+                              {m.title || m.slug}
+                            </Badge>
+                          )) || <span className="text-muted-foreground italic text-sm">No modules defined</span>}
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground italic text-sm">No manifest data available</div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>

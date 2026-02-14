@@ -83,21 +83,22 @@ export const useDashboard = (token?: string) => {
     },
   });
 
-  const updatePackageStatus = useMutation({
-    mutationFn: async ({ pkgId, status }: { pkgId: string; status: string }) => {
+  const updatePackage = useMutation({
+    mutationFn: async ({ pkgId, data }: { pkgId: string; data: Partial<RegistryPackage> }) => {
       const res = await fetch(`${API_URL}/registry/packages/${pkgId}`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(data),
       });
-      if (!res.ok) throw new Error('Failed to update status');
+      if (!res.ok) throw new Error('Failed to update package');
       return res.json();
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['packages'] });
+      queryClient.invalidateQueries({ queryKey: ['package'] });
     },
   });
 
@@ -163,7 +164,7 @@ export const useDashboard = (token?: string) => {
     resetCourse,
     updateUsername,
     listPackages,
-    updatePackageStatus,
+    updatePackage,
     deletePackage,
     checkout,
     usePackage,

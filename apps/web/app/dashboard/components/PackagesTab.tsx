@@ -83,13 +83,13 @@ import { useDashboard } from '@/hooks/use-dashboard';
 
 export function PackagesTab({ session }: { session: any }) {
   const router = useRouter();
-  const { listPackages, updatePackageStatus, deletePackage } = useDashboard(
+  const { listPackages, updatePackage, deletePackage } = useDashboard(
     session?.session.token,
   );
 
   const handleUpdateStatus = async (pkgId: string, status: string) => {
     try {
-      await updatePackageStatus.mutateAsync({ pkgId, status });
+      await updatePackage.mutateAsync({ pkgId, data: { status: status as any } });
       toast.success(`Status updated to ${status}`);
     } catch (e: any) {
       toast.error(e.message || 'Error updating status');
@@ -235,8 +235,8 @@ export function PackagesTab({ session }: { session: any }) {
                     <div className="w-10 h-10 rounded-xl bg-zinc-950/50 border border-white/10 flex items-center justify-center group-hover:border-primary/20 transition-colors">
                       <Package className="w-5 h-5 text-zinc-400 group-hover:text-primary transition-colors" />
                     </div>
-                    <div>
-                      <div className="font-bold text-sm text-zinc-200 group-hover:text-white transition-colors tracking-tight">
+                    <div className="min-w-0">
+                      <div className="font-bold text-sm text-zinc-200 group-hover:text-white transition-colors tracking-tight truncate max-w-[200px]" title={pkg.name}>
                         {pkg.name}
                       </div>
                       <div className="text-[10px] text-zinc-500 font-mono mt-0.5">
@@ -321,40 +321,30 @@ export function PackagesTab({ session }: { session: any }) {
                       <Dialog>
                         <DialogTrigger asChild>
                           <DropdownMenuItem
-                            className="text-[11px] font-bold uppercase tracking-wide rounded-lg focus:bg-red-500/10 focus:text-red-400 px-2 py-2 cursor-pointer text-zinc-400"
+                            className="text-red-600 focus:text-red-500 focus:bg-red-500/10 cursor-pointer"
                             onSelect={(e) => e.preventDefault()}
                           >
-                            <Trash2 className="w-3.5 h-3.5 mr-2" />
-                            Delete Package
+                            <Trash2 className="w-4 h-4 mr-2" />
+                            Delete
                           </DropdownMenuItem>
                         </DialogTrigger>
-                        <DialogContent className="bg-zinc-950 border-white/10 rounded-[2rem] sm:max-w-[400px] p-8 shadow-2xl shadow-black">
+                        <DialogContent>
                           <DialogHeader>
-                            <DialogTitle className="text-white uppercase font-black italic tracking-tight flex items-center gap-2">
-                              <AlertTriangle className="w-4 h-4 text-orange-500" />
-                              Confirm Deletion
-                            </DialogTitle>
-                            <DialogDescription className="text-muted-foreground/60 text-[11px] italic leading-relaxed pt-2">
-                              This action is{' '}
-                              <span className="text-destructive font-black">
-                                irreversible
-                              </span>
-                              . By deleting <strong>{pkg.name}</strong>, all
-                              versions will be wiped.
+                            <DialogTitle>Delete Package</DialogTitle>
+                            <DialogDescription>
+                              Are you sure you want to delete <strong>{pkg.name}</strong>? This action cannot be undone.
                             </DialogDescription>
                           </DialogHeader>
-                          <DialogFooter className="mt-8">
+                          <DialogFooter>
                             <Button
-                              variant="default"
-                              size="lg"
+                              variant="destructive"
                               onClick={() => handleDeletePackage(pkg.id)}
                               disabled={deletePackage.isPending}
-                              className="w-full uppercase font-black text-[11px] tracking-[0.2em] rounded-2xl h-12 shadow-xl shadow-orange-500/20 active:scale-95 transition-all bg-orange-600 hover:bg-orange-700 text-white"
                             >
                               {deletePackage.isPending ? (
                                 <Loader2 className="w-4 h-4 animate-spin" />
                               ) : (
-                                'Execute Deletion'
+                                'Delete'
                               )}
                             </Button>
                           </DialogFooter>
